@@ -67,6 +67,9 @@ DEFAULTS: dict[str, Any] = {
         # Writes the names said in a style: "camel case user name" -> userName,
         # "snake case created at" -> created_at.
         "developer_syntax": True,
+        # Writes the numbered lists said aloud: "un, des œufs, deux, du lait" or
+        # "firstly… secondly…" become "1. Des œufs" and "2. Du lait".
+        "lists": True,
         # Loaded when the daemon starts: the first dictation is instant.
         "preload": True,
     },

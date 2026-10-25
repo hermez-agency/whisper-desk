@@ -13,7 +13,7 @@ Sources: [wisprflow.ai/features](https://wisprflow.ai/features),
 2026-10-16); spoken punctuation, "Auto punctuation" on the features page (read on
 2026-10-18); developer syntax, "Syntax awareness" and "File tagging" on the features page (read on
 2026-10-20); usage statistics, "Insights" in the app as shown by its users' reviews (read on
-2026-10-24).
+2026-10-24); numbered lists, "Lists" formatting on the features page (read on 2026-10-25).
 
 **Status**: done · partial · missing · out of scope.
 **Effort**: S (a session) · M (a few sessions) · L (to split into several gaps).
@@ -25,7 +25,7 @@ Sources: [wisprflow.ai/features](https://wisprflow.ai/features),
 | **Backtrack** — a correction said mid-sentence keeps only the corrected version | `backtrack.py`: "non, plutôt", "ou plutôt", "je veux dire", "no wait", "actually", "I mean", "or rather"… carried out by local rules; measured in `bench/backtrack/` | partial | high | S |
 | **Filler removal** — "um", "uh", pauses | Whisper drops most hesitations by itself; `hesitations.py` removes those it writes ("euh", "hum", "um", "uh", "erm") and words or runs of up to three words said twice in a row, keeping intended doubles; measured in `bench/hesitations/`. A hesitation Whisper mishears as a word ("A", "« E »") stays | done | high | S |
 | **Auto punctuation** — inferred from pauses and tone, spoken marks ("comma") | Whisper's own punctuation and capitals; spoken marks and line breaks ("virgule", "point d'interrogation", "à la ligne", "comma", "new paragraph") written by `punctuation.py`, measured in `bench/punctuation/` (#26); quotes and brackets said aloud ("ouvrez les guillemets", "fermez la parenthèse", "open quote", "close paren") written « », " " and ( ) (#31). No square brackets or braces, no punctuation inferred from tone beyond Whisper's | partial | medium | S |
-| **Numbered lists** — spoken enumerations become a formatted list | — | missing | medium | M |
+| **Numbered lists** — spoken enumerations become a formatted list | `lists.py`: items numbered aloud (*un, deux*, *premièrement*, *firstly*, *number one*, or the figures Whisper writes) written one per line, "1. …", the words before as a title with a colon; goes on across pauses with the as-you-go dictation; measured in `bench/lists/` (in PR). No bulleted lists, no nested lists | partial | medium | S |
 | **Name spelling from context** | `vocabulary` (hotwords) and the context of the dictation fed back to the model | partial | high | — |
 | **100+ languages** | every Whisper language; `language = "auto"` detects one language per sentence | done | medium | — |
 | **Switching languages mid-dictation** (FR/EN) | detection per sentence with `auto`, but a fixed `language` forces one | partial | medium | M |
@@ -45,7 +45,7 @@ Sources: [wisprflow.ai/features](https://wisprflow.ai/features),
 | **History** of dictations | `whisper-desk history` and its window: search, copy, insert again, purge | done | — | — |
 | **Settings** | `whisper-desk settings`: language, model, microphone, shortcut, output, vocabulary, snippets, overlay | done | — | — |
 | **Overlay** | X11 overlay: live level, sentence transcribed, states, cancel | done | — | — |
-| **Usage dashboard** — words dictated, speed, streak, top apps | `whisper-desk stats` (`stats.py`): dictations, words in all, today and over 7 days, words per minute, days in a row, worked out from the history (in PR). No top apps (the history does not record the app), no rank among users | partial | low | S |
+| **Usage dashboard** — words dictated, speed, streak, top apps | `whisper-desk stats` (`stats.py`): dictations, words in all, today and over 7 days, words per minute, days in a row, worked out from the history (#32). No top apps (the history does not record the app), no rank among users | partial | low | S |
 | **Mobile apps, cross-device sync** | — | out of scope (account, cloud) | — | — |
 | **Shared team dictionary and snippets** | — | out of scope (account, cloud) | — | — |
 | **Notetaker** — meeting notes | — | out of scope for now (another product) | — | — |
@@ -116,7 +116,7 @@ Sources: [wisprflow.ai/features](https://wisprflow.ai/features),
   What remains is the transcription of the synthetic voices (*parenthèse* heard as
   "l'apparentaise", *paren* as "Perenn") and Whisper's own final full stop. Left to do:
   square brackets and braces.
-- 2026-10-24 — **Usage statistics** (in PR, partial): `whisper-desk stats` prints the
+- 2026-10-24 — **Usage statistics** (merged, #32, partial): `whisper-desk stats` prints the
   dictations and their days, the words dictated (in all, today, the last 7 days), the
   speed in words per minute and the streak of days with a dictation (current and best),
   worked out from the history on the spot, nothing stored besides; `--json` for a script
@@ -126,3 +126,22 @@ Sources: [wisprflow.ai/features](https://wisprflow.ai/features),
   Left to do: the apps dictated into (the history would have to record the focused
   window), the figures in the history window. Out of scope: Wispr Flow's rank among its
   users (it needs everyone's figures).
+- 2026-10-25 — **Numbered lists** (in PR, partial): items numbered aloud are written as a
+  list, one per line — *"J'ai trois choses à acheter, un, des œufs, deux, du lait et trois,
+  du pain"* → "J'ai trois choses à acheter :", "1. Des œufs", "2. Du lait", "3. Du pain" —
+  by local rules, `model.lists = true`. Numbers (*un*, *one*), ordinals (*premièrement*,
+  *primo*, *firstly*, *first*), *numéro* / *number* and the figures Whisper writes ("1. Le
+  bilan 2. Le recrutement") all number an item; two items numbered in a row from one make a
+  list, three when Whisper drops the pause after the numbers. With the as-you-go dictation
+  the next number goes on the list already inserted, and a sentence that may open a list
+  waits for the next one (one sentence at most) so that both land as a list. Measure
+  (`bench/lists/`, 20 lists + 10 controls, each recording whole and cut after each
+  sentence), lists laid out exactly (same lines, same numbers): written sentences 0/20 →
+  20/20; `small` (CPU) 0/20 → 18/20, error rate on words, line breaks and item numbers
+  FR 33.0 % → 8.9 %, EN 36.4 % → 4.2 %; `large-v3-turbo` (GPU) 0/20 → 18/20, FR 28.1 % →
+  5.4 %, EN 37.3 % → 9.3 %; the same figures whole and cut; no control sentence changed.
+  What remains is the transcription: numbers Whisper does not write ("à vérifier la facture
+  de le bon de livraison"), *secundo* heard as "ce qu'un dos". Known limit: an item that
+  says *un* right after *numéro un* loses it to the stutter rule ("numéro un, un accès" →
+  "1. Accès"). Left to do: bulleted lists, nested lists, a first item said more than one
+  pause before the second.

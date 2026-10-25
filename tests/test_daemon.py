@@ -494,6 +494,42 @@ class SpokenPunctuationTest(DictationCase):
         self.assertEqual(self.delivered, ["Hi John,\n", "Thanks.", "\nBye."])
 
 
+class ListsTest(DictationCase):
+    """A list said with a pause after each item still reaches the cursor as one."""
+
+    def dictate(self) -> None:
+        with self.service() as service:
+            self.listening(service)
+            service.toggle()
+            self.assertTrue(wait_until(lambda: service.session is None))
+
+    def test_the_first_item_waits_for_the_second(self):
+        self.recorder.segments[:] = [
+            b"J'ai des courses.", b"Un, des \xc5\x93ufs.", b"Deux, du lait.", b"Trois, du pain.",
+            b"Merci.",
+        ]
+        self.dictate()
+        self.assertEqual(self.delivered, [
+            "J'ai des courses.", "\n1. Des œufs\n2. Du lait", "\n3. Du pain", "\nMerci.",
+        ])
+
+    def test_a_sentence_held_to_the_end_is_still_inserted(self):
+        self.recorder.segments[:] = [b"First, let me check."]
+        self.dictate()
+        self.assertEqual(self.delivered, ["First, let me check."])
+
+    def test_the_model_hears_the_sentences_as_they_were_said(self):
+        self.recorder.segments[:] = [b"One, eggs.", b"Two, milk."]
+        self.dictate()
+        self.assertEqual(self.transcriber.contexts, ["", "One, eggs."])
+
+    def test_lists_can_be_turned_off(self):
+        with mock.patch.dict(CONFIG, {"model": {"lists": False}}):
+            self.recorder.segments[:] = [b"One, eggs.", b"Two, milk."]
+            self.dictate()
+        self.assertEqual(self.delivered, ["One, eggs.", " Two, milk."])
+
+
 class HistoryTest(DictationCase):
     """One entry per dictation, whatever the number of sentences it took."""
 

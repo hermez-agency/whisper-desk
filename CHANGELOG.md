@@ -4,6 +4,32 @@
 
 ### Added
 
+- **Numbered lists said aloud** (Wispr Flow's lists): the items you number as you say
+  them are written as a list, one per line — *"J'ai trois choses à acheter, un, des œufs,
+  deux, du lait et trois, du pain"* is written "J'ai trois choses à acheter :" then "1. Des
+  œufs", "2. Du lait", "3. Du pain". Numbers (*un, deux*, *one, two*), ordinals
+  (*premièrement, deuxièmement*, *primo, secundo*, *firstly, secondly*, *first, second*),
+  *numéro* / *number* and the figures Whisper writes for them (*1. Le bilan 2. Le
+  recrutement*) all count. The words before the first item become its title, with a colon
+  (a space before it in French); what is said after the last item, once its sentence is
+  over, goes on the next line; the *et* / *and* between two items and their commas go. A
+  list needs two items numbered in a row from one — three when Whisper drops the pause
+  after the numbers (*un des œufs, deux du lait*) —, so that numbers said in a sentence stay
+  words: *j'en veux deux, trois si possible*, *un, deux, trois, soleil*, *first, let me
+  check the logs*. With the as-you-go dictation you can pause after each item: the next
+  number goes on the list already at the cursor, and a sentence that may open a list
+  (*Premièrement, …*) waits for the next one before it is inserted, one sentence at most.
+  Local rules (`lists.py`); `lists = false` in `[model]` keeps the words.
+- `bench/lists/`: 20 lists said in French and English and 10 control sentences, with
+  synthetic recordings, each run whole and cut after each sentence. Lists laid out exactly
+  (same lines, same numbers) and error rate on words, line breaks and item numbers, before
+  → after:
+  - written sentences: 0/20 → 20/20; FR 33.0 % → 0.5 %, EN 37.3 % → 0.0 %;
+  - faster-whisper `small` (CPU, int8): 0/20 → 18/20; FR 33.0 % → 8.9 %, EN 36.4 % → 4.2 %;
+  - faster-whisper `large-v3-turbo` (CUDA, float16): 0/20 → 18/20; FR 28.1 % → 5.4 %, EN
+    37.3 % → 9.3 %.
+  The same whole and cut; no control sentence changes. What remains is the transcription:
+  numbers Whisper does not write, *secundo* heard as "ce qu'un dos".
 - **Usage statistics** (Wispr Flow's Insights): `whisper-desk stats` prints the
   dictations and the days they were made on, the words dictated — in all, today and over
   the last 7 days —, the speed in words per minute and the days in a row with a dictation,
