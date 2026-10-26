@@ -1,0 +1,31 @@
+id	lang	spoken	expected
+fr01	fr	J'ai trois choses à acheter, un, des œufs, deux, du lait, trois, du pain.	J'ai trois choses à acheter :\n1. Des œufs\n2. Du lait\n3. Du pain
+fr02	fr	Pour demain. Premièrement, appeler le client. Deuxièmement, envoyer le devis.	Pour demain.\n1. Appeler le client\n2. Envoyer le devis
+fr03	fr	Les étapes sont les suivantes. Un, on lance les tests. Deux, on relit le code. Trois, on déploie.	Les étapes sont les suivantes.\n1. On lance les tests\n2. On relit le code\n3. On déploie
+fr04	fr	Voici mes questions. Premièrement, quel est le budget ? Deuxièmement, quel est le délai ?	Voici mes questions.\n1. Quel est le budget ?\n2. Quel est le délai ?
+fr05	fr	Ordre du jour, un, le bilan du trimestre, deux, le recrutement, trois, les congés d'été.	Ordre du jour :\n1. Le bilan du trimestre\n2. Le recrutement\n3. Les congés d'été
+fr06	fr	Premièrement, réserver la salle. Deuxièmement, prévenir l'équipe. Troisièmement, préparer les slides. Merci à tous.	1. Réserver la salle\n2. Prévenir l'équipe\n3. Préparer les slides\nMerci à tous.
+fr07	fr	Il faut deux choses, numéro un, un accès au serveur, numéro deux, la clé du dépôt.	Il faut deux choses :\n1. Un accès au serveur\n2. La clé du dépôt
+fr08	fr	Pour la recette, un, faire fondre le beurre, deux, ajouter le sucre, trois, mélanger, quatre, enfourner.	Pour la recette :\n1. Faire fondre le beurre\n2. Ajouter le sucre\n3. Mélanger\n4. Enfourner
+fr09	fr	Mes priorités cette semaine. Primo, finir le rapport. Secundo, répondre aux mails.	Mes priorités cette semaine.\n1. Finir le rapport\n2. Répondre aux mails
+fr10	fr	À vérifier, un, la facture, deux, le bon de livraison et trois, le contrat.	À vérifier :\n1. La facture\n2. Le bon de livraison\n3. Le contrat
+fr11	fr	Deux options. Un, on reporte la réunion. Deux, on la fait en visio.	Deux options.\n1. On reporte la réunion\n2. On la fait en visio
+fr12	fr	Premièrement, sauvegarder la base. Deuxièmement, mettre à jour le serveur. Ensuite on verra.	1. Sauvegarder la base\n2. Mettre à jour le serveur\nEnsuite on verra.
+en01	en	We need three things: one, eggs. Two, milk. Three, bread.	We need three things:\n1. Eggs\n2. Milk\n3. Bread
+en02	en	For tomorrow. Firstly, call the client. Secondly, send the quote.	For tomorrow.\n1. Call the client\n2. Send the quote
+en03	en	The steps are simple. One, run the tests. Two, review the code. Three, deploy.	The steps are simple.\n1. Run the tests\n2. Review the code\n3. Deploy
+en04	en	Two questions. First, what is the budget? Second, what is the deadline?	Two questions.\n1. What is the budget?\n2. What is the deadline?
+en05	en	Agenda, one, the quarterly review, two, hiring, three, summer holidays.	Agenda:\n1. The quarterly review\n2. Hiring\n3. Summer holidays
+en06	en	Number one, book the room. Number two, tell the team. Number three, prepare the slides.	1. Book the room\n2. Tell the team\n3. Prepare the slides
+en07	en	Firstly, back up the database. Secondly, update the server. Then we will see.	1. Back up the database\n2. Update the server\nThen we will see.
+en08	en	To check, one, the invoice, two, the delivery note and three, the contract.	To check:\n1. The invoice\n2. The delivery note\n3. The contract
+ctl01	fr	Premièrement, je voudrais vous remercier pour votre accueil.	Premièrement, je voudrais vous remercier pour votre accueil.
+ctl02	fr	Un, deux, trois, soleil, c'est le jeu préféré des enfants.	Un, deux, trois, soleil, c'est le jeu préféré des enfants.
+ctl03	fr	J'en veux deux, trois si possible, pour la fête de samedi.	J'en veux deux, trois si possible, pour la fête de samedi.
+ctl04	fr	Il en reste un et deux sont cassés, il faut en racheter.	Il en reste un et deux sont cassés, il faut en racheter.
+ctl05	fr	Le premier train part à huit heures, le deuxième à neuf heures.	Le premier train part à huit heures, le deuxième à neuf heures.
+ctl06	fr	On se retrouve à deux heures, puis on part vers trois heures.	On se retrouve à deux heures, puis on part vers trois heures.
+ctl07	en	First, let me check the logs before we decide anything.	First, let me check the logs before we decide anything.
+ctl08	en	One, two, buckle my shoe, three, four, knock at the door.	One, two, buckle my shoe, three, four, knock at the door.
+ctl09	en	No one, two people at most, should have access to it.	No one, two people at most, should have access to it.
+ctl10	en	Wait a second, first we need to agree on the price.	Wait a second, first we need to agree on the price.

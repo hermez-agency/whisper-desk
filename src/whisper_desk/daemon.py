@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from . import config as config_module
-from . import history, host, hotkey, inject, punctuation, snippets
+from . import history, host, hotkey, inject, lists, punctuation, snippets
 from . import output
 from .capture import CaptureUnavailable
 from .overlay_proc import OverlayProcess
@@ -75,6 +75,8 @@ class Session:
         # What was said, before the snippets: the model's context is the
         # user's words, not an address or a signature it never heard.
         self.heard: list[str] = []
+        # A sentence that may open a numbered list, waiting for its next item.
+        self.pending = lists.Pending()
         self.listened = 0.0             # seconds the microphone stayed open
         self.queue: queue.Queue[bytes | None] = queue.Queue()
         self.overlay = OverlayProcess(service.config, on_event=self._on_overlay_event)
@@ -290,7 +292,11 @@ class Session:
         """Transcribes the sentences in order, as they come in."""
         while True:
             segment = self.queue.get()
-            if segment is None or self.cancelled.is_set():
+            if self.cancelled.is_set():
+                return
+            if segment is None:
+                if self.pending.held:
+                    self._insert(self.pending.flush())
                 return
             if not self.recording_over.is_set():
                 self.overlay.set_state("working")
@@ -316,23 +322,33 @@ class Session:
             if not text:
                 continue
             self.heard.append(text)
-            text = snippets.apply(text, self.service.config["snippets"])
-            # Later sentences are separated from the previous insertion by a
-            # space, unless one opens on a mark or follows a line break.
-            spacing = punctuation.separator(self.parts[-1], text) if self.parts else ""
-            self.parts.append(text)
-            self.overlay.set_text(text)
-            if not self.capture:
-                delivered = output.deliver(
-                    spacing + text,
-                    self.service.config,
-                    writer=self.writer,
-                    overlay=self.overlay,
+            if self.service.config["model"].get("lists", True):
+                ready = self.pending.feed(text, punctuation.join(self.parts))
+                if ready is None:
+                    self.overlay.set_text(text)
+                    continue
+                text = ready
+            self._insert(text)
+
+    def _insert(self, text: str) -> None:
+        """Inserts a transcribed sentence after those already inserted."""
+        text = snippets.apply(text, self.service.config["snippets"])
+        # Later sentences are separated from the previous insertion by a
+        # space, unless one opens on a mark or follows a line break.
+        spacing = punctuation.separator(self.parts[-1], text) if self.parts else ""
+        self.parts.append(text)
+        self.overlay.set_text(text)
+        if not self.capture:
+            delivered = output.deliver(
+                spacing + text,
+                self.service.config,
+                writer=self.writer,
+                overlay=self.overlay,
+            )
+            if not delivered and not self.delivery_failure:
+                self.delivery_failure = (
+                    self.writer.failure if self.writer and self.writer.failure else "clipboard"
                 )
-                if not delivered and not self.delivery_failure:
-                    self.delivery_failure = (
-                        self.writer.failure if self.writer and self.writer.failure else "clipboard"
-                    )
 
     def stop(self) -> None:
         self.stopping.set()

@@ -40,6 +40,11 @@ spoken_punctuation = true
 # payment service" -> PaymentService, "snake case created at" -> created_at, "kebab case
 # user profile" -> user-profile, "constant case max retries" -> MAX_RETRIES.
 developer_syntax = true
+# Writes the numbered lists you say: "j'ai trois choses à faire, un, appeler Marie,
+# deux, envoyer le devis" -> "J'ai trois choses à faire :", "1. Appeler Marie" and
+# "2. Envoyer le devis" on lines of their own ("premièrement", "firstly", "one", "two"
+# too). A sentence that may open a list waits for the next one before it is inserted.
+lists = true
 # Loads the model when the service starts: the first dictation is instant.
 preload = true
 

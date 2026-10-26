@@ -324,6 +324,34 @@ often hears the words in English best: if it mangles them, put *camel case, snak
 in `vocabulary`. Rules run on your machine; `developer_syntax = false` in `[model]` keeps
 the words. `bench/casing/` measures them on recordings (see Development).
 
+### Numbered lists said aloud
+
+Number the items as you say them, and they are written as a list, one item per line:
+*"J'ai trois choses à acheter, un, des œufs, deux, du lait et trois, du pain"* is written
+
+```
+J'ai trois choses à acheter :
+1. Des œufs
+2. Du lait
+3. Du pain
+```
+
+The numbers can be said as numbers (*un, deux, trois*, *one, two, three*), as ordinals
+(*premièrement, deuxièmement*, *primo, secundo*, *firstly, secondly*, *first, second*) or
+after *numéro* / *number*; the figures Whisper writes for them (*1. Des œufs 2. Du lait*)
+count too. The words before the first item become its title, with a colon; what you say
+after the last item, once its sentence is over, goes on the next line. A list needs two
+items numbered in a row from one; when Whisper drops the pause after the numbers (*un des
+œufs, deux du lait*), three. Numbers and ordinals said in a sentence stay words: *j'en veux
+deux, trois si possible*, *un, deux, trois, soleil*, *first, let me check the logs*.
+
+With the as-you-go dictation, you can pause after each item: the next number goes on the
+list already at the cursor. A sentence that may open a list (*Premièrement, …*, *One, …*)
+waits for the next one before it is inserted, so that both land as a list — when the
+pause comes before the second item, the first one is a sentence later at the cursor.
+Rules run on your machine; `lists = false` in `[model]` keeps the words. `bench/lists/`
+measures them on recordings (see Development).
+
 ### Snippets: say a cue, get the text you keep retyping
 
 Save the texts you type over and over — an address, a calendar link, a signature — under
@@ -475,6 +503,7 @@ corrections = true            # "mardi, non, plutôt mercredi" is written "mercr
 hesitations = true            # "euh", "um" and stuttered words left out
 spoken_punctuation = true     # "virgule", "point", "à la ligne", "comma", "new line"
 developer_syntax = true       # "camel case user name" is written userName
+lists = true                  # "un, des œufs, deux, du lait" is written as a numbered list
 
 [recording]
 backend = "auto"              # auto | arecord | parec | rec | sox | ffmpeg
@@ -783,6 +812,19 @@ words where a name only counts with its case and separators right:
 ```sh
 python3 bench/casing/measure.py -v
 ~/.local/share/whisper-desk/venv/bin/python bench/casing/measure.py --audio -v
+```
+
+`bench/lists/` measures the numbered lists: 20 lists said in French and English, numbered
+with numbers, ordinals or *numéro* / *number*, and 10 control sentences where numbers and
+ordinals are words (*un, deux, trois, soleil*, *j'en veux deux, trois si possible*, *first,
+let me check*). Each recording is run whole and cut after each sentence, as the
+as-you-go dictation does when you pause after every item. It counts the lists laid out
+exactly as expected — same lines, same numbers — and an error rate where line breaks and
+item numbers count as words:
+
+```sh
+python3 bench/lists/measure.py -v
+~/.local/share/whisper-desk/venv/bin/python bench/lists/measure.py --audio -v
 ```
 
 ## License
