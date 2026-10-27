@@ -1,0 +1,47 @@
+id	before	after	learned
+w01	Envoie le devis à animal link.	Envoie le devis à Animalink.	Animalink
+w02	On déploie sur cube et Netis demain.	On déploie sur Kubernetes demain.	Kubernetes
+w03	Je vois hermez demain.	Je vois Hermez demain.	Hermez
+w04	Merci pour les ripos GitHub.	Merci pour les repos GitHub.	repos
+w05	Use node JS for the API.	Use Node.js for the API.	Node.js
+w06	installe faster whisper	installe faster-whisper	faster-whisper
+w07	Le serveur tourne sous doc ploie.	Le serveur tourne sous Dokploy.	Dokploy
+w08	Demande à Ponnos de relancer.	Demande à Ponos de relancer.	Ponos
+w09	Les stats sont dans où mamie.	Les stats sont dans Umami.	Umami
+w10	Le modèle tourne avec au lama.	Le modèle tourne avec Ollama.	Ollama
+w11	La base est sur super base.	La base est sur Supabase.	Supabase
+w12	Leeds a trouvé trente contacts.	Leadz a trouvé trente contacts.	Leadz
+w13	Le site d'animal link est prêt.	Le site d'Animalink est prêt.	Animalink
+w14	Ouvre une pool request.	Ouvre une pull request.	pull
+w15	We store them with PG vector.	We store them with pgvector.	pgvector
+w16	Ask ponos to run the tests.	Ask Ponos to run the tests.	Ponos
+w17	The Grafana dashboard is red, ping Karim.	The Grafana dashboard is red, ping Kareem.	Kareem
+w18	The animal links quote is ready.	The Animalink's quote is ready.	Animalink
+w19	Pousse sur le cluster de prod avec cube CTL.	Pousse sur le cluster de prod avec kubectl.	kubectl
+w20	J'ai codé ça en C plus plus.	J'ai codé ça en C++.	C++
+w21	Rendez-vous chez Hostinger et OVH.	Rendez-vous chez Hostinger et Scaleway.	Scaleway
+w22	Le fichier est dans config point toml.	Le fichier est dans config.toml.	config.toml
+w23	Appelle Mme Dupont et M. Martin.	Appelle Mme Dupond et M. Martin.	Dupond
+w24	The PR touches the auth middle where.	The PR touches the auth middleware.	middleware
+w25	Il faut migrer vers post gré.	Il faut migrer vers Postgres.	Postgres
+w26	We deploy with Tory on Linux.	We deploy with Tauri on Linux.	Tauri
+w27	Je parle à salva demain pour le point.	Demain, j'appelle Hermez pour faire le point sur le budget.	Hermez
+w28	Le ticket ouvert par Opal est en revue.	Le ticket ouvert par Opoil est en revue.	Opoil
+w29	Lance le web hook strip.	Lance le webhook Stripe.	webhook|Stripe
+w30	Je teste avec whisper desk.	Je teste avec whisper-desk.	whisper-desk
+n01	Il mange des pommes.	Ils mangent des pommes.	
+n02	Elle parlait au client.	Elle parlais au client.	
+n03	Il a fini.	Il à fini.	
+n04	Il a des pommes.	Il a les pommes.	
+n05	Their going home.	They're going home.	
+n06	le chat dort	le petit chat dort	
+n07	bonjour tout le monde	Bonjour tout le monde.	
+n08	c'est fait. merci	C'est fait. Merci	
+n09	Je suis allé au marché.	Je suis allée au marché.	
+n10	The results was good.	The results were good.	
+n11	I has a meeting at noon.	I have a meeting at noon.	
+n12	On se voit demain matin.	On se voit demain après-midi.	
+n13	Les chiffres sont bon.	Les chiffres sont bons.	
+n14	We should of called.	We should have called.	
+n15	Je pense que c'est une bonne idée.	Je pense que c'est une très bonne idée.	
+n16	Envoie le rapport à l'équipe.	Envoie le rapport complet à toute l'équipe, s'il te plaît.	
