@@ -431,6 +431,7 @@ whisper-desk history                  # the 20 latest, numbered from 1 (the late
 whisper-desk history invoice friday   # search: every word, case and accents ignored
 whisper-desk history -n 0             # all of them
 whisper-desk history --copy 3         # copies dictation 3 to the clipboard
+whisper-desk history --correct 3 "Le devis d'Animalink est parti."   # fixes its text
 whisper-desk history --delete 3       # deletes it
 whisper-desk history --keep-days 30   # deletes dictations older than 30 days, from now on
 whisper-desk history --clear          # deletes everything
@@ -443,9 +444,22 @@ whisper-desk history --window         # the window below
 
 The window lists the dictations newest first, with a search field (`Ctrl+F`), and for
 each one **Copy**, **Insert** — the window closes and the daemon types the text where
-your cursor was — and a bin that asks for a second click. At the bottom, *Keep
-dictations* sets the automatic purge. It needs GTK3 for the system Python, like the
+your cursor was —, **Correct…** and a bin that asks for a second click. At the bottom,
+*Keep dictations* sets the automatic purge. It needs GTK3 for the system Python, like the
 overlay; without it, the command line does the same.
+
+**Correct…** (or `--correct N "text"`) fixes what Whisper got wrong, and the words you
+corrected join `vocabulary` — the personal dictionary pushed into the decoder —, so that
+they come out right the next time: correct *"le devis d'animal link"* into *"le devis
+d'Animalink"* once, and the next *Animalink* you say is written so. What is learned is a
+name or a piece of jargon — a capital a sentence start does not explain, a digit, a sign
+(*Node.js*, *C++*) — or a word of five letters or more heard as a word that sounds like
+it (*ripos* → *repos*); a grammar fix (*mange* → *mangent*, *a* → *à*), a word Whisper
+left out or a sentence you reworded teaches nothing but the names it holds. The window
+and the command say which words were added; untick *Add the corrected names and words
+to the vocabulary* (or add `--no-learn`) to fix the text alone, and remove a word in
+**Settings** like any other. Everything stays in `config.toml`, on this machine.
+`bench/dictionary/` measures it (see *Measuring the transcription*).
 
 ### Statistics
 
@@ -734,6 +748,7 @@ to test all three from any of them.
 | `src/whisper_desk/overlay_protocol.py` | the line protocol between the daemon and the overlay |
 | `src/whisper_desk/history.py` | dictation history (JSON Lines), search, purge |
 | `src/whisper_desk/stats.py` | usage statistics worked out from the history |
+| `src/whisper_desk/vocabulary.py` | the words a corrected dictation teaches the vocabulary |
 | `src/whisper_desk/history_window.py` | history window (GTK3, separate process) |
 | `src/whisper_desk/tomlwrite.py` | writing `config.toml` while keeping its comments |
 | `src/whisper_desk/settings_window.py` | settings window (GTK3, separate process) |
@@ -825,6 +840,21 @@ item numbers count as words:
 ```sh
 python3 bench/lists/measure.py -v
 ~/.local/share/whisper-desk/venv/bin/python bench/lists/measure.py --audio -v
+```
+
+`bench/dictionary/` measures the vocabulary learned from corrections, two ways. 46
+corrections written (30 that bring a name, a piece of jargon or a misheard word, 16 grammar
+fixes, words added or changes of mind): the words learned against those wanted. And 22
+names (*Animalink*, *Dokploy*, *Supabase*, *pgvector*…), French and English, each said in a
+first dictation that is transcribed, then corrected into the sentence said, as you would
+in the history; the name is then said in another sentence, transcribed with the
+vocabulary learned so far — one per language — and without; 8 control sentences check
+that the grown vocabulary mars nothing else. On CUDA, the venv's NVIDIA libraries go in
+`LD_LIBRARY_PATH`, as the `whisper-desk` launcher does:
+
+```sh
+python3 bench/dictionary/measure.py -v
+~/.local/share/whisper-desk/venv/bin/python bench/dictionary/measure.py --audio -v
 ```
 
 ## License

@@ -13,7 +13,8 @@ Sources: [wisprflow.ai/features](https://wisprflow.ai/features),
 2026-10-16); spoken punctuation, "Auto punctuation" on the features page (read on
 2026-10-18); developer syntax, "Syntax awareness" and "File tagging" on the features page (read on
 2026-10-20); usage statistics, "Insights" in the app as shown by its users' reviews (read on
-2026-10-24); numbered lists, "Lists" formatting on the features page (read on 2026-10-25).
+2026-10-24); numbered lists, "Lists" formatting on the features page (read on 2026-10-25); dictionary
+learned from corrections, "Personal dictionary" on the features page (read on 2026-10-27).
 
 **Status**: done · partial · missing · out of scope.
 **Effort**: S (a session) · M (a few sessions) · L (to split into several gaps).
@@ -25,7 +26,7 @@ Sources: [wisprflow.ai/features](https://wisprflow.ai/features),
 | **Backtrack** — a correction said mid-sentence keeps only the corrected version | `backtrack.py`: "non, plutôt", "ou plutôt", "je veux dire", "no wait", "actually", "I mean", "or rather"… carried out by local rules; measured in `bench/backtrack/` | partial | high | S |
 | **Filler removal** — "um", "uh", pauses | Whisper drops most hesitations by itself; `hesitations.py` removes those it writes ("euh", "hum", "um", "uh", "erm") and words or runs of up to three words said twice in a row, keeping intended doubles; measured in `bench/hesitations/`. A hesitation Whisper mishears as a word ("A", "« E »") stays | done | high | S |
 | **Auto punctuation** — inferred from pauses and tone, spoken marks ("comma") | Whisper's own punctuation and capitals; spoken marks and line breaks ("virgule", "point d'interrogation", "à la ligne", "comma", "new paragraph") written by `punctuation.py`, measured in `bench/punctuation/` (#26); quotes and brackets said aloud ("ouvrez les guillemets", "fermez la parenthèse", "open quote", "close paren") written « », " " and ( ) (#31). No square brackets or braces, no punctuation inferred from tone beyond Whisper's | partial | medium | S |
-| **Numbered lists** — spoken enumerations become a formatted list | `lists.py`: items numbered aloud (*un, deux*, *premièrement*, *firstly*, *number one*, or the figures Whisper writes) written one per line, "1. …", the words before as a title with a colon; goes on across pauses with the as-you-go dictation; measured in `bench/lists/` (in PR). No bulleted lists, no nested lists | partial | medium | S |
+| **Numbered lists** — spoken enumerations become a formatted list | `lists.py`: items numbered aloud (*un, deux*, *premièrement*, *firstly*, *number one*, or the figures Whisper writes) written one per line, "1. …", the words before as a title with a colon; goes on across pauses with the as-you-go dictation; measured in `bench/lists/` (#33). No bulleted lists, no nested lists | partial | medium | S |
 | **Name spelling from context** | `vocabulary` (hotwords) and the context of the dictation fed back to the model | partial | high | — |
 | **100+ languages** | every Whisper language; `language = "auto"` detects one language per sentence | done | medium | — |
 | **Switching languages mid-dictation** (FR/EN) | detection per sentence with `auto`, but a fixed `language` forces one | partial | medium | M |
@@ -37,7 +38,7 @@ Sources: [wisprflow.ai/features](https://wisprflow.ai/features),
 | Wispr Flow | whisper-desk | Status | Value | Effort |
 |---|---|---|---|---|
 | **Works in any app** | insertion at the cursor through the clipboard and a paste shortcut (uinput, Mutter, SendKeys, System Events) | done | — | — |
-| **Personal dictionary**, fed by the words you correct | `vocabulary` in the settings window, filled by hand; no learning from corrections | partial | high | M |
+| **Personal dictionary**, fed by the words you correct | `vocabulary` in the settings window, filled by hand; fed by the corrections made in the history (**Correct…**, `history --correct`), `vocabulary.py`, measured in `bench/dictionary/` (in PR). Not learned from an edit made in the app dictated into (whisper-desk cannot see it); no replacement entries ("misheard → meant") | partial | high | M |
 | **Snippets** — a spoken cue inserts a longer text | `[snippets]` in `config.toml`, `snippets.py`: alone or inside a sentence, case and punctuation ignored, longest cue wins, multi-line texts; measured in `bench/snippets/`; edited in the settings window too (#25). No rich text (bold, links) | partial | high | S |
 | **Styles** — tone adapted to the app (formal in docs, casual in chat) | — | missing | medium | L |
 | **Command Mode** — select text, say how to rewrite it | — (would need a local model, e.g. Ollama) | missing | high | L |
@@ -126,7 +127,7 @@ Sources: [wisprflow.ai/features](https://wisprflow.ai/features),
   Left to do: the apps dictated into (the history would have to record the focused
   window), the figures in the history window. Out of scope: Wispr Flow's rank among its
   users (it needs everyone's figures).
-- 2026-10-25 — **Numbered lists** (in PR, partial): items numbered aloud are written as a
+- 2026-10-25 — **Numbered lists** (merged, #33, partial): items numbered aloud are written as a
   list, one per line — *"J'ai trois choses à acheter, un, des œufs, deux, du lait et trois,
   du pain"* → "J'ai trois choses à acheter :", "1. Des œufs", "2. Du lait", "3. Du pain" —
   by local rules, `model.lists = true`. Numbers (*un*, *one*), ordinals (*premièrement*,
@@ -145,3 +146,18 @@ Sources: [wisprflow.ai/features](https://wisprflow.ai/features),
   says *un* right after *numéro un* loses it to the stutter rule ("numéro un, un accès" →
   "1. Accès"). Left to do: bulleted lists, nested lists, a first item said more than one
   pause before the second.
+- 2026-10-27 — **Personal dictionary fed by corrections** (in PR, partial): **Correct…** in
+  the history window and `whisper-desk history --correct N "text"` fix a dictation, and the
+  words corrected join `vocabulary` (the hotwords) — names and jargon (a capital a sentence
+  start does not explain, a digit, a sign), and words of five letters or more heard as a
+  word that sounds like them; grammar fixes, short words, words added and changes of mind
+  teach nothing. The words learned are shown; `--no-learn` or a checkbox fixes the text
+  alone. Measure (`bench/dictionary/`): 46 written corrections, 30/31 wanted words learned,
+  none unwanted, 16/16 controls quiet; 22 names said once, corrected, then said again in
+  another sentence: name written right `small` (CPU) 5/22 → 14/22, WER 18.1 % → 9.4 %;
+  `large-v3-turbo` (GPU) 9/22 → 16/22, 15.2 % → 9.4 %; controls `small` 3.4 % → 5.2 %
+  (*œufs* → "oeufs"), `large-v3-turbo` unchanged. What remains: names Whisper does not hear
+  even as hotwords (*Opoil*, *Hostinger*), two ordinary words learned (*tableau*, *lives*).
+  Left to do: learning from an edit made in place in the app (Wispr Flow watches the text
+  field; that needs accessibility APIs per desktop), replacement entries, a cap on a
+  vocabulary grown long (faster-whisper keeps only the start of a long prompt).
