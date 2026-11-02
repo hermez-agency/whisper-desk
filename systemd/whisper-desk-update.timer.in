@@ -1,0 +1,11 @@
+[Unit]
+Description=whisper-desk — daily check for a new version
+
+[Timer]
+OnCalendar=daily
+# A machine that was off at the time runs it at the next boot.
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target

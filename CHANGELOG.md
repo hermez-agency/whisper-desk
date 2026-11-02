@@ -4,6 +4,16 @@
 
 ### Added
 
+- **Automatic updates**: a user timer (systemd `whisper-desk-update.timer`, launchd
+  `fr.whisperdesk.update` on macOS) runs the new `whisper-desk update --auto` once a day —
+  `Persistent=true` and a random delay of up to an hour —, installed by `install.sh` and
+  removed by `uninstall.sh`. A new version is installed through the usual `install.sh`
+  replay, shortcut and configuration kept, and announced in a notification (*updated* /
+  *update available*); nothing is said when there is nothing new, and offline is silent
+  until the next round. It never runs during a dictation: it is retried 30 minutes later
+  (systemd). `auto_update` in the new `[update]` section of `config.toml`, and **Updates**
+  in the settings window, choose `"install"` (default), `"notify"` or `"off"`. An
+  installation made from a clone is left alone.
 - **A personal dictionary fed by your corrections** (Wispr Flow's dictionary, which learns
   the words you correct): **Correct…** in the history window — or `whisper-desk history
   --correct N "text"` — fixes the text of a dictation, and the words you corrected join

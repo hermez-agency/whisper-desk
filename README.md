@@ -191,6 +191,37 @@ whisper-desk update --check
 [ $? = 1 ] && notify-send "whisper-desk: an update is available"
 ```
 
+### Automatic updates
+
+The installation checks for itself: a user timer (`whisper-desk-update.timer` under
+systemd, the `fr.whisperdesk.update` agent under launchd) runs `whisper-desk update --auto`
+once a day, at a random minute of the hour, and at the next boot if the machine was off.
+That check on GitHub is the only network request whisper-desk ever makes; the voice never
+leaves the machine.
+
+What it does with a new version is `auto_update` in the `[update]` section of
+`config.toml`, or **Updates** in `whisper-desk settings`:
+
+| `auto_update` | |
+|---|---|
+| `"install"` (default) | installs it, restarts the daemon, and says *whisper-desk: updated* in a notification |
+| `"notify"` | only says *whisper-desk: update available*, once per version; `whisper-desk update` installs it |
+| `"off"` | checks nothing: the timer stays installed but does nothing |
+
+`true` and `false` are read as `"install"` and `"off"`.
+
+An automatic update never cuts a dictation off: with one under way it waits and tries
+again 30 minutes later (systemd; launchd's six-hour round plays that part on macOS).
+Offline, it stays silent until the next round. If `install.sh` fails, the error is in
+`journalctl --user -u whisper-desk-update` (macOS: `~/.local/state/whisper-desk/update.log`) and the
+installation in place stays as it was. Your configuration and shortcut are kept, as for
+a manual update. An installation made from a clone (`WD_SRC`) is left to `git pull`.
+
+```sh
+systemctl --user list-timers whisper-desk-update    # when the next check runs
+systemctl --user start whisper-desk-update.service  # check now
+```
+
 `whisper-desk --version` and `whisper-desk doctor` both name the commit installed —
 the project is distributed by `main`, so the commit says more than the version number.
 

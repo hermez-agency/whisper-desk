@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>fr.whisperdesk.update</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>@BIN@</string>
+        <string>update</string>
+        <string>--auto</string>
+    </array>
+    <!-- At login, then every six hours: launchd has neither Persistent nor a
+         retry, so a short interval makes up for a Mac asleep at the time and
+         for a dictation under way. The call is one GitHub request. -->
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StartInterval</key>
+    <integer>21600</integer>
+    <key>StandardOutPath</key>
+    <string>@LOG@</string>
+    <key>StandardErrorPath</key>
+    <string>@LOG@</string>
+</dict>
+</plist>

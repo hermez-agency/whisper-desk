@@ -186,6 +186,11 @@ class SettingsWindow(Gtk.Window):
         self.accent.set_halign(Gtk.Align.START)
         self._field("Accent colour", self.accent)
 
+        self._section("Updates")
+        self.updates = self._combo("New versions")
+        self._hint("Checked once a day on GitHub — the only request whisper-desk makes. "
+                   "An update never interrupts a dictation.")
+
         footer = Gtk.Box()
         footer.set_border_width(10)
         layout.pack_end(footer, False, False, 0)
@@ -251,6 +256,7 @@ class SettingsWindow(Gtk.Window):
             self._fill(self.device, choices["device"], values["device"])
             self._fill(self.mode, choices["mode"], values["mode"])
             self._fill(self.position, choices["position"], values["position"])
+            self._fill(self.updates, choices["updates"], values["updates"])
             self.vocabulary.set_text(values["vocabulary"])
             self.snippets.clear()
             for cue, text in values.get("snippets", []):
@@ -286,6 +292,7 @@ class SettingsWindow(Gtk.Window):
             "overlay": self.overlay.get_active(),
             "position": self.position.get_active_id(),
             "accent": hex_colour(self.accent.get_rgba()),
+            "updates": self.updates.get_active_id(),
             "snippets": [[row[0], row[1]] for row in self.snippets],
         }
 

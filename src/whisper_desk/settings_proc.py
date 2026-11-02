@@ -17,7 +17,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from . import capture, hotkey, snippets, window_proc
+from . import capture, hotkey, snippets, update, window_proc
 from . import config as config_module
 from .recorder import CHANNELS, CHUNK_BYTES, MIN_THRESHOLD, RATE, _rms
 from .spectrum import visual_level
@@ -58,6 +58,11 @@ POSITIONS = (
     ("top-center", "Top of the screen"),
     ("center", "Centre of the screen"),
 )
+UPDATES = (
+    ("install", "Install them on their own"),
+    ("notify", "Only tell me"),
+    ("off", "Never check"),
+)
 # Where each value of the window lives in config.toml.
 FIELDS = {
     "language": ("model", "language"),
@@ -69,6 +74,7 @@ FIELDS = {
     "overlay": ("overlay", "enabled"),
     "position": ("overlay", "position"),
     "accent": ("overlay", "accent"),
+    "updates": ("update", "auto_update"),
 }
 COLOUR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
@@ -182,6 +188,7 @@ class SettingsController:
         values: dict[str, Any] = {
             field: self.config[section][key] for field, (section, key) in FIELDS.items()
         }
+        values["updates"] = update.auto_mode(self.config)
         values["snippets"] = [
             [cue, text] for cue, text in self.config["snippets"].items() if isinstance(text, str)
         ]
@@ -201,6 +208,7 @@ class SettingsController:
                 ),
                 "mode": with_current(MODES, values["mode"]),
                 "position": with_current(POSITIONS, values["position"]),
+                "updates": with_current(UPDATES, values["updates"]),
             },
         }
 
@@ -243,7 +251,11 @@ class SettingsController:
                 continue
             section, key = FIELDS[field]
             current = self.config[section][key]
-            if isinstance(current, bool):
+            if field == "updates":
+                # A boolean written by hand reads as its word.
+                current = update.auto_mode(self.config)
+                value = str(value).strip()
+            elif isinstance(current, bool):
                 value = bool(value)
             else:
                 value = str(value).strip()
