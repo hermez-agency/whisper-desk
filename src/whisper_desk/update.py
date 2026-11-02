@@ -39,6 +39,14 @@ SHORT = 7
 # The network is never allowed to hold the diagnostic up.
 DOCTOR_TIMEOUT = 3.0
 
+AUTO_MODES = ("install", "notify", "off")
+# Beyond the three words, a boolean is what a user guesses to write.
+_BOOLEAN_MODES = {True: "install", False: "off"}
+# EX_TEMPFAIL: the timer's service restarts on it and on nothing else.
+BUSY = 75
+# A new version is announced once, not every day until it is installed.
+NOTIFIED_PATH = config_module.STATE_DIR / "update-notified"
+
 
 class UpstreamUnreachable(RuntimeError):
     """Upstream could not be asked: no network, private repository, unknown ref."""
@@ -90,6 +98,33 @@ def describe(fingerprint: dict[str, str]) -> str:
     described = f"{ref(fingerprint)} @ {short(local)}"
     date = fingerprint.get("date", "")
     return f"{described} ({date[:10]})" if date else described
+
+
+# -- the automatic update ----------------------------------------------------
+
+def auto_mode(config: dict) -> str:
+    """install | notify | off — an unreadable value counts as the default."""
+    value = config.get("update", {}).get("auto_update")
+    if isinstance(value, bool):
+        return _BOOLEAN_MODES[value]
+    value = str(value).strip().lower()
+    return value if value in AUTO_MODES else "install"
+
+
+def already_notified(sha: str, path: Path | None = None) -> bool:
+    try:
+        return (path or NOTIFIED_PATH).read_text(encoding="utf-8").strip() == sha
+    except OSError:
+        return False
+
+
+def remember_notified(sha: str, path: Path | None = None) -> None:
+    path = path or NOTIFIED_PATH
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(sha + "\n", encoding="utf-8")
+    except OSError:
+        pass    # announced again tomorrow, at worst
 
 
 # -- the upstream commit -----------------------------------------------------

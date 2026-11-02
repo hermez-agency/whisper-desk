@@ -120,6 +120,11 @@ DEFAULTS: dict[str, Any] = {
         # Distance to the screen edge, in pixels.
         "margin": 96,
     },
+    "update": {
+        # What the daily check does when a new version is out: "install" it
+        # (never during a dictation), "notify" only, or "off".
+        "auto_update": "install",
+    },
     # Spoken cue -> text inserted in its place: "mon adresse" types the address.
     "snippets": {},
 }

@@ -130,6 +130,31 @@ class SaveTest(ControllerCase):
         self.assertIs(config_module.load(self.path)["overlay"]["enabled"], False)
 
 
+class UpdatesTest(ControllerCase):
+    def test_the_window_gets_the_default(self):
+        self.assertEqual(self.controller.values()["updates"], "install")
+        self.assertEqual(
+            [value for value, _label in self.controller.snapshot()["choices"]["updates"]],
+            ["install", "notify", "off"],
+        )
+
+    def test_the_choice_is_written_in_its_own_section(self):
+        self.save(updates="notify")
+        text = self.path.read_text(encoding="utf-8")
+        self.assertIn("# my own comment", text)
+        self.assertEqual(tomllib.loads(text)["update"]["auto_update"], "notify")
+
+    def test_a_boolean_written_by_hand_reads_as_its_word(self):
+        self.controller.config["update"]["auto_update"] = False
+        self.assertEqual(self.controller.values()["updates"], "off")
+        self.assertEqual(self.controller.changes(self.controller.values()), {})
+
+    def test_the_default_is_not_written_back(self):
+        before = self.path.read_text(encoding="utf-8")
+        self.assertEqual(self.save()["status"], "Nothing to change")
+        self.assertEqual(self.path.read_text(encoding="utf-8"), before)
+
+
 class SnippetsTest(ControllerCase):
     def test_the_window_gets_the_snippets_in_their_order(self):
         self.controller.config["snippets"] = {"mon adresse": "ici", "ma signature": "Salva"}

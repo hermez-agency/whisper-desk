@@ -6,13 +6,18 @@ set -eu
 
 AGENT_LABEL="fr.whisperdesk.daemon"
 AGENT="$HOME/Library/LaunchAgents/$AGENT_LABEL.plist"
+UPDATE_LABEL="fr.whisperdesk.update"
+UPDATE_AGENT="$HOME/Library/LaunchAgents/$UPDATE_LABEL.plist"
 
 say() { printf '==> %s\n' "$1"; }
 
 if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
     say "Stopping the service"
+    systemctl --user disable --now whisper-desk-update.timer >/dev/null 2>&1 || true
     systemctl --user disable --now whisper-desk.service >/dev/null 2>&1 || true
-    rm -f "$HOME/.config/systemd/user/whisper-desk.service"
+    rm -f "$HOME/.config/systemd/user/whisper-desk.service" \
+        "$HOME/.config/systemd/user/whisper-desk-update.service" \
+        "$HOME/.config/systemd/user/whisper-desk-update.timer"
     systemctl --user daemon-reload || true
 fi
 
@@ -21,6 +26,12 @@ if command -v launchctl >/dev/null 2>&1 && [ -f "$AGENT" ]; then
     launchctl bootout "gui/$(id -u)/$AGENT_LABEL" >/dev/null 2>&1 \
         || launchctl unload -w "$AGENT" >/dev/null 2>&1 || true
     rm -f "$AGENT"
+fi
+
+if command -v launchctl >/dev/null 2>&1 && [ -f "$UPDATE_AGENT" ]; then
+    launchctl bootout "gui/$(id -u)/$UPDATE_LABEL" >/dev/null 2>&1 \
+        || launchctl unload -w "$UPDATE_AGENT" >/dev/null 2>&1 || true
+    rm -f "$UPDATE_AGENT"
 fi
 
 if [ -x "$HOME/.local/bin/whisper-desk" ]; then

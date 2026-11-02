@@ -34,6 +34,7 @@ APPLICATIONS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 AUTOSTART_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/autostart"
 AGENT_DIR="$HOME/Library/LaunchAgents"
 AGENT_LABEL="fr.whisperdesk.daemon"
+UPDATE_LABEL="fr.whisperdesk.update"
 
 BOLD=""; DIM=""; GREEN=""; YELLOW=""; RESET=""
 if [ -t 1 ]; then
@@ -317,6 +318,17 @@ if [ "${WD_NO_SERVICE:-0}" != "1" ]; then
         else
             warn "cannot load the agent — the daemon will start on demand"
         fi
+        # The daily check; what it does is up to [update] in config.toml.
+        UPDATE_AGENT="$AGENT_DIR/$UPDATE_LABEL.plist"
+        sed -e "s|@BIN@|$BIN|g" -e "s|@LOG@|$STATE_DIR/update.log|g" \
+            "$APP_DIR/launchd/$UPDATE_LABEL.plist.in" > "$UPDATE_AGENT"
+        launchctl bootout "gui/$(id -u)/$UPDATE_LABEL" >/dev/null 2>&1 || true
+        if launchctl bootstrap "gui/$(id -u)" "$UPDATE_AGENT" >/dev/null 2>&1 \
+            || launchctl load -w "$UPDATE_AGENT" >/dev/null 2>&1; then
+            ok "agent $UPDATE_LABEL loaded (checks for updates)"
+        else
+            warn "cannot load the update agent — run 'whisper-desk update' by hand"
+        fi
     elif have systemctl && [ -d /run/systemd/system ]; then
         say "Installing the service (started at login)"
         mkdir -p "$UNIT_DIR"
@@ -327,6 +339,16 @@ if [ "${WD_NO_SERVICE:-0}" != "1" ]; then
         systemctl --user restart whisper-desk.service >/dev/null 2>&1 || warn "startup deferred to the next session"
         ok "service whisper-desk.service enabled"
         SERVICE_INSTALLED=1
+        # The daily check; what it does is up to [update] in config.toml.
+        for unit in whisper-desk-update.service whisper-desk-update.timer; do
+            sed -e "s|@BIN@|$BIN|g" "$APP_DIR/systemd/$unit.in" > "$UNIT_DIR/$unit"
+        done
+        systemctl --user daemon-reload
+        # Not a restart: an update replays this script from the very service
+        # the timer starts.
+        systemctl --user enable --now whisper-desk-update.timer >/dev/null 2>&1 \
+            && ok "timer whisper-desk-update.timer enabled (checks for updates daily)" \
+            || warn "update timer not enabled — run 'whisper-desk update' by hand"
     else
         warn "neither systemd nor launchd — the daemon will be started on demand, on the first shortcut"
     fi

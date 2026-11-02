@@ -92,6 +92,13 @@ bars = 15                       # number of equalizer bars
 position = "bottom-center"      # bottom-center | top-center | center
 margin = 96                     # distance to the screen edge, in pixels
 
+[update]
+# A timer checks GitHub once a day (the only network request, and it carries
+# nothing of yours). Never during a dictation: it tries again later.
+#   install : installs the new version and says so in a notification
+#   notify  : only says that a new version is available
+#   off     : checks nothing (whisper-desk update still works by hand)
+auto_update = "install"
 
 [snippets]
 # A cue you say -> the text typed in its place, alone or inside a sentence.

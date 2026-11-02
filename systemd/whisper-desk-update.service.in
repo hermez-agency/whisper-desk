@@ -1,0 +1,13 @@
+[Unit]
+Description=whisper-desk — checks for a new version and installs it (see [update] in config.toml)
+Documentation=https://github.com/hermez-agency/whisper-desk
+
+[Service]
+Type=oneshot
+ExecStart=@BIN@ update --auto
+# A dictation under way ends the run with 75: the update is tried again, and
+# only then — an offline machine waits for tomorrow's round, a failed install.sh
+# is not replayed every half hour.
+Restart=on-failure
+RestartPreventExitStatus=1 2
+RestartSec=30min

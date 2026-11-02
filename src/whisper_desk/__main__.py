@@ -315,6 +315,74 @@ def _config_bytes() -> bytes | None:
         return None
 
 
+def _dictation_state() -> str:
+    """The daemon's state; restarting it under a dictation would cut someone off mid-sentence."""
+    from .client import DaemonUnavailable, send
+
+    try:
+        return str(send("status", timeout=10, autostart=False).get("state", "idle"))
+    except DaemonUnavailable:
+        return "idle"       # no daemon answering: no dictation to interrupt
+
+
+def _update_auto() -> int:
+    """What the daily timer runs: check, then install or only announce, as configured.
+
+    Silent unless there is something to say: a machine offline, up to date or
+    switched off exits 0 without a word, and the next round tries again.
+    """
+    from . import output, service, update
+
+    mode = update.auto_mode(config_module.load())
+    if mode == "off":
+        return 0
+    fingerprint = update.read_fingerprint()
+    # An installation made from a clone follows that clone, not GitHub.
+    if update.local_source(fingerprint) is not None:
+        return 0
+    local = update.commit(fingerprint)
+    reference = update.ref(fingerprint)
+    try:
+        latest = update.latest_commit(update.repo(fingerprint), reference)
+    except update.UpstreamUnreachable as error:
+        print(f"whisper-desk: update check skipped: {error}", file=sys.stderr)
+        return 0
+    if local == latest["commit"]:
+        return 0
+    target = update.short(latest["commit"])
+
+    if mode == "notify":
+        if not update.already_notified(latest["commit"]):
+            output.notify(
+                "whisper-desk: update available",
+                f"{reference} @ {target} — run 'whisper-desk update'",
+            )
+            update.remember_notified(latest["commit"])
+        return 0
+
+    state = _dictation_state()
+    if state != "idle":
+        print(f"whisper-desk: a dictation is under way ({state}) — update postponed")
+        return update.BUSY
+
+    print(f"Updating {update.short(local) or 'unknown version'} → {target}")
+    keep_hotkey = update.hotkey_installed()
+    try:
+        code = update.run_install(fingerprint, keep_hotkey)
+    except update.UpstreamUnreachable as error:
+        print(f"whisper-desk: update skipped: {error}", file=sys.stderr)
+        return 0
+    if code != 0:
+        return _print_error(
+            f"install.sh failed (exit code {code}) — the installation in place was left as is"
+        )
+    service.restart()
+    output.notify(
+        "whisper-desk: updated", f"now {update.describe(update.read_fingerprint())}"
+    )
+    return 0
+
+
 def cmd_update(args: argparse.Namespace) -> int:
     """Brings the installation up to date by replaying install.sh.
 
@@ -324,7 +392,9 @@ def cmd_update(args: argparse.Namespace) -> int:
     delete, and saying what changed.
     """
     from . import service, update
-    from .client import DaemonUnavailable, send
+
+    if args.auto:
+        return _update_auto()
 
     fingerprint = update.read_fingerprint()
     local = update.commit(fingerprint)
@@ -353,11 +423,7 @@ def cmd_update(args: argparse.Namespace) -> int:
         )
         return 1
 
-    # Restarting the daemon under a dictation would cut someone off mid-sentence.
-    try:
-        state = str(send("status", timeout=10, autostart=False).get("state", "idle"))
-    except DaemonUnavailable:
-        state = "idle"      # no daemon answering: no dictation to interrupt
+    state = _dictation_state()
     if state != "idle":
         return _print_error(
             f"a dictation is under way ({state}) — run the update once it is over"
@@ -737,6 +803,10 @@ def build_parser() -> argparse.ArgumentParser:
     update_parser.add_argument(
         "--check", action="store_true",
         help="only compares the versions: exit 0 up to date, 1 something new, 2 cannot tell",
+    )
+    update_parser.add_argument(
+        "--auto", action="store_true",
+        help="what the daily timer runs: follows [update] auto_update, silent when idle",
     )
     update_parser.set_defaults(func=cmd_update)
 
