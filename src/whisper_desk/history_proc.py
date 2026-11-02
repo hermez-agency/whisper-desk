@@ -1,7 +1,8 @@
 """Driving the history window (GTK3, system Python) from the command line.
 
 The window is a view: this side reads and rewrites the history, copies,
-asks the daemon to type a text again, and writes the purge setting.
+asks the daemon to type a text again, writes the purge setting, and adds
+the words a correction teaches to the vocabulary.
 """
 
 from __future__ import annotations
@@ -11,7 +12,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from . import config as config_module
-from . import history, hotkey, output, window_proc
+from . import history, hotkey, output, vocabulary, window_proc
 
 WINDOW_SCRIPT = Path(__file__).with_name("history_window.py")
 
@@ -78,6 +79,9 @@ class HistoryController:
             deleted = history.delete(entry)
             return self.snapshot("Dictation deleted" if deleted else
                                  "This dictation is no longer in the history")
+        if action == "correct":
+            return self._correct(entry, str(request.get("text", "")),
+                                 bool(request.get("learn", True)))
         if action == "insert":
             try:
                 reply = self.send("insert", timeout=10, text=entry.text)
@@ -92,8 +96,22 @@ class HistoryController:
             return None
         return None
 
+    def _correct(self, entry: history.Entry, text: str, learn: bool) -> dict[str, Any]:
+        text = text.strip()
+        if not text:
+            return self.snapshot("A dictation cannot be emptied — delete it instead")
+        if text == entry.text:
+            return self.snapshot("Nothing was changed")
+        if not history.correct(entry, text):
+            return self.snapshot("This dictation is no longer in the history")
+        added = vocabulary.learn(entry.text, text, self.config, config_module.update) if learn else []
+        if not added:
+            return self.snapshot("Dictation corrected")
+        self._reload_daemon()
+        return self.snapshot(f"Dictation corrected — added to the vocabulary: {', '.join(added)}")
+
     def _reload_daemon(self) -> None:
-        """The daemon purges as it writes: it must know the new limit."""
+        """The daemon keeps what it read: the purge limit, the vocabulary."""
         try:
             self.send("reload", timeout=10, autostart=False)
         except Exception:

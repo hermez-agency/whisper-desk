@@ -4,6 +4,38 @@
 
 ### Added
 
+- **A personal dictionary fed by your corrections** (Wispr Flow's dictionary, which learns
+  the words you correct): **Correct…** in the history window — or `whisper-desk history
+  --correct N "text"` — fixes the text of a dictation, and the words you corrected join
+  `vocabulary`, the names and jargon pushed into the decoder, so that they come out right
+  the next time. Correct *"le devis d'animal link"* into *"le devis d'Animalink"* once and
+  the next *Animalink* is written so. A name or a piece of jargon is learned — a capital a
+  sentence start does not explain, a digit, a sign (*Node.js*, *C++*, *faster-whisper*
+  where *faster whisper* was heard) —, as is a word of five letters or more heard as one
+  that sounds like it (*ripos* → *repos*); the elision and the possessive are left out
+  (*d'Animalink*, *Animalink's* teach *Animalink*). A grammar fix (*mange* → *mangent*,
+  *a* → *à*, *has* → *have*), a short word, a word Whisper left out and a change of mind
+  (*matin* → *après-midi*) teach nothing; a sentence reworded teaches only its names. The
+  window and the command say which words were added and the daemon is reloaded; a word
+  already in the vocabulary, in any case, is not added twice. Untick *Add the corrected
+  names and words to the vocabulary* (`--no-learn`) to fix the text alone; the words are
+  removed in **Settings** like the others. Local rules (`vocabulary.py`), nothing leaves
+  the machine.
+- `bench/dictionary/`: 46 corrections written (30 that should teach a word, 16 that
+  should not) and 22 names said in French and English, each once in a dictation corrected
+  as in the history, then in another sentence, with 8 control sentences:
+  - written corrections: 30/31 wanted words learned, none unwanted, 16/16 controls teach
+    nothing (*pool* → *pull* is missed: four letters, as short as *has* → *have*);
+  - faster-whisper `small` (CPU, int8): the name written right in the next sentence 5/22 →
+    14/22, word error rate 18.1 % → 9.4 %; controls 3.4 % → 5.2 % (*œufs* written
+    *oeufs*);
+  - faster-whisper `large-v3-turbo` (CUDA, float16): 9/22 → 16/22, 15.2 % → 9.4 %;
+    controls 3.4 % → 3.4 %.
+  Of the names misheard in the first dictation, 19/19 (`small`) and 13/14
+  (`large-v3-turbo`) were learned from the correction; what remains is Whisper not
+  hearing the name even with it in the vocabulary (*Opoil* heard "au poil", *Hostinger*
+  "au Stinger"), and two ordinary words learned from a real correction (*tableau* for
+  "tabou", *lives* for "lies").
 - **Numbered lists said aloud** (Wispr Flow's lists): the items you number as you say
   them are written as a list, one per line — *"J'ai trois choses à acheter, un, des œufs,
   deux, du lait et trois, du pain"* is written "J'ai trois choses à acheter :" then "1. Des

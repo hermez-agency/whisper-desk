@@ -116,6 +116,23 @@ class EditTest(HistoryCase):
         self.assertFalse(history.delete(gone))
         self.assertEqual(len(history.load()), 2)
 
+    def test_correct(self):
+        self.assertTrue(history.correct(history.load()[1], "  three days ago, corrected "))
+        self.assertEqual([entry.text for entry in history.load()],
+                         ["a month ago", "three days ago, corrected", "today"])
+
+    def test_a_correction_keeps_the_date_and_cannot_empty(self):
+        entry = history.load()[2]
+        self.assertFalse(history.correct(entry, "  "))
+        history.correct(entry, "today, fixed")
+        self.assertEqual(history.load()[2].date, entry.date)
+
+    def test_a_dictation_already_gone_is_not_corrected(self):
+        gone = history.load()[0]
+        history.purge(30, now=NOW)
+        self.assertFalse(history.correct(gone, "a month ago, fixed"))
+        self.assertNotIn("fixed", history.path().read_text(encoding="utf-8"))
+
     def test_clear(self):
         self.assertEqual(history.clear(), 3)
         self.assertEqual(history.load(), [])
@@ -226,6 +243,27 @@ class CommandTest(HistoryCase):
     def test_delete(self):
         self.run_cli("--delete", "1")
         self.assertEqual([entry.text for entry in history.load()], ["We should add pictures"])
+
+    def test_correct_teaches_the_vocabulary(self):
+        with mock.patch("whisper_desk.client.send") as send:
+            code, out = self.run_cli("--correct", "2", "We should add Pyxis pictures")
+        self.assertEqual(code, 0)
+        self.assertEqual(history.load()[0].text, "We should add Pyxis pictures")
+        self.assertIn("Added to the vocabulary: Pyxis", out)
+        self.assertEqual(config_module.load(self.config_path)["model"]["vocabulary"], "Pyxis")
+        send.assert_called_once_with("reload", timeout=10, autostart=False)
+
+    def test_correct_without_learning(self):
+        with mock.patch("whisper_desk.client.send") as send:
+            self.run_cli("--correct", "1", "Résumé de la réunion Animalink", "--no-learn")
+        self.assertEqual(history.load()[1].text, "Résumé de la réunion Animalink")
+        self.assertEqual(config_module.load(self.config_path)["model"]["vocabulary"], "")
+        send.assert_not_called()
+
+    def test_correct_wants_a_number(self):
+        code, out = self.run_cli("--correct", "last", "text")
+        self.assertEqual(code, 1)
+        self.assertIn("number", out)
 
     def test_keep_days_is_written_to_the_configuration(self):
         self.run_cli("--keep-days", "30")

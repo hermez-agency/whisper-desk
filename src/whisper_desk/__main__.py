@@ -140,8 +140,28 @@ def _history_line(number: int, entry, width: int | None) -> str:
     return head + text
 
 
+def _correct(entry, text: str, config: dict, learn: bool) -> int:
+    """Rewrites a dictation and teaches the vocabulary the words corrected."""
+    from . import history, vocabulary
+    from .client import send
+
+    if not text.strip():
+        return _print_error("a dictation cannot be emptied — use --delete")
+    if not history.correct(entry, text):
+        return _print_error("that dictation is no longer in the history")
+    print(f"Corrected: {text.strip()}")
+    added = vocabulary.learn(entry.text, text, config, config_module.update) if learn else []
+    if added:
+        print(f"Added to the vocabulary: {', '.join(added)}")
+        try:
+            send("reload", timeout=10, autostart=False)
+        except Exception:
+            pass  # not running: it will read the vocabulary when it starts
+    return 0
+
+
 def cmd_history(args: argparse.Namespace) -> int:
-    """Past dictations: list, search, copy, delete — or the window that does it all."""
+    """Past dictations: list, search, copy, correct, delete — or the window that does it all."""
     from . import history, output
 
     config = config_module.load()
@@ -171,7 +191,13 @@ def cmd_history(args: argparse.Namespace) -> int:
         return 0
 
     entries = history.load()
-    for number in (args.copy, args.delete):
+    corrected = args.correct[0] if args.correct else None
+    if corrected is not None:
+        try:
+            corrected = int(corrected)
+        except ValueError:
+            return _print_error(f"--correct takes the number of a dictation, not {corrected!r}")
+    for number in (args.copy, args.delete, corrected):
         if number is not None and not 1 <= number <= len(entries):
             return _print_error(f"no dictation number {number} — there are {len(entries)}")
     if args.copy is not None:
@@ -180,6 +206,9 @@ def cmd_history(args: argparse.Namespace) -> int:
             return _print_error("no clipboard tool answered — see 'whisper-desk doctor'")
         print(f"Copied: {entry.text}")
         return 0
+    if corrected is not None:
+        return _correct(entries[history.index_of(corrected, entries)], args.correct[1],
+                        config, learn=args.learn)
     if args.delete is not None:
         entry = entries[history.index_of(args.delete, entries)]
         if not history.delete(entry):
@@ -713,7 +742,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     history_parser = sub.add_parser(
         "history",
-        help="past dictations: list, search, copy, delete",
+        help="past dictations: list, search, copy, correct, delete",
         description="Past dictations, numbered from 1 (the latest).",
     )
     history_parser.add_argument("query", nargs="*", help="words to look for (case and accents ignored)")
@@ -721,6 +750,14 @@ def build_parser() -> argparse.ArgumentParser:
         "-n", "--limit", type=int, default=20, help="how many to show (0: all; default 20)"
     )
     history_parser.add_argument("--copy", type=int, metavar="N", help="copies dictation N")
+    history_parser.add_argument(
+        "--correct", nargs=2, metavar=("N", "TEXT"),
+        help="replaces the text of dictation N; the names and words corrected join the vocabulary",
+    )
+    history_parser.add_argument(
+        "--no-learn", dest="learn", action="store_false",
+        help="with --correct: leaves the vocabulary as it is",
+    )
     history_parser.add_argument("--delete", type=int, metavar="N", help="deletes dictation N")
     history_parser.add_argument("--clear", action="store_true", help="deletes every dictation")
     history_parser.add_argument(

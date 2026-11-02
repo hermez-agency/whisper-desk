@@ -1,0 +1,31 @@
+id	lang	term	first	next
+fr01	fr	Animalink	J'ai envoyé le devis d'Animalink ce matin.	Le site d'Animalink sera en ligne vendredi.
+fr02	fr	Hermez	Hermez prépare une nouvelle offre.	On présente Hermez au client jeudi.
+fr03	fr	Dokploy	Le serveur tourne sous Dokploy.	Redémarre le conteneur dans Dokploy.
+fr04	fr	Kubernetes	Nous migrons le cluster vers Kubernetes.	La facture Kubernetes a doublé ce mois-ci.
+fr05	fr	Ponos	Ponos a ouvert la demande de fusion.	Demande à Ponos de relancer les tests.
+fr06	fr	Umami	Les statistiques sont dans Umami.	Ajoute le script Umami sur la page d'accueil.
+fr07	fr	Ollama	Le modèle tourne en local avec Ollama.	Installe Ollama sur le portable.
+fr08	fr	Supabase	La base de données est sur Supabase.	Exporte les utilisateurs depuis Supabase.
+fr09	fr	Leadz	Leadz a trouvé trente nouveaux contacts.	Branche Leadz sur le tableur commercial.
+fr10	fr	Grafana	Le tableau de bord Grafana est rouge.	Partage le lien Grafana avec l'équipe.
+fr11	fr	Opoil	La boutique Opoil ouvre lundi.	Les commandes Opoil arrivent par courriel.
+fr12	fr	Hostinger	Le domaine est chez Hostinger.	Renouvelle l'hébergement Hostinger avant la fin du mois.
+en01	en	Kubernetes	We are moving the cluster to Kubernetes.	The Kubernetes bill doubled this month.
+en02	en	Animalink	I sent the Animalink quote this morning.	The Animalink website goes live on Friday.
+en03	en	Dokploy	The server runs on Dokploy.	Restart the container in Dokploy.
+en04	en	Supabase	The database lives on Supabase.	Export the users from Supabase.
+en05	en	Grafana	The Grafana dashboard is red.	Share the Grafana link with the team.
+en06	en	Hermez	Hermez is working on a new offer.	We present Hermez to the client on Thursday.
+en07	en	Ollama	The model runs locally with Ollama.	Install Ollama on the laptop.
+en08	en	Ponos	Ponos opened the pull request.	Ask Ponos to run the tests again.
+en09	en	pgvector	We store the embeddings with pgvector.	Upgrade pgvector before the migration.
+en10	en	Leadz	Leadz found thirty new contacts.	Connect Leadz to the sales spreadsheet.
+c01	fr			Je passe à la banque avant midi.
+c02	fr			Le rendez-vous est déplacé à mardi prochain.
+c03	fr			Pense à acheter du pain et des œufs.
+c04	fr			Le client a validé la maquette hier soir.
+c05	en			I will call you back after lunch.
+c06	en			The meeting moved to next Tuesday.
+c07	en			Please send me the slides before noon.
+c08	en			The client approved the mockup last night.

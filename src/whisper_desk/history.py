@@ -161,6 +161,21 @@ def delete(entry: Entry) -> bool:
     return False
 
 
+def correct(entry: Entry, text: str) -> bool:
+    """Gives this dictation the text it should have had, found again as delete() does."""
+    text = text.strip()
+    if not text:
+        return False
+    with _locked():
+        entries = load()
+        for candidate in entries:
+            if candidate.date == entry.date and candidate.text == entry.text:
+                candidate.text = text
+                save(entries)
+                return True
+    return False
+
+
 def clear() -> int:
     with _locked():
         entries = load()

@@ -1,4 +1,4 @@
-"""The history window's requests: copy, insert again, delete, purge."""
+"""The history window's requests: copy, insert again, correct, delete, purge."""
 
 from __future__ import annotations
 
@@ -74,6 +74,37 @@ class ControllerTest(HistoryCase):
         reply = self.controller.handle({"action": "delete", "id": 0, "date": "1999-01-01T00:00:00"})
         self.assertEqual(len(history.load()), 2)
         self.assertIn("no longer", reply["status"])
+
+    def test_correct_rewrites_learns_and_reloads(self):
+        request = self.request("correct", 1)
+        request["text"] = "the one that got lost in Kubernetes"
+        reply = self.controller.handle(request)
+        self.assertEqual(reply["entries"][1]["text"], "the one that got lost in Kubernetes")
+        self.assertEqual(reply["status"], "Dictation corrected — added to the vocabulary: Kubernetes")
+        self.assertEqual(config_module.load(self.config_path)["model"]["vocabulary"], "Kubernetes")
+        self.assertEqual(self.config["model"]["vocabulary"], "Kubernetes")
+        self.assertIn(("reload", {"timeout": 10, "autostart": False}), self.sent)
+
+    def test_a_correction_that_teaches_nothing_leaves_the_daemon_alone(self):
+        request = self.request("correct", 1)
+        request["text"] = "the ones that got lost"
+        reply = self.controller.handle(request)
+        self.assertEqual(reply["status"], "Dictation corrected")
+        self.assertEqual(self.sent, [])
+
+    def test_a_correction_may_leave_the_vocabulary_out(self):
+        request = self.request("correct", 1)
+        request.update(text="the one that got lost in Kubernetes", learn=False)
+        self.controller.handle(request)
+        self.assertEqual(self.config["model"]["vocabulary"], "")
+        self.assertFalse(self.config_path.exists())
+
+    def test_a_dictation_cannot_be_emptied(self):
+        request = self.request("correct", 1)
+        request["text"] = "   "
+        reply = self.controller.handle(request)
+        self.assertIn("delete it instead", reply["status"])
+        self.assertEqual(history.load()[1].text, "the one that got lost")
 
     def test_keep_days_purges_writes_and_reloads(self):
         reply = self.controller.handle({"action": "keep_days", "days": 30})

@@ -895,9 +895,15 @@
       <code>~/.local/state/whisper-desk/history.jsonl</code>. A text lost on the way can be found
       again, copied or typed again at the cursor. The <code>history.log</code> of earlier versions is still read.
     </p>
+    <p>
+      <b>Correct…</b> fixes what Whisper got wrong, and the names and words you corrected join the
+      vocabulary: correct <i>“animal link”</i> into <i>“Animalink”</i> once, and the next time it is
+      written right. A grammar fix teaches nothing; the words learned are shown, and stay on your machine.
+    </p>
     <pre data-copy><span class="p">$ </span>whisper-desk history                  <span class="c"># the 20 latest, numbered from 1 (the latest)</span>
 <span class="p">$ </span>whisper-desk history invoice friday   <span class="c"># search: every word, case and accents ignored</span>
 <span class="p">$ </span>whisper-desk history --copy 3         <span class="c"># copies dictation 3 to the clipboard</span>
+<span class="p">$ </span>whisper-desk history --correct 3 "…"  <span class="c"># fixes its text, the words corrected join the vocabulary</span>
 <span class="p">$ </span>whisper-desk history --delete 3       <span class="c"># deletes it</span>
 <span class="p">$ </span>whisper-desk history --keep-days 30   <span class="c"># deletes dictations older than 30 days, from now on</span>
 <span class="p">$ </span>whisper-desk history --window         <span class="c"># the history window</span>
@@ -908,7 +914,7 @@
           <source srcset="history-window.webp" type="image/webp">
           <img src="history-window.png" alt="The whisper-desk history window: search, copy, insert again, delete" width="680" height="649" loading="lazy">
         </picture>
-        <span>Search, <b>Copy</b>, <b>Insert</b> again where the cursor was, delete — and the automatic purge</span>
+        <span>Search, <b>Copy</b>, <b>Insert</b> again where the cursor was, <b>Correct…</b>, delete — and the automatic purge</span>
       </div>
     </div>
   </div>
@@ -1149,6 +1155,7 @@ margin = <span class="n">96</span>
           <tr><td><code>overlay.py</code></td><td>X11 overlay (separate process)</td></tr>
           <tr><td><code>overlay_protocol.py</code></td><td>the line protocol between the daemon and the overlay</td></tr>
           <tr><td><code>history.py</code></td><td>dictation history (JSON Lines), search, purge</td></tr>
+          <tr><td><code>vocabulary.py</code></td><td>the words a corrected dictation teaches the vocabulary</td></tr>
           <tr><td><code>history_window.py</code></td><td>history window (GTK3, separate process)</td></tr>
           <tr><td><code>tomlwrite.py</code></td><td>writing <code>config.toml</code> while keeping its comments</td></tr>
           <tr><td><code>settings_window.py</code></td><td>settings window (GTK3, separate process)</td></tr>

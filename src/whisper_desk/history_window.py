@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""History window: find a past dictation, copy it, insert it again, delete it.
+"""History window: find a past dictation, copy it, insert it again, correct it, delete it.
 
 Like the overlay, a view launched with the system Python (the one with
 PyGObject) and nothing else: it knows neither the history file nor the
@@ -9,6 +9,7 @@ stdout, one JSON object per line:
     stdin   {"entries": [{"id", "date", "duration", "model", "text"}, ...],
              "keep_days": 30, "hint": "Super+J", "status": "Copied"}
     stdout  {"action": "copy" | "insert" | "delete", "id": 3, "date": "..."}
+            {"action": "correct", "id": 3, "date": "...", "text": "...", "learn": true}
             {"action": "keep_days", "days": 30}
 """
 
@@ -117,11 +118,14 @@ class Row(Gtk.ListBoxRow):
         insert = Gtk.Button(label="Insert")
         insert.set_tooltip_text("Type it again where the cursor was")
         insert.connect("clicked", lambda _button: window.insert(entry))
+        correct = Gtk.Button(label="Correct…")
+        correct.set_tooltip_text("Fix the text — the words corrected join the vocabulary")
+        correct.connect("clicked", lambda _button: window.correct(entry))
         self.delete = Gtk.Button.new_from_icon_name("user-trash-symbolic", Gtk.IconSize.BUTTON)
         self.delete.set_tooltip_text("Delete this dictation")
         self.delete.connect("clicked", self._on_delete)
         self.confirming = False
-        for button in (copy, insert, self.delete):
+        for button in (copy, insert, correct, self.delete):
             buttons.pack_start(button, False, False, 0)
         self.window = window
 
@@ -279,6 +283,42 @@ class HistoryWindow(Gtk.Window):
     # -- what the user asks ------------------------------------------------
     def act(self, action: str, entry: dict) -> None:
         send({"action": action, "id": entry["id"], "date": entry["date"]})
+
+    def correct(self, entry: dict) -> None:
+        dialog = Gtk.Dialog(title="Correct the dictation", transient_for=self, modal=True)
+        dialog.add_buttons("Cancel", Gtk.ResponseType.CANCEL, "Save", Gtk.ResponseType.OK)
+        dialog.set_default_response(Gtk.ResponseType.OK)
+        dialog.set_default_size(520, 260)
+        area = dialog.get_content_area()
+        area.set_spacing(8)
+        area.set_border_width(12)
+
+        scroller = Gtk.ScrolledWindow()
+        scroller.set_shadow_type(Gtk.ShadowType.IN)
+        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        text = Gtk.TextView()
+        text.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        text.set_left_margin(6)
+        text.set_right_margin(6)
+        text.get_buffer().set_text(entry["text"])
+        scroller.add(text)
+        area.pack_start(scroller, True, True, 0)
+        learn = Gtk.CheckButton(label="Add the corrected names and words to the vocabulary")
+        learn.set_tooltip_text("Whisper hears them right next time — "
+                               "they can be removed in the settings")
+        learn.set_active(True)
+        area.pack_start(learn, False, False, 0)
+
+        dialog.show_all()
+        text.grab_focus()
+        response = dialog.run()
+        buffer = text.get_buffer()
+        corrected = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+        learning = learn.get_active()
+        dialog.destroy()
+        if response == Gtk.ResponseType.OK:
+            send({"action": "correct", "id": entry["id"], "date": entry["date"],
+                  "text": corrected, "learn": learning})
 
     def insert(self, entry: dict) -> None:
         """The window gets out of the way, so the text lands where the cursor was."""
