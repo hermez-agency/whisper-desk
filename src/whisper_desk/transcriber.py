@@ -21,6 +21,18 @@ CPU_MODEL = "small"
 CONTEXT_CHARS = 220
 # Above this, the model itself judges that it heard nothing spoken.
 NO_SPEECH_LIMIT = 0.6
+# A dictation said under the breath reaches the model some 25 dB under an
+# ordinary voice: raised to the level of one first, Whisper and its voice
+# detector hear the whisper better (bench/whisper/). Full scale is 1.
+VOICE_LEVEL = 0.05
+# Beyond +30 dB, it is the noise of the room being raised, not a voice.
+MAX_GAIN = 30.0
+# The loudest sample is kept below clipping.
+PEAK_CEILING = 0.9
+# The level is measured over 100 ms, and the voice taken as the loud tenth
+# of them: the pauses between words must not pass for a quiet voice.
+LEVEL_SAMPLES = 1600
+VOICE_PERCENTILE = 0.9
 # Whisper learned on subtitles: when it hears nothing, it spits their credits
 # back out. The sentence alone is not damning — "thank you" does get dictated —
 # but paired with a high no_speech_prob, it is filler. The list stays in the
@@ -136,6 +148,21 @@ def is_filler(text: str, no_speech_prob: float) -> bool:
     return no_speech_prob >= NO_SPEECH_LIMIT and normalised in FILLERS
 
 
+def voice_gain(levels: list[float], peak: float) -> float:
+    """Gain that brings a dictation said quietly up to an ordinary voice.
+
+    `levels` are the RMS of the successive 100 ms of the audio, `peak` its
+    loudest sample, on a full scale of 1. A voice already loud enough is left
+    as it is: the gain only ever raises.
+    """
+    if not levels or peak <= 0.0:
+        return 1.0
+    voice = sorted(levels)[int(VOICE_PERCENTILE * (len(levels) - 1))]
+    if voice <= 0.0:
+        return 1.0
+    return max(1.0, min(VOICE_LEVEL / voice, MAX_GAIN, PEAK_CEILING / peak))
+
+
 def has_nvidia_gpu() -> bool:
     if not shutil.which("nvidia-smi"):
         return False
@@ -243,6 +270,12 @@ class Transcriber:
         import numpy as np
 
         audio = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+        usable = len(audio) - len(audio) % LEVEL_SAMPLES
+        levels = np.sqrt(np.mean(np.square(audio[:usable].reshape(-1, LEVEL_SAMPLES)), axis=1))
+        gain = voice_gain(levels.tolist(), float(np.max(np.abs(audio))))
+        if gain > 1.0:
+            logger.debug("Quiet voice raised by %.1f dB.", 20 * np.log10(gain))
+            audio = audio * gain
         language = self.config["language"]
         segments, _info = self._model.transcribe(
             audio,

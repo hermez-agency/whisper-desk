@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import array
 import contextlib
+import itertools
 import math
+import types
 import unittest
 from unittest import mock
 
@@ -199,6 +201,46 @@ class RecordTest(unittest.TestCase):
     def test_the_peak_tells_a_mute_microphone_from_silence(self):
         instance, _, _ = self.run_recorder([constant(400)] * 20, stop_at_end=True)
         self.assertGreater(instance.peak, recorder.SILENT_INPUT_PEAK)
+
+    def test_a_voice_said_under_the_breath_is_heard(self):
+        """Some 25 dB under an ordinary voice, in a quiet room."""
+        room = [constant(12)] * recorder.NOISE_CHUNKS
+        instance, tail, segments = self.run_recorder(
+            room + [tone(150)] * 10, stop_at_end=True, threshold="auto"
+        )
+        self.assertEqual(len(tail), (recorder.NOISE_CHUNKS + 10) * CHUNK_BYTES)
+
+    def test_the_steady_noise_of_the_room_is_not_taken_for_a_voice(self):
+        instance, tail, segments = self.run_recorder(
+            [tone(60)] * 20, stop_at_end=True, threshold="auto"
+        )
+        self.assertEqual(tail, b"")
+        self.assertEqual(segments, [])
+
+    def run_in_time(self, chunks: list[bytes]):
+        """Plays the frames back at their own pace, 100 ms each."""
+        ticks = itertools.count(1)
+        clock = types.SimpleNamespace(monotonic=lambda: next(ticks) / 10)
+        with mock.patch.object(recorder, "time", clock):
+            return self.run_recorder(chunks, stop_at_end=True, segment_silence_seconds=0.6)
+
+    def test_the_soft_syllables_of_a_low_voice_hold_the_sentence_open(self):
+        """Under the threshold (300) but above its hold: still the same sentence."""
+        soft = tone(350)                                    # RMS ~247
+        _, tail, segments = self.run_in_time([tone(9000)] * 5 + [soft] * 10 + [tone(9000)] * 5)
+        self.assertEqual(segments, [])
+        self.assertEqual(len(tail), 20 * CHUNK_BYTES)
+
+    def test_a_pause_still_ends_the_sentence(self):
+        _, _, segments = self.run_in_time(
+            [tone(9000)] * 5 + [constant(20)] * 10 + [tone(9000)] * 5
+        )
+        self.assertEqual(len(segments), 1)
+
+    def test_a_voice_in_the_hold_does_not_open_a_sentence(self):
+        _, tail, segments = self.run_in_time([tone(350)] * 20)
+        self.assertEqual(tail, b"")
+        self.assertEqual(segments, [])
 
     def listen(self, bands: int):
         """Records twelve frames of voice and returns what the overlay saw."""

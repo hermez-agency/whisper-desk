@@ -383,6 +383,17 @@ pause comes before the second item, the first one is a sentence later at the cur
 Rules run on your machine; `lists = false` in `[model]` keeps the words. `bench/lists/`
 measures them on recordings (see Development).
 
+### Dictating under your breath
+
+In an open space, next to someone asleep, on a call: speak low, or whisper, close to the
+microphone, and the dictation goes on as usual. Nothing to switch on. Listening opens on a
+voice some 25 dB under an ordinary one — the automatic threshold stops at an RMS of 60
+instead of 180, and stays 11 dB over the noise the room makes in the first 400 ms —, the
+soft syllables of a low voice no longer pass for the pause that ends a sentence, and a
+sentence said low is raised to the level of an ordinary voice before Whisper hears it.
+A voice already loud enough reaches the model untouched. `bench/whisper/` measures it on
+recordings (see Development).
+
 ### Snippets: say a cue, get the text you keep retyping
 
 Save the texts you type over and over — an address, a calendar link, a signature — under
@@ -699,8 +710,13 @@ measured peak:
 journalctl --user -u whisper-desk | grep "peak"
 ```
 
-**My voice is not loud enough** — raise the source gain (`wpctl set-volume <id> 1.0`),
-or set the threshold by hand with `threshold = 400` (instead of `"auto"`) in `[recording]`.
+**My voice is not loud enough** — the automatic threshold already hears a whisper close
+to the microphone; further away, raise the source gain (`wpctl set-volume <id> 1.0`).
+
+**Noises around me open a sentence** — a door, a keyboard, a voice in the next room now
+reach the threshold of a low voice. Set the threshold by hand in `[recording]`:
+`threshold = 180` hears about as whisper-desk did before it heard a whisper, `threshold = 400`
+only a voice raised.
 
 **WSL: no sound arrives** — WSLg provides audio through PulseAudio; install
 `pulseaudio-utils` (for `parec`), check that the microphone is allowed on the Windows side
@@ -886,6 +902,21 @@ that the grown vocabulary mars nothing else. On CUDA, the venv's NVIDIA librarie
 ```sh
 python3 bench/dictionary/measure.py -v
 ~/.local/share/whisper-desk/venv/bin/python bench/dictionary/measure.py --audio -v
+```
+
+`bench/whisper/` measures a dictation said low or whispered, from the microphone to the
+text. Its 84 sentences are the control recordings of the other benches, played at an
+ordinary level, 24 dB lower, and whispered — the voice's spectral envelope over a noise, as
+a whisper is made — at that same low level, over the steady noise of a quiet room. Each
+goes through the `Recorder` as from the microphone, then through the `Transcriber`
+sentence by sentence, as the daemon does; "before" is the former threshold floor, without
+hold or gain. It also checks that two sentences said 1 s apart stay two and end the
+dictation, in a steady room and in one whose noise swells and ebbs, and that room noise
+alone is never heard. It needs numpy, so whisper-desk's own Python:
+
+```sh
+~/.local/share/whisper-desk/venv/bin/python bench/whisper/measure.py              # the recorder
+~/.local/share/whisper-desk/venv/bin/python bench/whisper/measure.py --audio -v   # + faster-whisper
 ```
 
 ## License

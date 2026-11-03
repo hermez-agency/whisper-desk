@@ -12,7 +12,15 @@ from unittest import mock
 from . import context  # noqa: F401  (adds src/ to the import path)
 
 from whisper_desk import transcriber
-from whisper_desk.transcriber import CONTEXT_CHARS, Transcriber, is_filler
+from whisper_desk.transcriber import (
+    CONTEXT_CHARS,
+    MAX_GAIN,
+    PEAK_CEILING,
+    VOICE_LEVEL,
+    Transcriber,
+    is_filler,
+    voice_gain,
+)
 
 try:
     import numpy
@@ -72,6 +80,36 @@ class FillerTest(unittest.TestCase):
 
     def test_a_real_sentence_stays_even_on_a_high_no_speech(self):
         self.assertFalse(is_filler("we should add some pictures of blocks", 0.99))
+
+
+class VoiceGainTest(unittest.TestCase):
+    """A dictation said under the breath reaches the model at an ordinary level."""
+
+    def test_an_ordinary_voice_is_left_as_it_is(self):
+        self.assertEqual(voice_gain([0.08] * 20, 0.5), 1.0)
+
+    def test_a_loud_voice_is_never_lowered(self):
+        self.assertEqual(voice_gain([0.3] * 20, 0.95), 1.0)
+
+    def test_a_low_voice_is_raised_to_an_ordinary_one(self):
+        gain = voice_gain([0.005] * 20, 0.02)
+        self.assertAlmostEqual(0.005 * gain, VOICE_LEVEL)
+
+    def test_the_pauses_between_words_do_not_pass_for_a_quiet_voice(self):
+        """Mostly silence, a few loud words: the voice is the loud part."""
+        self.assertEqual(voice_gain([0.0005] * 15 + [0.08] * 5, 0.5), 1.0)
+
+    def test_the_noise_of_the_room_is_not_raised_beyond_reason(self):
+        self.assertEqual(voice_gain([0.0002] * 20, 0.001), MAX_GAIN)
+
+    def test_the_loudest_sample_is_not_clipped(self):
+        """A quiet voice with a click in it: the click sets the limit."""
+        gain = voice_gain([0.005] * 20, 0.3)
+        self.assertAlmostEqual(0.3 * gain, PEAK_CEILING)
+
+    def test_nothing_to_measure_changes_nothing(self):
+        self.assertEqual(voice_gain([], 0.0), 1.0)
+        self.assertEqual(voice_gain([0.0] * 20, 0.0), 1.0)
 
 
 class PromptTest(unittest.TestCase):
@@ -168,6 +206,26 @@ class TranscribeTest(unittest.TestCase):
     def test_the_names_said_in_a_style_can_be_kept_as_words(self):
         text, _ = self.transcribe([Segment("Renomme camel case user name.")], developer_syntax=False)
         self.assertEqual(text, "Renomme camel case user name.")
+
+    @requires_numpy
+    def test_a_whispered_dictation_reaches_the_model_raised(self):
+        quiet = numpy.full(16000, 100, dtype="<i2").tobytes()      # -50 dBFS
+        model = Transcriber(settings())
+        model._model = mock.Mock()
+        model._model.transcribe.return_value = (iter([Segment("text")]), None)
+        model.transcribe(quiet)
+        audio = model._model.transcribe.call_args.args[0]
+        self.assertAlmostEqual(float(numpy.max(numpy.abs(audio))), VOICE_LEVEL, places=4)
+
+    @requires_numpy
+    def test_an_ordinary_dictation_reaches_the_model_untouched(self):
+        ordinary = numpy.full(16000, 3000, dtype="<i2").tobytes()
+        model = Transcriber(settings())
+        model._model = mock.Mock()
+        model._model.transcribe.return_value = (iter([Segment("text")]), None)
+        model.transcribe(ordinary)
+        audio = model._model.transcribe.call_args.args[0]
+        self.assertAlmostEqual(float(numpy.max(audio)), 3000 / 32768, places=6)
 
     @requires_numpy
     def test_the_vocabulary_goes_out_as_hotwords(self):
