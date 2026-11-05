@@ -102,10 +102,6 @@ CSS_TEMPLATE = """
 .icon {{ color: {accent}; }}
 .icon.working, .icon.loading, .icon.cancelled, .icon.paused {{ color: rgba(255, 255, 255, 0.65); }}
 .icon.error {{ color: {error}; }}
-.halo {{
-    background-image: radial-gradient(circle, {accent} 0%, rgba(0, 0, 0, 0) 70%);
-    border-radius: 24px;
-}}
 .title {{
     color: #ffffff;
     font-weight: 600;
@@ -299,11 +295,6 @@ class Overlay(Gtk.Window):
         self.lead = lead = Gtk.Fixed()
         lead.set_size_request(BARS_LEFT, head_height)
         head.pack_start(lead, False, False, 0)
-        self.halo = Gtk.Box()
-        self.halo.get_style_context().add_class("halo")
-        self.halo.set_size_request(48, 48)
-        self.halo.set_opacity(0.0)
-        lead.put(self.halo, 10, head_height // 2 - 24)
         self.icon = Gtk.Image.new_from_icon_name(ICONS["listening"], Gtk.IconSize.DND)
         self.icon.set_pixel_size(MIC_SIZE)
         self.icon.get_style_context().add_class("icon")
@@ -453,7 +444,6 @@ class Overlay(Gtk.Window):
             else:
                 bar_context.remove_class("working")
         if working or final:
-            self.halo.set_opacity(0.0)
             # Nobody feeds the levels any more: start from zero, otherwise
             # going back to listening would replay the last syllable heard.
             self.level = 0.0
@@ -476,7 +466,6 @@ class Overlay(Gtk.Window):
         self.head.set_halign(Gtk.Align.FILL if final else Gtk.Align.CENTER)
         self.head.set_size_request(-1, height)
         self.lead.set_size_request(BARS_LEFT, height)
-        self.lead.move(self.halo, 10, height // 2 - 24)
         self.lead.move(self.icon, 34 - MIC_SIZE // 2, height // 2 - MIC_SIZE // 2)
         self.caption.set_visible(not final)
 
@@ -609,7 +598,6 @@ class Overlay(Gtk.Window):
         listening = self.state == "listening"
         if listening:
             breathe = 0.5 + 0.5 * math.sin(self.elapsed * 3.5)
-            self.halo.set_opacity(0.10 + 0.22 * self.smoothed + 0.05 * breathe)
             self.icon.set_opacity(0.85 + 0.15 * breathe)
         else:
             self.icon.set_opacity(0.7)

@@ -27,7 +27,7 @@ from gi.repository import GLib, Gtk  # noqa: E402
 
 ACCENT = "#e46212"
 CSS = f"""
-.headline {{ font-size: x-large; font-weight: bold; }}
+.headline {{ font-size: x-large; font-weight: 600; }}
 .lead {{ color: alpha(currentColor, 0.75); }}
 .hint {{ color: alpha(currentColor, 0.60); font-size: small; }}
 .keycap {{
