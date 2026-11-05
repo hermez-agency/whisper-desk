@@ -27,7 +27,7 @@ gi.require_version("Pango", "1.0")
 from gi.repository import Gdk, GLib, Gtk, Pango  # noqa: E402
 
 CSS = """
-.section { font-weight: bold; margin-top: 18px; }
+.section { font-weight: 600; margin-top: 18px; }
 .section.first { margin-top: 0; }
 .hint { color: alpha(currentColor, 0.60); font-size: small; }
 .keycap {
