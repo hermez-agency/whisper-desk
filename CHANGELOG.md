@@ -4,6 +4,34 @@
 
 ### Added
 
+- **Dictating under your breath** (Wispr Flow's "works when you're whispering"): speak low
+  or whisper close to the microphone, in an open space or next to someone asleep, and the
+  dictation goes on as usual — nothing to switch on. Three changes, all local:
+  - the automatic threshold stops at an RMS of 60 instead of 180 (`MIN_THRESHOLD`), so a
+    voice some 25 dB under an ordinary one opens the listening; the noise of the room
+    still raises it through the calibration of the first 400 ms;
+  - once a sentence has begun, a voice down to 60 % of the threshold holds it open: the
+    soft syllables of a low voice no longer pass for the pause that ends a sentence;
+  - a sentence said low is raised to the level of an ordinary voice (at most +30 dB,
+    never into clipping) before faster-whisper and its voice detector hear it; a voice
+    already loud enough reaches the model untouched.
+  Noises that now reach a low voice's threshold (a door, a keyboard) can be kept out with
+  `threshold = 180` in `[recording]`, which hears about as before.
+- `bench/whisper/`: the 84 control recordings of the other benches, French and English,
+  played at an ordinary level, 24 dB lower and whispered (the voice's envelope over a
+  noise) at that low level, over the noise of a quiet room, through the `Recorder` and
+  then the `Transcriber` as the daemon does:
+  - sentences heard whole by the recorder: low 3/84 → 81/84 (81 missed before),
+    whispered 5/84 → 83/84, ordinary 83/84 → 84/84;
+  - faster-whisper `large-v3-turbo` (CUDA, float16), word error rate: low 97.6 % →
+    4.3 % (0/84 → 70/84 exact), whispered 97.2 % → 6.2 % (0 → 61/84), ordinary 3.6 % →
+    3.6 %;
+  - faster-whisper `small` (CPU, int8): low 97.5 % → 7.7 % (0 → 59/84), whispered
+    97.6 % → 13.1 % (0 → 53/84), ordinary 6.0 % → 6.5 % (69 → 67/84 exact);
+  - two sentences said 1 s apart: still split at the pause and ended by the silence
+    (ordinary 42/42 before and after, steady room or noise swelling by 10 dB; low 0/42 →
+    40/42), and 40 recordings of room noise alone, steady or fluctuating, heard 0/40
+    before and after, no text written.
 - **Automatic updates**: a user timer (systemd `whisper-desk-update.timer`, launchd
   `fr.whisperdesk.update` on macOS) runs the new `whisper-desk update --auto` once a day —
   `Persistent=true` and a random delay of up to an hour —, installed by `install.sh` and

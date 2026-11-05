@@ -1,0 +1,85 @@
+id	lang	source	text
+s01	fr	backtrack/ctl01	Je préfère plutôt le thé que le café.
+s02	fr	backtrack/ctl02	Non, je ne viendrai pas demain.
+s03	fr	backtrack/ctl03	Je veux dire à Paul qu'il a fait du bon travail.
+s04	fr	backtrack/ctl04	Pardon, je n'avais pas vu ton message.
+s05	fr	backtrack/ctl05	C'est plutôt une bonne nouvelle pour l'équipe.
+s06	fr	backtrack/ctl06	Il a dit non, et il est parti.
+s07	fr	backtrack/ctl07	La réunion de lundi est déplacée à mardi.
+s08	fr	backtrack/ctl08	Ce n'est pas rouge, c'est bleu.
+s09	en	backtrack/ctl09	I actually think this is a good idea.
+s10	en	backtrack/ctl10	No, I don't want to go there.
+s11	en	backtrack/ctl11	I mean what I say.
+s12	en	backtrack/ctl12	Sorry for the late reply.
+s13	en	backtrack/ctl13	It is actually faster than the old version.
+s14	en	backtrack/ctl14	The meeting moved from Monday to Tuesday.
+s15	fr	backtrack/ctl15	J'ai fini, enfin presque.
+s16	fr	backtrack/ctl16	Oui, non, je ne sais pas encore.
+s17	fr	casing/ctl01	J'ai rangé le serpent dans une case du vivarium
+s18	fr	casing/ctl02	On a mangé un kebab case départ pour tout le monde
+s19	fr	casing/ctl03	Le dromadaire et le chameau n'ont pas le même nombre de bosses
+s20	fr	casing/ctl04	Ce cas est constant depuis des années
+s21	fr	casing/ctl05	Le langage Pascal a beaucoup influencé les étudiants
+s22	fr	casing/ctl06	Toutes nos colonnes sont en snake case
+s23	en	casing/ctl07	The snake hid in a case under the bed
+s24	en	casing/ctl08	That is a constant case of bad luck
+s25	en	casing/ctl09	Blaise Pascal wrote about probability
+s26	en	casing/ctl10	The camel carried the case across the desert
+s27	en	casing/ctl11	We use camel case for variables and snake case for columns
+s28	en	casing/ctl12	The pascal case convention is common in C sharp
+s29	fr	hesitations/ctl01	Nous nous voyons demain matin.
+s30	fr	hesitations/ctl02	Vous vous trompez de salle.
+s31	fr	hesitations/ctl03	C'est très très bien fait.
+s32	fr	hesitations/ctl04	J'ai eu un appel du client.
+s33	fr	hesitations/ctl05	Ah, je vois ce que tu veux dire.
+s34	fr	hesitations/ctl06	Il parle souvent de De Gaulle.
+s35	fr	hesitations/ctl07	Oui oui, c'est noté.
+s36	fr	hesitations/ctl08	Ben arrive à la gare demain.
+s37	en	hesitations/ctl09	I think that that is the right answer.
+s38	en	hesitations/ctl10	He had had enough of the meetings.
+s39	en	hesitations/ctl11	Oh, I see what you mean.
+s40	en	hesitations/ctl12	Always err on the side of caution.
+s41	en	hesitations/ctl13	What it is is a timing bug.
+s42	en	hesitations/ctl14	Bye bye, see you tomorrow.
+s43	fr	lists/ctl01	Premièrement, je voudrais vous remercier pour votre accueil.
+s44	fr	lists/ctl02	Un, deux, trois, soleil, c'est le jeu préféré des enfants.
+s45	fr	lists/ctl03	J'en veux deux, trois si possible, pour la fête de samedi.
+s46	fr	lists/ctl04	Il en reste un et deux sont cassés, il faut en racheter.
+s47	fr	lists/ctl05	Le premier train part à huit heures, le deuxième à neuf heures.
+s48	fr	lists/ctl06	On se retrouve à deux heures, puis on part vers trois heures.
+s49	en	lists/ctl07	First, let me check the logs before we decide anything.
+s50	en	lists/ctl08	One, two, buckle my shoe, three, four, knock at the door.
+s51	en	lists/ctl09	No one, two people at most, should have access to it.
+s52	en	lists/ctl10	Wait a second, first we need to agree on the price.
+s53	fr	punctuation/ctl01	C'est un bon point de départ pour la discussion.
+s54	fr	punctuation/ctl02	On fait le point demain matin.
+s55	fr	punctuation/ctl03	Il manque une virgule dans cette phrase.
+s56	fr	punctuation/ctl04	Le taux est de trois virgule cinq pour cent.
+s57	fr	punctuation/ctl05	La nouvelle ligne de métro ouvre en mars.
+s58	fr	punctuation/ctl06	Nous avons deux points d'avance sur eux.
+s59	fr	punctuation/ctl07	À mon point de vue, c'est trop tôt.
+s60	fr	punctuation/ctl08	La viande est cuite à point.
+s61	fr	punctuation/ctl09	Elle ne viendra point.
+s62	en	punctuation/ctl10	The trial period ends next week.
+s63	en	punctuation/ctl11	You missed a comma in that sentence.
+s64	en	punctuation/ctl12	We launched a new line of products.
+s65	en	punctuation/ctl13	That is a good point, let me think.
+s66	en	punctuation/ctl14	Put a question mark at the end.
+s67	fr	punctuation/ctl15	Il est temps de fermer la parenthèse.
+s68	fr	punctuation/ctl16	Elle a refermé la parenthèse de sa jeunesse.
+s69	fr	punctuation/ctl17	On ferme la parenthèse et on avance.
+s70	fr	punctuation/ctl18	Il manque une parenthèse fermante.
+s71	en	punctuation/ctl19	We have an open quote request from the client.
+s72	en	punctuation/ctl20	Can I quote you on that?
+s73	en	punctuation/ctl21	The store is open, quote me if you want.
+s74	en	punctuation/ctl22	He was, quote unquote, busy.
+s75	fr	snippets/ctl01	Quelle est l'adresse de ton frère ?
+s76	fr	snippets/ctl02	J'ai changé d'adresse le mois dernier.
+s77	fr	snippets/ctl03	Sa signature est illisible sur le contrat.
+s78	fr	snippets/ctl04	Le numéro de téléphone du cabinet a changé.
+s79	fr	snippets/ctl05	Mets le lien vers l'agenda partagé dans le message.
+s80	fr	snippets/ctl06	Mon adresse e-mail a été piratée hier.
+s81	en	snippets/ctl07	What is your home address?
+s82	en	snippets/ctl08	The calendar is full this week.
+s83	en	snippets/ctl09	Her phone number is on the card.
+s84	en	snippets/ctl10	The signature on the email looks fake.

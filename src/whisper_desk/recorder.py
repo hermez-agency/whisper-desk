@@ -25,7 +25,15 @@ CHUNK_SAMPLES = 1600           # 100 ms
 CHUNK_BYTES = CHUNK_SAMPLES * SAMPLE_WIDTH
 CHUNKS_PER_SECOND = RATE / CHUNK_SAMPLES
 NOISE_CHUNKS = 4               # 400 ms of background noise to calibrate the threshold
-MIN_THRESHOLD = 180.0
+# Floor of the automatic threshold. A voice kept low or whispered reaches the
+# microphone some 25 dB under an ordinary one, around 100: a higher floor cut
+# its sentences into scraps or missed them whole (bench/whisper/). The noise of
+# the room still raises the threshold above this through the calibration.
+MIN_THRESHOLD = 60.0
+# Once a sentence has begun, a voice down to this share of the threshold still
+# holds it open: the soft syllables of a low voice no longer pass for the pause
+# that ends a sentence, which cut it into scraps Whisper heard badly.
+HOLD = 0.6
 MIN_SEGMENT_CHUNKS = 4         # under 400 ms, it is not a sentence
 SILENT_INPUT_PEAK = 30.0       # below this peak, the input is mute, not discreet
 # Margin kept after the last voice, so a word ending is not cut off.
@@ -146,7 +154,7 @@ class Recorder:
                         spectrum.bands(chunk, self.bands, RATE, level, threshold),
                     )
 
-                if level >= threshold:
+                if level >= threshold or (speaking and level >= threshold * HOLD):
                     speaking = True
                     spoke_once = True
                     last_voice = now

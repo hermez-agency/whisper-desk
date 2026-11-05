@@ -14,7 +14,8 @@ Sources: [wisprflow.ai/features](https://wisprflow.ai/features),
 2026-10-18); developer syntax, "Syntax awareness" and "File tagging" on the features page (read on
 2026-10-20); usage statistics, "Insights" in the app as shown by its users' reviews (read on
 2026-10-24); numbered lists, "Lists" formatting on the features page (read on 2026-10-25); dictionary
-learned from corrections, "Personal dictionary" on the features page (read on 2026-10-27).
+learned from corrections, "Personal dictionary" on the features page (read on 2026-10-27); whisper
+mode, "Flow even works when you're whispering" on the features page (read on 2026-11-03).
 
 **Status**: done · partial · missing · out of scope.
 **Effort**: S (a session) · M (a few sessions) · L (to split into several gaps).
@@ -30,7 +31,7 @@ learned from corrections, "Personal dictionary" on the features page (read on 20
 | **Name spelling from context** | `vocabulary` (hotwords) and the context of the dictation fed back to the model | partial | high | — |
 | **100+ languages** | every Whisper language; `language = "auto"` detects one language per sentence | done | medium | — |
 | **Switching languages mid-dictation** (FR/EN) | detection per sentence with `auto`, but a fixed `language` forces one | partial | medium | M |
-| **Whisper mode** — dictating very quietly | automatic silence threshold; no gain or model tuning for a whisper | missing | medium | M |
+| **Whisper mode** — dictating very quietly | heard from some 25 dB under an ordinary voice: automatic threshold floor 60 instead of 180, a hold that keeps a low sentence open over its soft syllables, a low sentence raised to an ordinary level before Whisper; measured in `bench/whisper/` (in PR). Threshold not re-learned during the dictation; no model tuned on whispers | partial | medium | M |
 | **Latency** — "4× faster than typing" | sentence by sentence as you speak, model kept in memory, GPU when there is one; no measure yet | partial | high | M |
 
 ## Features
@@ -38,7 +39,7 @@ learned from corrections, "Personal dictionary" on the features page (read on 20
 | Wispr Flow | whisper-desk | Status | Value | Effort |
 |---|---|---|---|---|
 | **Works in any app** | insertion at the cursor through the clipboard and a paste shortcut (uinput, Mutter, SendKeys, System Events) | done | — | — |
-| **Personal dictionary**, fed by the words you correct | `vocabulary` in the settings window, filled by hand; fed by the corrections made in the history (**Correct…**, `history --correct`), `vocabulary.py`, measured in `bench/dictionary/` (in PR). Not learned from an edit made in the app dictated into (whisper-desk cannot see it); no replacement entries ("misheard → meant") | partial | high | M |
+| **Personal dictionary**, fed by the words you correct | `vocabulary` in the settings window, filled by hand; fed by the corrections made in the history (**Correct…**, `history --correct`), `vocabulary.py`, measured in `bench/dictionary/` (#34). Not learned from an edit made in the app dictated into (whisper-desk cannot see it); no replacement entries ("misheard → meant") | partial | high | M |
 | **Snippets** — a spoken cue inserts a longer text | `[snippets]` in `config.toml`, `snippets.py`: alone or inside a sentence, case and punctuation ignored, longest cue wins, multi-line texts; measured in `bench/snippets/`; edited in the settings window too (#25). No rich text (bold, links) | partial | high | S |
 | **Styles** — tone adapted to the app (formal in docs, casual in chat) | — | missing | medium | L |
 | **Command Mode** — select text, say how to rewrite it | — (would need a local model, e.g. Ollama) | missing | high | L |
@@ -146,7 +147,7 @@ learned from corrections, "Personal dictionary" on the features page (read on 20
   says *un* right after *numéro un* loses it to the stutter rule ("numéro un, un accès" →
   "1. Accès"). Left to do: bulleted lists, nested lists, a first item said more than one
   pause before the second.
-- 2026-10-27 — **Personal dictionary fed by corrections** (in PR, partial): **Correct…** in
+- 2026-10-27 — **Personal dictionary fed by corrections** (merged, #34, partial): **Correct…** in
   the history window and `whisper-desk history --correct N "text"` fix a dictation, and the
   words corrected join `vocabulary` (the hotwords) — names and jargon (a capital a sentence
   start does not explain, a digit, a sign), and words of five letters or more heard as a
@@ -161,3 +162,23 @@ learned from corrections, "Personal dictionary" on the features page (read on 20
   Left to do: learning from an edit made in place in the app (Wispr Flow watches the text
   field; that needs accessibility APIs per desktop), replacement entries, a cap on a
   vocabulary grown long (faster-whisper keeps only the start of a long prompt).
+- 2026-11-03 — **Whisper mode** (in PR, partial): a dictation said low or whispered close to
+  the microphone is heard and transcribed, with nothing to switch on. The automatic
+  threshold floor goes from 180 to 60 (the room's noise still raises it), a hold keeps a
+  sentence open down to 60 % of the threshold so that the soft syllables of a low voice
+  no longer cut it, and a sentence said low is raised to an ordinary level (+30 dB at
+  most, no clipping) before faster-whisper. Measure (`bench/whisper/`, the 84 control
+  recordings of the other benches at an ordinary level, 24 dB lower and whispered —
+  the voice's envelope over a noise — through the Recorder then the Transcriber):
+  sentences heard whole, low 3/84 → 81/84, whispered 5/84 → 83/84; word error rate
+  `large-v3-turbo` (GPU) low 97.6 % → 4.3 %, whispered 97.2 % → 6.2 %, ordinary 3.6 % →
+  3.6 %; `small` (CPU) low 97.5 % → 7.7 %, whispered 97.6 % → 13.1 %, ordinary 6.0 % →
+  6.5 %; two sentences 1 s apart still split and ended by the silence, in a steady room
+  and one whose noise swells by 10 dB; room noise alone heard 0/40 before and after.
+  Tried and measured on the way: the gain alone, without the recorder, brings the
+  whisper from 11.8 % to 9.5 % (`small`) and 6.2 % to 5.1 % (`large-v3-turbo`) — the
+  recorder, which missed 81/84 low sentences, was the real gap. Known limits: the
+  recordings are synthetic (a Piper voice lowered, a whisper made from it), no real
+  microphone; a non-stationary noise (door, keyboard, a voice next door) now reaches the
+  threshold more easily — `threshold = 180` hears about as before. Left to do: re-learning the
+  room's noise during the dictation, a model tuned on whispers.
