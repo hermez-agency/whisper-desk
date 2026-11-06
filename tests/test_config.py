@@ -51,7 +51,8 @@ class LoadTest(unittest.TestCase):
     def test_every_expected_section_is_there(self):
         config = config_module.load(Path("/nonexistent"))
         self.assertEqual(
-            set(config), {"hotkey", "model", "recording", "output", "overlay", "update", "snippets"}
+            set(config), {"hotkey", "model", "recording", "output", "overlay", "update", "snippets",
+                          "replacements"}
         )
 
     def test_the_keys_read_by_the_code_exist(self):

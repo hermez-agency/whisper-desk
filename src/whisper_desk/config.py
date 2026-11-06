@@ -127,6 +127,8 @@ DEFAULTS: dict[str, Any] = {
     },
     # Spoken cue -> text inserted in its place: "mon adresse" types the address.
     "snippets": {},
+    # Spelling Whisper keeps writing -> the one meant: "mac os" is written "macOS".
+    "replacements": {},
 }
 
 
@@ -154,7 +156,8 @@ def update(changes: dict[str, dict[str, Any]], path: Path | None = None,
            tables: dict[str, dict[str, Any]] | None = None) -> None:
     """Writes values into config.toml, its comments and layout kept.
 
-    `tables` replaces whole sections — [snippets], whose cues come and go.
+    `tables` replaces whole sections — [snippets] and [replacements], whose
+    entries come and go.
 
     A missing file starts from the commented example rather than from an
     empty page: the user who opens it later still finds the explanations.

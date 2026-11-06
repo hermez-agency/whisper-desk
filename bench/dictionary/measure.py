@@ -11,6 +11,12 @@ teaches joins the vocabulary, one name after the other. The name is then
 said in another sentence: is it written right, before and after? The control
 sentences check that the vocabulary grown on the way mars nothing else.
 
+--replacements goes one step further, as Wispr Flow's "Correct a misspelling":
+the first dictation is said again with the vocabulary learned; where the
+name is still written wrong, the user saves what Whisper wrote and the name
+as a replacement. Is the name right in the other sentence, said apart, with
+the vocabulary and the replacements — and do the controls stay as they were?
+
 --audio needs the whisper-desk venv (whisper-desk's own Python) and the
 recordings next to this file; the models are those already downloaded. On
 CUDA, the venv's own NVIDIA libraries go in LD_LIBRARY_PATH, as bin/whisper-desk
@@ -21,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import difflib
 import re
 import sys
 from pathlib import Path
@@ -28,7 +35,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1] / "src"))
 
-from whisper_desk import vocabulary  # noqa: E402
+from whisper_desk import replacements, vocabulary  # noqa: E402
 
 
 def rows(name: str) -> list[dict[str, str]]:
@@ -82,7 +89,32 @@ def transcribe(whisper, row: dict[str, str], part: str, hotwords: str | None) ->
     return " ".join(segment.text.strip() for segment in segments).strip()
 
 
-def audio(model: str, device: str, verbose: bool) -> None:
+TOKEN = re.compile(r"\w+")
+
+
+def misspelled(heard: str, said: str, term: str) -> str | None:
+    """What Whisper wrote where the sentence said `term`, if it is not the term."""
+    if term in heard:
+        return None
+    heard_tokens = list(TOKEN.finditer(heard))
+    said_words = [word.casefold() for word in TOKEN.findall(said)]
+    term_words = [word.casefold() for word in TOKEN.findall(term)]
+    start = next((i for i in range(len(said_words))
+                  if said_words[i:i + len(term_words)] == term_words), None)
+    if start is None:
+        return None
+    end = start + len(term_words)
+    matcher = difflib.SequenceMatcher(
+        None, said_words, [token.group().casefold() for token in heard_tokens], autojunk=False)
+    span = [j for tag, i1, i2, j1, j2 in matcher.get_opcodes()
+            if i1 < end and i2 > start for j in range(j1, j2)]
+    # Nothing written for it, or a whole stretch of the sentence: no entry to save.
+    if not span or len(span) > len(term_words) + 3:
+        return None
+    return heard[heard_tokens[span[0]].start():heard_tokens[span[-1]].end()]
+
+
+def audio(model: str, device: str, verbose: bool, with_replacements: bool) -> None:
     from faster_whisper import WhisperModel
 
     whisper = WhisperModel(model, device=device,
@@ -103,10 +135,26 @@ def audio(model: str, device: str, verbose: bool) -> None:
         if verbose:
             print(f"    {row['id']}: {heard!r} taught {added}")
 
+    # The replacements a user saves from the first dictation, said again with
+    # the vocabulary learned: what Whisper still writes for the name.
+    learned_replacements: dict[str, dict[str, str]] = {}
+    if with_replacements:
+        for row in names:
+            heard = transcribe(whisper, row, "first", learned_vocabulary.get(row["lang"]))
+            wrong = misspelled(heard, row["first"], row["term"])
+            if wrong:
+                learned_replacements.setdefault(row["lang"], {})[wrong] = row["term"]
+            if verbose:
+                print(f"    {row['id']}: {heard!r} -> {wrong!r}")
+
     for label, rows_, kind in (("names", names, "names"), ("controls", controls, "controls")):
         before = [transcribe(whisper, row, "next", None) for row in rows_]
         after = [transcribe(whisper, row, "next", learned_vocabulary.get(row["lang"]))
                  for row in rows_]
+        if with_replacements:
+            after = [replacements.apply(text, learned_replacements.get(row["lang"], {}))
+                     for row, text in zip(rows_, after)]
+            label += "+repl"
         pairs_before = [(row["next"], text) for row, text in zip(rows_, before)]
         pairs_after = [(row["next"], text) for row, text in zip(rows_, after)]
         line = f"{model + ' (' + device + ')':<28} {label:<9} WER {wer(pairs_before):6.1%} -> {wer(pairs_after):6.1%}"
@@ -126,19 +174,23 @@ def audio(model: str, device: str, verbose: bool) -> None:
     if verbose:
         for lang, learned in learned_vocabulary.items():
             print(f"    vocabulary learned ({lang}): {learned}")
+        for lang, table in learned_replacements.items():
+            print(f"    replacements saved ({lang}): {table}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--audio", action="store_true")
     parser.add_argument("--models", default="small:cpu,large-v3-turbo:cuda")
+    parser.add_argument("--replacements", action="store_true",
+                        help="with --audio: the misspellings left saved as replacements")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
     written(args.verbose)
     if args.audio:
         for spec in args.models.split(","):
             model, device = spec.split(":")
-            audio(model, device, args.verbose)
+            audio(model, device, args.verbose, args.replacements)
 
 
 if __name__ == "__main__":

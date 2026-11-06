@@ -426,6 +426,36 @@ check that Whisper writes them as you saved them: if it does not (*mon lien d'ag
 machine, after the transcription; **Save** in the settings window, or `whisper-desk
 reload` after editing the file, takes a change into account.
 
+### Replacements: a spelling the model keeps getting wrong
+
+Some names Whisper never writes right, even with them in `vocabulary`: *Alarmor* for
+*Ollama*, *au Stinger* for *Hostinger*. Save what it writes and what you mean as a
+replacement — in the **Replacements** list of `whisper-desk settings`, next to the
+vocabulary (**Add…**, **Edit…**, **Remove**), or by hand in the `[replacements]` section
+of `config.toml` — and it is written your way wherever it appears:
+
+```toml
+[replacements]
+"mac os" = "macOS"
+"alarmor" = "Ollama"
+"don't" = "do not"
+```
+
+| Whisper writes | whisper-desk writes |
+|---|---|
+| Je suis passé sous Mac OS hier. | Je suis passé sous macOS hier. |
+| Install Alarmor on the laptop. | Install Ollama on the laptop. |
+| Don't merge it yet. | Do not merge it yet. |
+
+The misspelling is matched as whole words, whatever their case, spaced or hyphenated
+(*Mac OS*, *mac-os*), never inside a longer word nor across a full stop; when two overlap
+the longest wins. The spelling is written exactly as saved (*macOS*, *iPhone*), unless it
+is all in lowercase: then it takes the capital Whisper gave a sentence start (*Do not*).
+Replacements are literal: avoid a word you also say for what it is — *leads* → *Leadz*
+would rename every lead. They run on your machine, right after the transcription and
+before the snippets, and the model hears the name as you spell it in the context of the
+next sentence. Two entries with the same misspelling (*Mac OS* and *mac-os*) are refused.
+
 ### From the command line
 
 ```sh
@@ -539,10 +569,12 @@ whisper-desk settings
 Language; model, with its download size and an indication of its speed (and whether it is
 already on disk); microphone, from the list of the capture tool's own sources, with a
 **Test** gauge; shortcut, captured by pressing the new combination; output mode;
-domain vocabulary; snippets, each cue with its text; overlay position and colour.
+domain vocabulary; replacements, each misspelling with the spelling meant; snippets, each
+cue with its text; overlay position and colour.
 **Save** writes `config.toml` — only the values that changed, your comments kept —
 reloads the daemon and, for a new shortcut, installs it. Two snippets with the same cue
-(*Mon adresse.* and *mon adresse*) are refused: whisper-desk would not know which to type. Like the overlay, the window needs GTK3 for the system Python.
+(*Mon adresse.* and *mon adresse*) are refused: whisper-desk would not know which to type;
+so are two replacements with the same misspelling. Like the overlay, the window needs GTK3 for the system Python.
 
 Everything, the rest included, is configurable in **`~/.config/whisper-desk/config.toml`**:
 
@@ -585,6 +617,9 @@ margin = 96
 
 [snippets]
 "mon adresse perso" = "12 rue des Lilas, 75011 Paris"   # cue said -> text typed
+
+[replacements]
+"mac os" = "macOS"            # what Whisper writes -> what you mean
 ```
 
 After a change by hand (the settings window does both for you):
@@ -788,6 +823,7 @@ to test all three from any of them.
 | `src/whisper_desk/punctuation.py` | punctuation said aloud ("virgule", "à la ligne") written as marks |
 | `src/whisper_desk/casing.py` | names said in a style ("camel case user name") written in it |
 | `src/whisper_desk/snippets.py` | spoken cues replaced by the text saved for them |
+| `src/whisper_desk/replacements.py` | spellings Whisper keeps writing replaced by the ones meant |
 | `src/whisper_desk/inject.py` | simulated keystroke: `uinput`, Mutter, SendKeys, System Events |
 | `src/whisper_desk/mutter_keyboard.py` | GNOME remote desktop session (system Python) |
 | `src/whisper_desk/output.py` | insertion at the cursor, clipboard, notifications |
@@ -896,12 +932,16 @@ names (*Animalink*, *Dokploy*, *Supabase*, *pgvector*…), French and English, e
 first dictation that is transcribed, then corrected into the sentence said, as you would
 in the history; the name is then said in another sentence, transcribed with the
 vocabulary learned so far — one per language — and without; 8 control sentences check
-that the grown vocabulary mars nothing else. On CUDA, the venv's NVIDIA libraries go in
-`LD_LIBRARY_PATH`, as the `whisper-desk` launcher does:
+that the grown vocabulary mars nothing else. `--replacements` adds a step: each first
+dictation is said again with the vocabulary learned, and where the name is still written
+wrong, what Whisper wrote is saved as a replacement for it; the other sentence is then
+transcribed with the vocabulary and the replacements. On CUDA, the venv's NVIDIA libraries
+go in `LD_LIBRARY_PATH`, as the `whisper-desk` launcher does:
 
 ```sh
 python3 bench/dictionary/measure.py -v
 ~/.local/share/whisper-desk/venv/bin/python bench/dictionary/measure.py --audio -v
+~/.local/share/whisper-desk/venv/bin/python bench/dictionary/measure.py --audio --replacements -v
 ```
 
 `bench/whisper/` measures a dictation said low or whispered, from the microphone to the

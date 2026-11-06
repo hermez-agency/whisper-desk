@@ -41,6 +41,7 @@ CONFIG = {
     "hotkey": {"binding": "<Super>j"},
     "model": {},
     "snippets": {},
+    "replacements": {},
 }
 
 
@@ -472,6 +473,32 @@ class SnippetsTest(DictationCase):
             self.recorder.segments[:] = [b"Send it to my address."]
             self.dictate()
         self.assertEqual(self.delivered, ["Send it to my address."])
+
+
+class ReplacementsTest(DictationCase):
+    """A spelling the model keeps writing reaches the cursor as the one meant."""
+
+    def setUp(self):
+        super().setUp()
+        patcher = mock.patch.dict(CONFIG, {"replacements": {"animal link": "Animalink"}})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def dictate(self) -> None:
+        with self.service() as service:
+            self.listening(service)
+            service.toggle()
+            self.assertTrue(wait_until(lambda: service.session is None))
+
+    def test_the_misspelling_is_inserted_as_meant(self):
+        self.recorder.segments[:] = [b"The animal link quote.", b"Thanks."]
+        self.dictate()
+        self.assertEqual(self.delivered, ["The Animalink quote.", " Thanks."])
+
+    def test_the_model_hears_the_name_as_it_is_spelled(self):
+        self.recorder.segments[:] = [b"Animal link.", b"Thanks."]
+        self.dictate()
+        self.assertEqual(self.transcriber.contexts, ["", "Animalink."])
 
 
 class SpokenPunctuationTest(DictationCase):

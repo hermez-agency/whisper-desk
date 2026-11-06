@@ -15,7 +15,9 @@ Sources: [wisprflow.ai/features](https://wisprflow.ai/features),
 2026-10-20); usage statistics, "Insights" in the app as shown by its users' reviews (read on
 2026-10-24); numbered lists, "Lists" formatting on the features page (read on 2026-10-25); dictionary
 learned from corrections, "Personal dictionary" on the features page (read on 2026-10-27); whisper
-mode, "Flow even works when you're whispering" on the features page (read on 2026-11-03).
+mode, "Flow even works when you're whispering" on the features page (read on 2026-11-03);
+dictionary replacements, [Teach Flow your words with the dictionary](https://docs.wisprflow.ai/articles/4052411709-teach-flow-your-words-with-the-dictionary),
+"Correct a misspelling" (read on 2026-11-06).
 
 **Status**: done · partial · missing · out of scope.
 **Effort**: S (a session) · M (a few sessions) · L (to split into several gaps).
@@ -31,7 +33,7 @@ mode, "Flow even works when you're whispering" on the features page (read on 202
 | **Name spelling from context** | `vocabulary` (hotwords) and the context of the dictation fed back to the model | partial | high | — |
 | **100+ languages** | every Whisper language; `language = "auto"` detects one language per sentence | done | medium | — |
 | **Switching languages mid-dictation** (FR/EN) | detection per sentence with `auto`, but a fixed `language` forces one | partial | medium | M |
-| **Whisper mode** — dictating very quietly | heard from some 25 dB under an ordinary voice: automatic threshold floor 60 instead of 180, a hold that keeps a low sentence open over its soft syllables, a low sentence raised to an ordinary level before Whisper; measured in `bench/whisper/` (in PR). Threshold not re-learned during the dictation; no model tuned on whispers | partial | medium | M |
+| **Whisper mode** — dictating very quietly | heard from some 25 dB under an ordinary voice: automatic threshold floor 60 instead of 180, a hold that keeps a low sentence open over its soft syllables, a low sentence raised to an ordinary level before Whisper; measured in `bench/whisper/` (#36). Threshold not re-learned during the dictation; no model tuned on whispers | partial | medium | M |
 | **Latency** — "4× faster than typing" | sentence by sentence as you speak, model kept in memory, GPU when there is one; no measure yet | partial | high | M |
 
 ## Features
@@ -39,7 +41,7 @@ mode, "Flow even works when you're whispering" on the features page (read on 202
 | Wispr Flow | whisper-desk | Status | Value | Effort |
 |---|---|---|---|---|
 | **Works in any app** | insertion at the cursor through the clipboard and a paste shortcut (uinput, Mutter, SendKeys, System Events) | done | — | — |
-| **Personal dictionary**, fed by the words you correct | `vocabulary` in the settings window, filled by hand; fed by the corrections made in the history (**Correct…**, `history --correct`), `vocabulary.py`, measured in `bench/dictionary/` (#34). Not learned from an edit made in the app dictated into (whisper-desk cannot see it); no replacement entries ("misheard → meant") | partial | high | M |
+| **Personal dictionary**, fed by the words you correct | `vocabulary` in the settings window, filled by hand; fed by the corrections made in the history (**Correct…**, `history --correct`), `vocabulary.py`, measured in `bench/dictionary/` (#34); replacement entries ("misheard → meant", Wispr Flow's "Correct a misspelling") in `[replacements]` and the settings window, `replacements.py` (in PR). Not learned from an edit made in the app dictated into (whisper-desk cannot see it); replacements saved by hand, not proposed from a correction | partial | high | M |
 | **Snippets** — a spoken cue inserts a longer text | `[snippets]` in `config.toml`, `snippets.py`: alone or inside a sentence, case and punctuation ignored, longest cue wins, multi-line texts; measured in `bench/snippets/`; edited in the settings window too (#25). No rich text (bold, links) | partial | high | S |
 | **Styles** — tone adapted to the app (formal in docs, casual in chat) | — | missing | medium | L |
 | **Command Mode** — select text, say how to rewrite it | — (would need a local model, e.g. Ollama) | missing | high | L |
@@ -162,7 +164,7 @@ mode, "Flow even works when you're whispering" on the features page (read on 202
   Left to do: learning from an edit made in place in the app (Wispr Flow watches the text
   field; that needs accessibility APIs per desktop), replacement entries, a cap on a
   vocabulary grown long (faster-whisper keeps only the start of a long prompt).
-- 2026-11-03 — **Whisper mode** (in PR, partial): a dictation said low or whispered close to
+- 2026-11-03 — **Whisper mode** (merged, #36, partial): a dictation said low or whispered close to
   the microphone is heard and transcribed, with nothing to switch on. The automatic
   threshold floor goes from 180 to 60 (the room's noise still raises it), a hold keeps a
   sentence open down to 60 % of the threshold so that the soft syllables of a low voice
@@ -182,3 +184,17 @@ mode, "Flow even works when you're whispering" on the features page (read on 202
   microphone; a non-stationary noise (door, keyboard, a voice next door) now reaches the
   threshold more easily — `threshold = 180` hears about as before. Left to do: re-learning the
   room's noise during the dictation, a model tuned on whispers.
+- 2026-11-06 — **Dictionary replacements** (in PR, partial): Wispr Flow's "Correct a
+  misspelling" — a spelling Whisper keeps writing saved with the one meant, in
+  `[replacements]` or the **Replacements** list of the settings window (`"alarmor" =
+  "Ollama"`, `"mac os" = "macOS"`), replaced as whole words, whatever the case, spaced or
+  hyphenated, the longest entry first, the spelling written as saved (a lowercase one
+  takes a sentence start's capital). Applied right after the transcription, so the model's
+  context holds the name as spelled. Measure (`bench/dictionary/ --replacements`, 22 names
+  said once, the misspelling left after the vocabulary saved as a replacement, then the
+  name said in another sentence): name written right `small` (CPU) vocabulary alone 14/22 →
+  with replacements 17/22, WER 10.9 % → 8.0 %; `large-v3-turbo` (GPU) 16/22 (#34) → 18/22,
+  9.4 % → 8.0 %; no control sentence changed. What remains: Whisper writing the name
+  another way in the next sentence (*Ananaling*, then *Animal Inc.*). Left to do: proposing
+  a replacement from a correction made in the history when the vocabulary did not suffice,
+  replacements per language.

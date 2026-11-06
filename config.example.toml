@@ -110,3 +110,14 @@ auto_update = "install"
 # "ma signature" = """
 # Bien à vous,
 # Salvador"""
+
+[replacements]
+# A spelling Whisper keeps writing -> the one you meant, replaced wherever it
+# appears, as whole words. Also edited in the settings window: whisper-desk
+# settings, Replacements. Case does not matter on the left; the right is written
+# as saved — a spelling all in lowercase takes the capital of a sentence start.
+# For a name Whisper never gets right even with it in `vocabulary`. The longest
+# entry wins; avoid words you also say for what they are ("au poil", "real").
+# "mac os" = "macOS"
+# "animal link" = "Animalink"
+# "dock ploy" = "Dokploy"
