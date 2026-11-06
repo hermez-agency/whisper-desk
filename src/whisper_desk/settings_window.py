@@ -5,7 +5,8 @@ A view launched with the system Python, like the overlay and the history:
 settings_proc.py sends it the values and the choices on stdin, and receives
 on stdout what the user asks for, one JSON object per line:
 
-    stdin   {"values": {..., "snippets": [[cue, text], ...]}, "choices": {...},
+    stdin   {"values": {..., "snippets": [[cue, text], ...],
+                         "replacements": [[misspelling, spelling], ...]}, "choices": {...},
              "hotkey": {"binding", "label"}}
             {"level": 0.42, "meter": "..."}  {"status": "...", "saved": true}
     stdout  {"action": "save", "values": {...}}
@@ -108,6 +109,36 @@ class SettingsWindow(Gtk.Window):
         self.vocabulary.set_placeholder_text("Animalink, Kubernetes, pull request…")
         self._field("Vocabulary", self.vocabulary)
         self._hint("Proper nouns, tools and jargon the model tends to mangle, separated by commas.")
+
+        self.replacements = Gtk.ListStore(str, str)
+        self.replacement_view = Gtk.TreeView(model=self.replacements)
+        self.replacement_view.set_headers_visible(True)
+        self.replacement_view.connect("row-activated",
+                                      lambda *_args: self._on_edit_replacement(None))
+        for index, title in enumerate(("Heard as", "Written")):
+            renderer = Gtk.CellRendererText()
+            renderer.props.ellipsize = Pango.EllipsizeMode.END
+            column = Gtk.TreeViewColumn(title, renderer, text=index)
+            column.set_resizable(True)
+            column.set_expand(True)
+            self.replacement_view.append_column(column)
+        frame = Gtk.ScrolledWindow()
+        frame.set_shadow_type(Gtk.ShadowType.IN)
+        frame.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        frame.set_min_content_height(90)
+        frame.add(self.replacement_view)
+        self._field("Replacements", frame)
+        buttons = Gtk.Box(spacing=8)
+        for label, handler in (("Add…", self._on_add_replacement),
+                               ("Edit…", self._on_edit_replacement),
+                               ("Remove", self._on_remove_replacement)):
+            button = Gtk.Button(label=label)
+            button.connect("clicked", handler)
+            buttons.pack_start(button, False, False, 0)
+        self._field("", buttons)
+        self._hint("A spelling the model keeps writing, and the one you mean: “mac os” "
+                   "is written “macOS” wherever it appears. Avoid words you also say "
+                   "for what they are.")
 
         self._section("Snippets")
         self.snippets = Gtk.ListStore(str, str)
@@ -261,6 +292,9 @@ class SettingsWindow(Gtk.Window):
             self.snippets.clear()
             for cue, text in values.get("snippets", []):
                 self.snippets.append([cue, text])
+            self.replacements.clear()
+            for misspelling, spelling in values.get("replacements", []):
+                self.replacements.append([misspelling, spelling])
             self.overlay.set_active(bool(values["overlay"]))
             colour = Gdk.RGBA()
             if colour.parse(values["accent"]):
@@ -294,6 +328,7 @@ class SettingsWindow(Gtk.Window):
             "accent": hex_colour(self.accent.get_rgba()),
             "updates": self.updates.get_active_id(),
             "snippets": [[row[0], row[1]] for row in self.snippets],
+            "replacements": [[row[0], row[1]] for row in self.replacements],
         }
 
     def _on_save(self, _button: Gtk.Button) -> None:
@@ -371,6 +406,66 @@ class SettingsWindow(Gtk.Window):
         if answer != Gtk.ResponseType.OK or not cue:
             return None
         return cue, text
+
+    def _on_add_replacement(self, _button: Gtk.Button) -> None:
+        edited = self._replacement_dialog("New replacement", "", "")
+        if edited:
+            tree_iter = self.replacements.append(list(edited))
+            self.replacement_view.get_selection().select_iter(tree_iter)
+
+    def _on_edit_replacement(self, _button: Gtk.Button | None) -> None:
+        model, tree_iter = self.replacement_view.get_selection().get_selected()
+        if tree_iter is None:
+            self.status.set_text("Select a replacement first.")
+            return
+        edited = self._replacement_dialog("Edit the replacement",
+                                          model[tree_iter][0], model[tree_iter][1])
+        if edited:
+            model[tree_iter][0], model[tree_iter][1] = edited
+
+    def _on_remove_replacement(self, _button: Gtk.Button) -> None:
+        model, tree_iter = self.replacement_view.get_selection().get_selected()
+        if tree_iter is not None:
+            model.remove(tree_iter)
+
+    def _replacement_dialog(self, title: str, misspelling: str,
+                            spelling: str) -> tuple[str, str] | None:
+        """The misspelling and its spelling as the user leaves them, or None if cancelled."""
+        dialog = Gtk.Dialog(title=title, transient_for=self, modal=True)
+        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+        dialog.add_button("OK", Gtk.ResponseType.OK).get_style_context().add_class("suggested-action")
+        dialog.set_default_response(Gtk.ResponseType.OK)
+        dialog.set_default_size(420, -1)
+        box = dialog.get_content_area()
+        box.set_spacing(8)
+        box.set_border_width(14)
+        entries = []
+        for label_text, value, placeholder in (
+            ("What the model writes", misspelling, "mac os"),
+            ("What you mean", spelling, "macOS"),
+        ):
+            label = Gtk.Label(label=label_text)
+            label.set_xalign(0.0)
+            entry = Gtk.Entry()
+            entry.set_text(value)
+            entry.set_placeholder_text(placeholder)
+            entry.set_activates_default(True)
+            box.pack_start(label, False, False, 0)
+            box.pack_start(entry, False, False, 0)
+            entries.append(entry)
+        hint = Gtk.Label(label="Matched as whole words, whatever their case. "
+                               "What you mean is written exactly as typed here.")
+        hint.set_xalign(0.0)
+        hint.set_line_wrap(True)
+        hint.get_style_context().add_class("hint")
+        box.pack_start(hint, False, False, 0)
+        dialog.show_all()
+        answer = dialog.run()
+        misspelling, spelling = (entry.get_text().strip() for entry in entries)
+        dialog.destroy()
+        if answer != Gtk.ResponseType.OK or not misspelling or not spelling:
+            return None
+        return misspelling, spelling
 
     def _on_test(self, _button: Gtk.Button) -> None:
         if self.testing:

@@ -17,7 +17,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from . import capture, hotkey, snippets, update, window_proc
+from . import capture, hotkey, replacements, snippets, update, window_proc
 from . import config as config_module
 from .recorder import CHANNELS, CHUNK_BYTES, MIN_THRESHOLD, RATE, _rms
 from .spectrum import visual_level
@@ -192,6 +192,11 @@ class SettingsController:
         values["snippets"] = [
             [cue, text] for cue, text in self.config["snippets"].items() if isinstance(text, str)
         ]
+        values["replacements"] = [
+            [misspelling, spelling]
+            for misspelling, spelling in self.config["replacements"].items()
+            if isinstance(spelling, str)
+        ]
         return values
 
     def snapshot(self) -> dict[str, Any]:
@@ -284,6 +289,27 @@ class SettingsController:
             table[cue] = text
         return table
 
+    def replacement_table(self, rows: list[Any]) -> dict[str, Any]:
+        """The [replacements] section the window's rows make; ValueError says what is wrong."""
+        current = self.config["replacements"]
+        table = {key: value for key, value in current.items() if not isinstance(value, str)}
+        seen: dict[str, str] = {}
+        for row in rows:
+            misspelling, spelling = (str(part).strip() for part in (list(row) + ["", ""])[:2])
+            if not misspelling and not spelling:
+                continue
+            if not misspelling:
+                raise ValueError(f"The replacement “{spelling[:30]}” has no misspelling")
+            key = replacements.misspelling_key(misspelling)
+            if not key:
+                raise ValueError(f"The misspelling “{misspelling}” has no word in it")
+            if key in seen:
+                raise ValueError(f"“{seen[key]}” and “{misspelling}” are the same misspelling")
+            # An empty spelling is an entry switched off by hand: kept as it is.
+            seen[key] = misspelling
+            table[misspelling] = spelling
+        return table
+
     def save(self, values: dict[str, Any]) -> dict[str, Any]:
         accent = values.get("accent", self.config["overlay"]["accent"])
         if not COLOUR.match(str(accent)):
@@ -297,6 +323,13 @@ class SettingsController:
                 return {"status": str(error), "saved": False}
             if table != self.config["snippets"]:
                 tables["snippets"] = table
+        if "replacements" in values:
+            try:
+                table = self.replacement_table(values["replacements"] or [])
+            except ValueError as error:
+                return {"status": str(error), "saved": False}
+            if table != self.config["replacements"]:
+                tables["replacements"] = table
         if not changes and not tables:
             return {"status": "Nothing to change", "saved": True}
         self.meter.stop()

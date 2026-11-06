@@ -361,5 +361,50 @@ Source #53
             self.assertEqual(capture.devices(), [capture.DEFAULT_DEVICE])
 
 
+
+class ReplacementsTest(ControllerCase):
+    def test_the_window_gets_the_replacements_in_their_order(self):
+        self.controller.config["replacements"] = {"mac os": "macOS", "lori": "Laurie"}
+        self.assertEqual(self.controller.snapshot()["values"]["replacements"],
+                         [["mac os", "macOS"], ["lori", "Laurie"]])
+
+    def test_replacements_are_written_and_the_daemon_reloads(self):
+        reply = self.save(replacements=[["mac os", " macOS "], ["animal link", "Animalink"]])
+        self.assertTrue(reply["saved"])
+        self.assertEqual(self.sent, ["reload"])
+        self.assertEqual(config_module.load(self.path)["replacements"],
+                         {"mac os": "macOS", "animal link": "Animalink"})
+        self.assertIn("# my own comment", self.path.read_text(encoding="utf-8"))
+
+    def test_a_removed_replacement_leaves_the_file(self):
+        self.save(replacements=[["mac os", "macOS"], ["lori", "Laurie"]])
+        self.save(replacements=[["lori", "Laurie"]])
+        self.assertEqual(config_module.load(self.path)["replacements"], {"lori": "Laurie"})
+
+    def test_unchanged_replacements_write_nothing(self):
+        self.save(replacements=[["mac os", "macOS"]])
+        before = self.path.read_text(encoding="utf-8")
+        self.assertEqual(self.save()["status"], "Nothing to change")
+        self.assertEqual(self.path.read_text(encoding="utf-8"), before)
+
+    def test_the_same_misspelling_twice_is_refused(self):
+        reply = self.save(replacements=[["mac os", "macOS"], ["Mac-OS", "MacOS"]])
+        self.assertFalse(reply["saved"])
+        self.assertEqual(reply["status"], "“mac os” and “Mac-OS” are the same misspelling")
+        self.assertEqual(config_module.load(self.path)["replacements"], {})
+
+    def test_an_incomplete_row_is_refused(self):
+        self.assertEqual(self.save(replacements=[["", "macOS"]])["status"],
+                         "The replacement “macOS” has no misspelling")
+        self.assertEqual(self.save(replacements=[["--", "x"]])["status"],
+                         "The misspelling “--” has no word in it")
+        self.assertEqual(self.save(replacements=[["", ""]])["status"], "Nothing to change")
+
+    def test_an_entry_switched_off_by_hand_does_not_block_the_save(self):
+        self.save(replacements=[["mac os", ""], ["lori", "Laurie"]])
+        self.assertEqual(config_module.load(self.path)["replacements"],
+                         {"mac os": "", "lori": "Laurie"})
+
+
 if __name__ == "__main__":
     unittest.main()

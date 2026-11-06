@@ -4,6 +4,33 @@
 
 ### Added
 
+- **Replacements in the personal dictionary** (Wispr Flow's "Correct a misspelling"): a
+  name Whisper never writes right, even with it in `vocabulary`, is saved with what Whisper
+  writes for it — `"alarmor" = "Ollama"`, `"mac os" = "macOS"` — in the new
+  `[replacements]` section of `config.toml` or the **Replacements** list of the settings
+  window (**Add…**, **Edit…**, **Remove**), and it is written your way wherever it
+  appears. The misspelling is matched as whole words, whatever their case, spaced or
+  hyphenated, never inside a longer word, before the *'t* of a contraction or across a
+  full stop; the longest entry wins. The spelling is written as saved (*macOS*,
+  *iPhone*), unless it is all in lowercase: then it takes a sentence start's capital
+  (*"don't" = "do not"* gives *Do not*). Applied by local rules (`replacements.py`) right
+  after the transcription, before the lists and the snippets, so the model hears the name
+  as you spell it in the context of the next sentence. Two entries with the same
+  misspelling are refused; an empty spelling switches an entry off.
+- `bench/dictionary/measure.py --replacements`: each first dictation of the bench is said
+  again with the vocabulary learned from its correction, and what Whisper still writes
+  instead of the name is saved as a replacement; the name is then said in another
+  sentence:
+  - faster-whisper `small` (CPU, int8): name written right 14/22 with the vocabulary alone
+    → 17/22 with the replacements (5/22 with neither), word error rate 10.9 % → 8.0 %;
+  - faster-whisper `large-v3-turbo` (CUDA, float16): 16/22 → 18/22 (9/22 with neither),
+    9.4 % → 8.0 % (the vocabulary-alone figure is #34's: the GPU dropped out before it
+    could be measured again);
+  - the 8 control sentences: no replacement changed any.
+  What remains is Whisper writing the name differently from one sentence to the next
+  (*Ananaling*, then *Animal Inc.*; *Pono*, then *Polos*). Two of the entries saved are
+  ordinary words (*au poil*, *leads*), which a user should not save: replacements are
+  literal.
 - **Dictating under your breath** (Wispr Flow's "works when you're whispering"): speak low
   or whisper close to the microphone, in an open space or next to someone asleep, and the
   dictation goes on as usual — nothing to switch on. Three changes, all local:

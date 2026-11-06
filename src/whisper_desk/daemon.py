@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from . import config as config_module
-from . import history, host, hotkey, inject, lists, punctuation, snippets
+from . import history, host, hotkey, inject, lists, punctuation, replacements, snippets
 from . import output
 from .capture import CaptureUnavailable
 from .overlay_proc import OverlayProcess
@@ -321,6 +321,8 @@ class Session:
             logger.debug("Transcribed: %r", text)
             if not text:
                 continue
+            # Before the context: the model hears the name as it is spelled.
+            text = replacements.apply(text, self.service.config["replacements"])
             self.heard.append(text)
             if self.service.config["model"].get("lists", True):
                 ready = self.pending.feed(text, punctuation.join(self.parts))

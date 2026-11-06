@@ -856,6 +856,16 @@
       sentence, and it is raised to an ordinary level before Whisper hears it.
     </p>
 
+    <h3>Replacements</h3>
+    <p>
+      A name Whisper never writes right, even with it in the vocabulary? Save what it writes and
+      what you mean, in the settings window or the <code>[replacements]</code> section of
+      <code>config.toml</code>: <em>“Install Alarmor on the laptop”</em> becomes
+      <strong>Install Ollama on the laptop.</strong> Whole words, whatever the case; the spelling
+      is written as you saved it (<i>macOS</i>, <i>iPhone</i>). Applied on your machine, right after
+      the transcription.
+    </p>
+
     <h3>Snippets</h3>
     <p>
       Save the texts you keep retyping under a cue, in the settings window or the
@@ -959,8 +969,8 @@
     <pre data-copy><span class="p">$ </span>whisper-desk settings</pre>
     <p>
       Language, model (with its size, its speed and whether it is already downloaded), microphone
-      with a test gauge, shortcut captured from the keyboard, output mode, vocabulary, snippets,
-      overlay position and colour. <b>Save</b> writes only what changed — your comments are kept — and
+      with a test gauge, shortcut captured from the keyboard, output mode, vocabulary, replacements,
+      snippets, overlay position and colour. <b>Save</b> writes only what changed — your comments are kept — and
       reloads the daemon.
     </p>
     <div class="shots">
@@ -1012,7 +1022,10 @@ position = <span class="s">"bottom-center"</span>    <span class="c"># bottom-ce
 margin = <span class="n">96</span>
 
 <span class="k">[snippets]</span>
-<span class="s">"mon adresse perso"</span> = <span class="s">"12 rue des Lilas, 75011 Paris"</span>   <span class="c"># cue said -> text typed</span></pre>
+<span class="s">"mon adresse perso"</span> = <span class="s">"12 rue des Lilas, 75011 Paris"</span>   <span class="c"># cue said -> text typed</span>
+
+<span class="k">[replacements]</span>
+<span class="s">"mac os"</span> = <span class="s">"macOS"</span>            <span class="c"># what Whisper writes -> what you mean</span></pre>
 
     <p>After a change:</p>
     <pre data-copy><span class="p">$ </span>whisper-desk reload            <span class="c"># for everything but the shortcut</span>
@@ -1152,6 +1165,7 @@ margin = <span class="n">96</span>
           <tr><td><code>punctuation.py</code></td><td>punctuation said aloud (“virgule”, “à la ligne”) written as marks</td></tr>
           <tr><td><code>casing.py</code></td><td>names said in a style (“camel case user name”) written in it</td></tr>
           <tr><td><code>snippets.py</code></td><td>spoken cues replaced by the text saved for them</td></tr>
+          <tr><td><code>replacements.py</code></td><td>spellings Whisper keeps writing replaced by the ones meant</td></tr>
           <tr><td><code>inject.py</code></td><td>simulated keystroke: <code>uinput</code>, SendKeys, System Events</td></tr>
           <tr><td><code>output.py</code></td><td>insertion at the cursor, clipboard, notifications</td></tr>
           <tr><td><code>overlay.py</code></td><td>X11 overlay (separate process)</td></tr>
