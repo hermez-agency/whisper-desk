@@ -65,6 +65,11 @@ class SnapshotTest(ControllerCase):
         self.assertIn(["en", "English"], snapshot["choices"]["language"])
         self.assertEqual(snapshot["choices"]["device"], [["default", "Default microphone"]])
 
+    def test_french_and_english_together_are_one_choice(self):
+        self.assertIn(["fr, en", "French and English"], self.controller.snapshot()["choices"]["language"])
+        self.save(language="fr, en")
+        self.assertEqual(tomllib.loads(self.path.read_text(encoding="utf-8"))["model"]["language"], "fr, en")
+
     def test_each_model_says_its_size_its_speed_and_if_it_is_here(self):
         labels = dict(self.controller.snapshot()["choices"]["model"])
         self.assertEqual(labels["auto"], "Automatic — small on this machine")

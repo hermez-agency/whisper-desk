@@ -394,6 +394,17 @@ sentence said low is raised to the level of an ordinary voice before Whisper hea
 A voice already loud enough reaches the model untouched. `bench/whisper/` measures it on
 recordings (see Development).
 
+### Dictating in two languages
+
+Switch from French to English and back within one dictation: with **French and English**
+as the language in the settings window, or `language = "fr, en"` in `[model]`, each
+sentence is written in the language it was said in — *"Je te rappelle."*, then *"Sounds
+good."* —, and in no third one. Whisper weighs every language it knows for each sentence and
+keeps the most likely of those you listed: with `"auto"`, a short *"Oui."* may come out in
+Spanish and *"Check tes mails."* in Russian; with `"fr"` alone, an English sentence comes
+out in French (*"Thanks a lot."* is written *"Merci beaucoup."*). Any codes go, two or more:
+`"de, en"`, `"fr, en, es"`. `bench/languages/` measures it on recordings (see Development).
+
 ### Snippets: say a cue, get the text you keep retyping
 
 Save the texts you type over and over — an address, a calendar link, a signature — under
@@ -585,7 +596,7 @@ binding = "auto"              # "auto", or <Ctrl>/<Alt>/<Shift>/<Super> + a key
 [model]
 name = "auto"                 # auto | tiny | base | small | medium | large-v3 | large-v3-turbo
 device = "auto"               # auto | cuda | cpu
-language = "fr"               # ISO code, or "auto" for detection
+language = "fr"               # ISO code, "fr, en" for either, or "auto" for any
 initial_prompt = ""           # vocabulary to favour (proper nouns, jargon)
 corrections = true            # "mardi, non, plutôt mercredi" is written "mercredi"
 hesitations = true            # "euh", "um" and stuttered words left out
@@ -957,6 +968,18 @@ alone is never heard. It needs numpy, so whisper-desk's own Python:
 ```sh
 ~/.local/share/whisper-desk/venv/bin/python bench/whisper/measure.py              # the recorder
 ~/.local/share/whisper-desk/venv/bin/python bench/whisper/measure.py --audio -v   # + faster-whisper
+```
+
+`bench/languages/` measures a dictation that switches between French and English: 50 short
+replies of a few words (half of the French ones laden with English words, *"Je push le fix
+ce soir"*), recorded by `bench/languages/synthesize.py` with the same two voices, and the 84
+control recordings `bench/whisper/` lists. Each set is dictated as one dictation, French and
+English sentences in turn, with what came before as context, once per `language` setting —
+`"fr"`, `"auto"` and `"fr, en"` —; it prints the sentences transcribed in a language other
+than the one spoken, the word error rate and the seconds per sentence:
+
+```sh
+~/.local/share/whisper-desk/venv/bin/python bench/languages/measure.py -v
 ```
 
 ## License

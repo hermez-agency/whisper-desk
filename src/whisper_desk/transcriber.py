@@ -163,6 +163,21 @@ def voice_gain(levels: list[float], peak: float) -> float:
     return max(1.0, min(VOICE_LEVEL / voice, MAX_GAIN, PEAK_CEILING / peak))
 
 
+def languages(setting: str) -> list[str]:
+    """The languages a dictation may be in: none for any, "fr, en" for two."""
+    chosen: list[str] = []
+    for code in str(setting).replace(",", " ").lower().split():
+        if code != "auto" and code not in chosen:
+            chosen.append(code)
+    return chosen
+
+
+def pick_language(probabilities: list[tuple[str, float]], allowed: list[str]) -> str:
+    """The most likely of the allowed languages."""
+    heard = dict(probabilities)
+    return max(allowed, key=lambda code: heard.get(code, 0.0))
+
+
 def has_nvidia_gpu() -> bool:
     if not shutil.which("nvidia-smi"):
         return False
@@ -261,6 +276,19 @@ class Transcriber:
             parts.append(context.strip()[-CONTEXT_CHARS:])
         return " ".join(part for part in parts if part) or None
 
+    def _language(self, audio: Any) -> str | None:
+        """The language to transcribe this sentence in, None to let Whisper tell."""
+        allowed = languages(self.config["language"])
+        if len(allowed) < 2 or not self._model.model.is_multilingual:
+            return allowed[0] if allowed else None
+        # Left to itself, Whisper picks among a hundred languages: a short "Oui."
+        # comes out in Portuguese, a French sentence full of English words in
+        # Russian (bench/languages/). Among the user's own, it rarely errs.
+        _code, _probability, probabilities = self._model.detect_language(audio, vad_filter=True)
+        language = pick_language(probabilities, allowed)
+        logger.debug("Sentence heard in %s.", language)
+        return language
+
     def transcribe(self, pcm: bytes, context: str = "") -> str:
         """s16le 16 kHz mono PCM -> text."""
         if not pcm:
@@ -276,10 +304,9 @@ class Transcriber:
         if gain > 1.0:
             logger.debug("Quiet voice raised by %.1f dB.", 20 * np.log10(gain))
             audio = audio * gain
-        language = self.config["language"]
         segments, _info = self._model.transcribe(
             audio,
-            language=None if language in ("", "auto") else language,
+            language=self._language(audio),
             beam_size=int(self.config["beam_size"]),
             initial_prompt=self.prompt(context),
             # Domain terms, pushed into the decoder prompt: without them,

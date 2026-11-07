@@ -4,6 +4,28 @@
 
 ### Added
 
+- **French and English in one dictation** (Wispr Flow's language switching): with
+  **French and English** as the language in the settings window (and the first-launch
+  window), or `language = "fr, en"` in `[model]`, each sentence is written in the language
+  it was said in, and never in a third one. Whisper weighs every language it knows for the
+  sentence, and the most likely of those listed is kept: with `"auto"`, a short *"Oui."*
+  came out in Spanish or Japanese and *"Check tes mails."* in Russian or Turkish; with
+  `"fr"` alone, an English sentence came out in French (*"Thanks a lot."* written
+  *"Merci beaucoup."*). Any codes go, two or more (`"de, en"`, `"fr, en, es"`); an
+  English-only model keeps the first one. The default stays `"fr"`.
+- `bench/languages/`: 50 short replies (half of the French ones laden with English words,
+  *"Je push le fix ce soir"*) recorded with the voices of the other benches, and the 84
+  control recordings, each set dictated as one dictation switching between French and
+  English, once per `language` setting. Sentences transcribed in a language other than
+  the one spoken, out of 134 — `"fr"` / `"auto"` / `"fr, en"`:
+  - faster-whisper `large-v3-turbo` (CUDA, float16): 60 / 2 / **0**; word error rate,
+    short replies 14.4 % / 12.2 % / 13.3 %, ordinary sentences 7.6 % / 7.0 % / 7.0 %;
+  - faster-whisper `small` (CPU, int8, one thread): 60 / 2 / **1** (a lone *"Oui."*
+    written *"Ui."*, in English); short replies 23.2 % / 7.2 % / 7.7 %, ordinary sentences
+    13.7 % / 5.4 % / 5.4 %.
+  Telling the language costs what `"auto"` costs: about twice the time per sentence of a
+  forced language on one CPU thread (8.2 s against 4.3 s), 0.6 s against 0.3 s on the GPU.
+
 - **Replacements in the personal dictionary** (Wispr Flow's "Correct a misspelling"): a
   name Whisper never writes right, even with it in `vocabulary`, is saved with what Whisper
   writes for it — `"alarmor" = "Ollama"`, `"mac os" = "macOS"` — in the new
