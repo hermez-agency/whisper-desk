@@ -249,6 +249,71 @@ class TranscribeTest(unittest.TestCase):
         transcriber._model.transcribe.assert_not_called()
 
 
+class LanguageTest(unittest.TestCase):
+    """The language of each sentence, among those the user speaks."""
+
+    def language(self, setting, probabilities=(), multilingual=True):
+        transcriber = Transcriber(settings(language=setting))
+        transcriber._model = mock.Mock()
+        transcriber._model.model.is_multilingual = multilingual
+        transcriber._model.detect_language.return_value = ("pt", 0.3, list(probabilities))
+        return transcriber._language("audio"), transcriber._model.detect_language
+
+    def test_the_setting_lists_the_languages_spoken(self):
+        self.assertEqual(transcriber.languages("fr, en"), ["fr", "en"])
+        self.assertEqual(transcriber.languages("FR,EN,fr"), ["fr", "en"])
+        self.assertEqual(transcriber.languages("de en"), ["de", "en"])
+
+    def test_auto_or_nothing_lists_no_language(self):
+        self.assertEqual(transcriber.languages("auto"), [])
+        self.assertEqual(transcriber.languages(""), [])
+
+    def test_the_most_likely_of_the_allowed_languages_wins(self):
+        heard = [("pt", 0.40), ("en", 0.35), ("fr", 0.20)]
+        self.assertEqual(transcriber.pick_language(heard, ["fr", "en"]), "en")
+
+    def test_an_allowed_language_never_heard_comes_last(self):
+        self.assertEqual(transcriber.pick_language([("fr", 0.1)], ["en", "fr"]), "fr")
+
+    def test_one_language_is_forced_without_listening(self):
+        language, detect = self.language("fr")
+        self.assertEqual(language, "fr")
+        detect.assert_not_called()
+
+    def test_auto_leaves_whisper_to_tell(self):
+        language, detect = self.language("auto")
+        self.assertIsNone(language)
+        detect.assert_not_called()
+
+    def test_a_short_french_reply_is_not_taken_for_portuguese(self):
+        """"Oui." alone: Whisper's first guess is Portuguese, French comes next."""
+        language, detect = self.language(
+            "fr, en", [("pt", 0.26), ("fr", 0.21), ("es", 0.15), ("en", 0.08)]
+        )
+        self.assertEqual(language, "fr")
+        self.assertTrue(detect.call_args.kwargs["vad_filter"])
+
+    def test_an_english_sentence_is_written_in_english(self):
+        language, _ = self.language("fr, en", [("en", 0.97), ("fr", 0.01)])
+        self.assertEqual(language, "en")
+
+    def test_an_english_only_model_is_not_asked(self):
+        language, detect = self.language("fr, en", multilingual=False)
+        self.assertEqual(language, "fr")
+        detect.assert_not_called()
+
+    @requires_numpy
+    def test_the_language_chosen_reaches_the_model(self):
+        transcriber = Transcriber(settings(language="fr, en"))
+        model = mock.Mock()
+        model.model.is_multilingual = True
+        model.detect_language.return_value = ("en", 0.9, [("en", 0.9), ("fr", 0.05)])
+        model.transcribe.return_value = (iter([Segment("Sounds good.")]), None)
+        transcriber._model = model
+        self.assertEqual(transcriber.transcribe(b"\x01\x02" * 800), "Sounds good.")
+        self.assertEqual(model.transcribe.call_args.kwargs["language"], "en")
+
+
 class DownloadTest(unittest.TestCase):
     """The first dictation waits for the model: the gauge says how long."""
 

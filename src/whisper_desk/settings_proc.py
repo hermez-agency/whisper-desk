@@ -30,6 +30,8 @@ METER_SECONDS = 30.0
 
 LANGUAGES = (
     ("auto", "Detect automatically"),
+    # Each sentence in whichever of the two it was said in, and no third one.
+    ("fr, en", "French and English"),
     ("fr", "French"), ("en", "English"), ("es", "Spanish"), ("de", "German"),
     ("it", "Italian"), ("pt", "Portuguese"), ("nl", "Dutch"), ("pl", "Polish"),
     ("ca", "Catalan"), ("ro", "Romanian"), ("sv", "Swedish"), ("da", "Danish"),

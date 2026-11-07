@@ -856,6 +856,14 @@
       sentence, and it is raised to an ordinary level before Whisper hears it.
     </p>
 
+    <h3>Two languages</h3>
+    <p>
+      French and English in one dictation? Pick <em>French and English</em> in the settings
+      window, or <code>language = "fr, en"</code>: each sentence is written in the language it
+      was said in, and never in a third one — no short <em>“Oui.”</em> turned Spanish, no
+      <em>“Thanks a lot.”</em> turned into <em>“Merci beaucoup.”</em>
+    </p>
+
     <h3>Replacements</h3>
     <p>
       A name Whisper never writes right, even with it in the vocabulary? Save what it writes and
@@ -991,7 +999,7 @@ binding = <span class="s">"auto"</span>              <span class="c"># "auto", o
 <span class="k">[model]</span>
 name = <span class="s">"auto"</span>                 <span class="c"># auto | tiny | base | small | medium | large-v3 | large-v3-turbo</span>
 device = <span class="s">"auto"</span>               <span class="c"># auto | cuda | cpu</span>
-language = <span class="s">"fr"</span>               <span class="c"># ISO code, or "auto" for detection</span>
+language = <span class="s">"fr"</span>               <span class="c"># ISO code, "fr, en" for either, or "auto" for any</span>
 initial_prompt = <span class="s">""</span>           <span class="c"># vocabulary to favour (proper nouns, jargon)</span>
 corrections = <span class="n">true</span>            <span class="c"># "mardi, non, plutôt mercredi" is written "mercredi"</span>
 hesitations = <span class="n">true</span>            <span class="c"># "euh", "um" and stuttered words left out</span>

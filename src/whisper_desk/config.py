@@ -47,7 +47,7 @@ DEFAULTS: dict[str, Any] = {
         "name": "auto",
         "device": "auto",          # auto | cuda | cpu
         "compute_type": "auto",    # auto | float16 | int8_float16 | int8
-        "language": "fr",          # ISO code, or "auto" for detection
+        "language": "fr",          # ISO code, "fr, en" for either, or "auto" for any
         "beam_size": 5,
         "initial_prompt": "",
         # Terms the model mangles: proper nouns, tools, domain jargon.

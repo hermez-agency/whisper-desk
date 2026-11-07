@@ -32,7 +32,7 @@ dictionary replacements, [Teach Flow your words with the dictionary](https://doc
 | **Numbered lists** — spoken enumerations become a formatted list | `lists.py`: items numbered aloud (*un, deux*, *premièrement*, *firstly*, *number one*, or the figures Whisper writes) written one per line, "1. …", the words before as a title with a colon; goes on across pauses with the as-you-go dictation; measured in `bench/lists/` (#33). No bulleted lists, no nested lists | partial | medium | S |
 | **Name spelling from context** | `vocabulary` (hotwords) and the context of the dictation fed back to the model | partial | high | — |
 | **100+ languages** | every Whisper language; `language = "auto"` detects one language per sentence | done | medium | — |
-| **Switching languages mid-dictation** (FR/EN) | detection per sentence with `auto`, but a fixed `language` forces one | partial | medium | M |
+| **Switching languages mid-dictation** (FR/EN) | `language = "fr, en"` (**French and English** in the settings): each sentence in whichever of the listed languages it was said in, never a third one; measured in `bench/languages/` (in PR). One language per sentence: a sentence mixing both is written in one | partial | medium | M |
 | **Whisper mode** — dictating very quietly | heard from some 25 dB under an ordinary voice: automatic threshold floor 60 instead of 180, a hold that keeps a low sentence open over its soft syllables, a low sentence raised to an ordinary level before Whisper; measured in `bench/whisper/` (#36). Threshold not re-learned during the dictation; no model tuned on whispers | partial | medium | M |
 | **Latency** — "4× faster than typing" | sentence by sentence as you speak, model kept in memory, GPU when there is one; no measure yet | partial | high | M |
 
@@ -41,7 +41,7 @@ dictionary replacements, [Teach Flow your words with the dictionary](https://doc
 | Wispr Flow | whisper-desk | Status | Value | Effort |
 |---|---|---|---|---|
 | **Works in any app** | insertion at the cursor through the clipboard and a paste shortcut (uinput, Mutter, SendKeys, System Events) | done | — | — |
-| **Personal dictionary**, fed by the words you correct | `vocabulary` in the settings window, filled by hand; fed by the corrections made in the history (**Correct…**, `history --correct`), `vocabulary.py`, measured in `bench/dictionary/` (#34); replacement entries ("misheard → meant", Wispr Flow's "Correct a misspelling") in `[replacements]` and the settings window, `replacements.py` (in PR). Not learned from an edit made in the app dictated into (whisper-desk cannot see it); replacements saved by hand, not proposed from a correction | partial | high | M |
+| **Personal dictionary**, fed by the words you correct | `vocabulary` in the settings window, filled by hand; fed by the corrections made in the history (**Correct…**, `history --correct`), `vocabulary.py`, measured in `bench/dictionary/` (#34); replacement entries ("misheard → meant", Wispr Flow's "Correct a misspelling") in `[replacements]` and the settings window, `replacements.py` (#38). Not learned from an edit made in the app dictated into (whisper-desk cannot see it); replacements saved by hand, not proposed from a correction | partial | high | M |
 | **Snippets** — a spoken cue inserts a longer text | `[snippets]` in `config.toml`, `snippets.py`: alone or inside a sentence, case and punctuation ignored, longest cue wins, multi-line texts; measured in `bench/snippets/`; edited in the settings window too (#25). No rich text (bold, links) | partial | high | S |
 | **Styles** — tone adapted to the app (formal in docs, casual in chat) | — | missing | medium | L |
 | **Command Mode** — select text, say how to rewrite it | — (would need a local model, e.g. Ollama) | missing | high | L |
@@ -184,7 +184,20 @@ dictionary replacements, [Teach Flow your words with the dictionary](https://doc
   microphone; a non-stationary noise (door, keyboard, a voice next door) now reaches the
   threshold more easily — `threshold = 180` hears about as before. Left to do: re-learning the
   room's noise during the dictation, a model tuned on whispers.
-- 2026-11-06 — **Dictionary replacements** (in PR, partial): Wispr Flow's "Correct a
+- 2026-11-07 — **French and English in one dictation** (in PR, partial): `language =
+  "fr, en"`, or **French and English** in the settings window — Whisper's language
+  probabilities for each sentence, the most likely of the listed languages kept, then the
+  sentence transcribed in it. Measure (`bench/languages/`, 50 short replies and the 84
+  control recordings, dictated as dictations switching between French and English):
+  sentences in the wrong language out of 134, `"fr"` / `"auto"` / `"fr, en"`,
+  `large-v3-turbo` (GPU) 60 / 2 / 0, `small` (CPU) 60 / 2 / 1; WER on the short replies
+  `large-v3-turbo` 14.4 % / 12.2 % / 13.3 %, `small` 23.2 % / 7.2 % / 7.7 %, ordinary
+  sentences unchanged against `"auto"` (7.0 %, 5.4 %). Telling the language costs what
+  `"auto"` costs (an encoder pass: 0.3 → 0.6 s per sentence on the GPU). Known limits:
+  synthetic voices, one per language; a lone *"Oui."* may still pass for English with
+  `small`; a sentence mixing both languages is written in one. Left to do: the default
+  language proposed from the system locale, a language per application.
+- 2026-11-06 — **Dictionary replacements** (merged, #38, partial): Wispr Flow's "Correct a
   misspelling" — a spelling Whisper keeps writing saved with the one meant, in
   `[replacements]` or the **Replacements** list of the settings window (`"alarmor" =
   "Ollama"`, `"mac os" = "macOS"`), replaced as whole words, whatever the case, spaced or

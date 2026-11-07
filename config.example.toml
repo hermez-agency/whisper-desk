@@ -16,7 +16,7 @@ action = "toggle"
 name = "auto"
 device = "auto"          # auto | cuda | cpu
 compute_type = "auto"    # auto | float16 | int8_float16 | int8
-language = "fr"          # ISO 639-1 code, or "auto" for automatic detection
+language = "fr"          # ISO 639-1 code, "fr, en" for either of two, or "auto" for any
 beam_size = 5
 # Priming sentence given to the model (style, general context):
 initial_prompt = ""
