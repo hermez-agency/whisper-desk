@@ -304,8 +304,9 @@ class HistoryWindow(Gtk.Window):
         scroller.add(text)
         area.pack_start(scroller, True, True, 0)
         learn = Gtk.CheckButton(label="Add the corrected names and words to the vocabulary")
-        learn.set_tooltip_text("Whisper hears them right next time — "
-                               "they can be removed in the settings")
+        learn.set_tooltip_text("Whisper hears them right next time — a name already in "
+                               "the vocabulary and still written wrong is saved as a "
+                               "replacement; both can be removed in the settings")
         learn.set_active(True)
         area.pack_start(learn, False, False, 0)
 

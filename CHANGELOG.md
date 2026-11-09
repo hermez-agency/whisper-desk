@@ -4,6 +4,33 @@
 
 ### Added
 
+- **Replacements learned from a correction** (Wispr Flow's dictionary fed by what you
+  correct): a name already in `vocabulary` that Whisper still writes wrong is beyond what
+  the vocabulary can do — corrected in the history (**Correct…**, `whisper-desk history
+  --correct`), what Whisper wrote is saved with the name in `[replacements]`, and written
+  right from then on: *"le ticket ouvert par Opal"* corrected into *"…par Opoil"* saves
+  `"Opal" = "Opoil"`. A name not yet in the vocabulary joins it first, as before; the
+  window and the command say which replacements were saved, *Add the corrected names and
+  words to the vocabulary* unticked (`--no-learn`) saves none. Only a run of three words
+  at most that sounds like the name is taken: a change of mind (*OVH* → *Scaleway*), an
+  ordinary word put for another (*pool* → *pull*), a word of one or two letters, a term of
+  the vocabulary itself or a misspelling that already has an entry — one switched off
+  included — never are (`vocabulary.misheard`, `vocabulary.learn_spellings`).
+- `bench/dictionary/measure.py --from-corrections`: the replacements are those
+  whisper-desk takes on its own from the second correction of each first dictation,
+  instead of the misspellings picked out by hand of `--replacements`; and the 46 written
+  corrections are read again with their names already in the vocabulary (a new
+  `replaced` column says which replacement each should give):
+  - written corrections: 25/26 replacements wanted taken, none unwanted, 16/16 grammar
+    fixes and changes of mind take none (the one missed: *C plus plus* → *C++*, too unlike);
+  - faster-whisper `small` (CPU, int8): name written right in the other sentence 5/22 →
+    17/22, word error rate 18.1 % → 8.0 % — the same as the replacements picked by hand;
+  - faster-whisper `large-v3-turbo` (CUDA, float16): 9/22 → 18/22, 15.2 % → 8.0 % — the
+    same as by hand;
+  - the 8 control sentences: no replacement changed any (one loses a sentence start's
+    capital to the vocabulary, as without the replacements).
+  Taken on the way and worth knowing: *Leads* → *Leadz* and *au poil* → *Opoil*, ordinary
+  words a replacement then rewrites everywhere — they can be removed in the settings.
 - **French and English in one dictation** (Wispr Flow's language switching): with
   **French and English** as the language in the settings window (and the first-launch
   window), or `language = "fr, en"` in `[model]`, each sentence is written in the language

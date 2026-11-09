@@ -99,6 +99,20 @@ class ControllerTest(HistoryCase):
         self.assertEqual(self.config["model"]["vocabulary"], "")
         self.assertFalse(self.config_path.exists())
 
+    def test_a_name_still_misheard_becomes_a_replacement(self):
+        self.config["model"]["vocabulary"] = "Kubernetes"
+        request = self.request("correct", 1)
+        request["text"] = "the one that got Kubernetes"
+        history.correct(history.load()[1], "the one that got cube and Netis")
+        request["date"] = history.load()[1].date
+        reply = self.controller.handle(request)
+        self.assertEqual(reply["status"],
+                         "Dictation corrected — replaced from now on: cube and Netis → Kubernetes")
+        saved = config_module.load(self.config_path)
+        self.assertEqual(saved["replacements"], {"cube and Netis": "Kubernetes"})
+        self.assertEqual(self.config["replacements"], {"cube and Netis": "Kubernetes"})
+        self.assertIn(("reload", {"timeout": 10, "autostart": False}), self.sent)
+
     def test_a_dictation_cannot_be_emptied(self):
         request = self.request("correct", 1)
         request["text"] = "   "

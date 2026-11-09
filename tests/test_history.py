@@ -253,6 +253,19 @@ class CommandTest(HistoryCase):
         self.assertEqual(config_module.load(self.config_path)["model"]["vocabulary"], "Pyxis")
         send.assert_called_once_with("reload", timeout=10, autostart=False)
 
+    def test_correct_saves_a_name_still_misheard_as_a_replacement(self):
+        config_module.update({"model": {"vocabulary": "Pyxis"}}, path=self.config_path)
+        history.correct(history.load()[0], "We should add Pixies pictures")
+        with mock.patch("whisper_desk.client.send") as send:
+            code, out = self.run_cli("--correct", "2", "We should add Pyxis pictures")
+        self.assertEqual(code, 0)
+        self.assertIn("Replaced from now on: Pixies → Pyxis", out)
+        self.assertNotIn("Added to the vocabulary", out)
+        saved = config_module.load(self.config_path)
+        self.assertEqual((saved["model"]["vocabulary"], saved["replacements"]),
+                         ("Pyxis", {"Pixies": "Pyxis"}))
+        send.assert_called_once_with("reload", timeout=10, autostart=False)
+
     def test_correct_without_learning(self):
         with mock.patch("whisper_desk.client.send") as send:
             self.run_cli("--correct", "1", "Résumé de la réunion Animalink", "--no-learn")

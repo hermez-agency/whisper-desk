@@ -118,5 +118,93 @@ class MergeTest(unittest.TestCase):
         self.assertEqual(saved, [])
 
 
+def misheard(before: str, after: str, known: str) -> list[tuple[str, str]]:
+    return vocabulary.misheard(before, after, known)
+
+
+class MisheardTest(unittest.TestCase):
+    """A name the vocabulary held, still written wrong and corrected: a replacement."""
+
+    def test_a_name_heard_as_another_word(self):
+        self.assertEqual(misheard("Je vois Opal demain.", "Je vois Opoil demain.", "Hermez, Opoil"),
+                         [("Opal", "Opoil")])
+
+    def test_a_name_heard_as_several_words(self):
+        self.assertEqual(misheard("Le site d'Animal Inc. sera en ligne.",
+                                  "Le site d'Animalink sera en ligne.", "Animalink"),
+                         [("Animal Inc", "Animalink")])
+        self.assertEqual(misheard("Installe mac os.", "Installe macOS.", "macOS"),
+                         [("mac os", "macOS")])
+
+    def test_a_term_of_several_words(self):
+        self.assertEqual(misheard("On lance whisper desque.", "On lance Whisper Desk.",
+                                  "Whisper Desk"), [("whisper desque", "Whisper Desk")])
+
+    def test_a_whole_term_given_its_capital(self):
+        self.assertEqual(misheard("Je vois hermez demain.", "Je vois Hermez demain.", "Hermez"),
+                         [("hermez", "Hermez")])
+
+    def test_each_misspelling_once(self):
+        self.assertEqual(misheard("Opal et Opal", "Opoil et Opoil", "Opoil"), [("Opal", "Opoil")])
+
+
+class NotMisheardTest(unittest.TestCase):
+    def test_a_name_the_vocabulary_did_not_hold_is_learned_first(self):
+        self.assertEqual(misheard("Je vois Opal demain.", "Je vois Opoil demain.", "Hermez"), [])
+
+    def test_grammar_and_ordinary_words(self):
+        self.assertEqual(misheard("Il mange.", "Ils mangent.", "Hermez"), [])
+        self.assertEqual(misheard("Merci pour les ripos.", "Merci pour les repos.", "Hermez"), [])
+
+    def test_a_short_word_is_never_replaced(self):
+        self.assertEqual(misheard("Je vois a demain.", "Je vois Hermez demain.", "Hermez"), [])
+
+    def test_a_word_of_the_vocabulary_is_never_replaced(self):
+        self.assertEqual(misheard("Opal et Opoil", "Opoil et Opoil", "Opoil, Opal"), [])
+
+    def test_a_word_of_a_longer_term_keeps_its_case(self):
+        self.assertEqual(misheard("le Animal link", "le Animal Link", "Animal Link"), [])
+
+    def test_a_name_added_around_what_was_heard(self):
+        # "Animal" replaced by "Animal Link" would write "Animal Link Link".
+        self.assertEqual(misheard("le devis Animal ok", "le devis Animal Link ok", "Animal Link"), [])
+
+    def test_a_misspelling_with_a_sign_or_a_dot(self):
+        self.assertEqual(misheard("Use node.JS here.", "Use Node.js here.", "Node.js"), [])
+
+    def test_a_sentence_rewritten(self):
+        self.assertEqual(misheard("On verra ça avec le client demain.",
+                                  "Hermez présente l'offre jeudi.", "Hermez"), [])
+
+
+class LearnSpellingsTest(unittest.TestCase):
+    def config(self, table: dict) -> dict:
+        return {"model": {"vocabulary": "Opoil, Hermez"}, "replacements": dict(table)}
+
+    def test_saved_with_the_other_entries(self):
+        config, saved = self.config({"alarmor": "Ollama"}), []
+        added = vocabulary.learn_spellings("Je vois Opal.", "Je vois Opoil.", config, saved.append)
+        self.assertEqual(added, {"Opal": "Opoil"})
+        self.assertEqual(saved, [{"alarmor": "Ollama", "Opal": "Opoil"}])
+        self.assertEqual(config["replacements"], {"alarmor": "Ollama", "Opal": "Opoil"})
+
+    def test_an_entry_already_there_is_left_alone(self):
+        # Switched off by hand ("" as its spelling), or written in another case.
+        for table in ({"opal": ""}, {"OPAL": "Opale"}):
+            config, saved = self.config(table), []
+            self.assertEqual(vocabulary.learn_spellings("Je vois Opal.", "Je vois Opoil.",
+                                                        config, saved.append), {})
+            self.assertEqual((saved, config["replacements"]), ([], table))
+
+    def test_before_learn_the_vocabulary_is_the_one_dictated_with(self):
+        config, saved = self.config({}), []
+        config["model"]["vocabulary"] = ""
+        self.assertEqual(vocabulary.learn_spellings("Je vois Opal.", "Je vois Opoil.",
+                                                    config, saved.append), {})
+        self.assertEqual(vocabulary.learn("Je vois Opal.", "Je vois Opoil.", config,
+                                          lambda changes: None), ["Opoil"])
+        self.assertEqual(saved, [])
+
+
 if __name__ == "__main__":
     unittest.main()

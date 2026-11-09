@@ -5,6 +5,10 @@ is made in the history; the words it brings that Whisper could not have
 guessed — names, jargon, a word it heard as another — join `vocabulary`, the
 hotwords pushed into the decoder for every sentence. A grammar fix ("mange"
 -> "manges", "a" -> "à") or a word Whisper merely left out teaches nothing.
+
+A name the vocabulary already held and Whisper still wrote wrong is beyond
+what the hotwords can do: the correction saves what it wrote and the name as
+a replacement ("Opal" -> "Opoil"), Wispr Flow's "Correct a misspelling".
 """
 
 from __future__ import annotations
@@ -14,6 +18,8 @@ import re
 import unicodedata
 from collections.abc import Callable
 from typing import Any
+
+from . import replacements
 
 # Inner dots, dashes and signs belong to the word: "Node.js", "faster-whisper", "C++".
 WORD = re.compile(r"\w(?:[\w'’.+#-]*[\w+#])?")
@@ -29,6 +35,16 @@ MIN_PLAIN = 5
 # A plain word misheard sounds like the one written instead — "ripos" for
 # "repos" —, a word less alike is the user changing their mind.
 ALIKE = 0.5
+# What Whisper wrote for a name is saved as a replacement only when it is made
+# of plain words: the replacement matches them spaced or hyphenated, never
+# across a dot or a sign.
+PLAIN = re.compile(r"\w+(?:['’-]\w+)*")
+# Fewer letters than this ("a", "I", "un") is grammar the replacement would
+# rewrite everywhere.
+MIN_MISHEARD = 3
+# Below this likeness, what was written was said: "OVH" corrected into
+# "Scaleway" is a change of mind, not a name misheard ("Tory" -> "Tauri": 0.44).
+SOUNDS_LIKE = 0.4
 
 
 def fold(text: str) -> str:
@@ -135,4 +151,79 @@ def learn(before: str, after: str, config: dict[str, Any], save: Callable[[dict[
     if added:
         save({"model": {"vocabulary": vocabulary}})
         config["model"]["vocabulary"] = vocabulary
+    return added
+
+
+def _within(words: list[str], others: list[str]) -> bool:
+    """`words` found in a row inside `others`: replacing them would repeat them."""
+    a, b = [fold(w) for w in words], [fold(w) for w in others]
+    return any(b[i:i + len(a)] == a for i in range(len(b) - len(a) + 1))
+
+
+def _replaceable(heard: list[str], meant: list[str], terms: list[str]) -> bool:
+    whole = {fold(term) for term in terms}
+    if fold(" ".join(heard)) == fold(" ".join(meant)):
+        # A whole term given the case or accents it lacked: "hermez" -> "Hermez".
+        # Not a word of a longer one: "link" would become "Link" everywhere.
+        return fold(" ".join(meant)) in whole
+    # A term of the vocabulary is never replaced by another.
+    if fold(" ".join(heard)) in whole or any(fold(w) in whole for w in heard) or _within(heard, meant):
+        return False
+    # An ordinary word put for another ("pool" -> "pull") is right elsewhere;
+    # words run together ("middle where" -> "middleware") are not.
+    if len(heard) <= len(meant) and all(w.isalpha() and w.islower() for w in meant):
+        return False
+    said, written = ("".join(fold(w) for w in words) for words in (heard, meant))
+    return difflib.SequenceMatcher(None, said, written).ratio() >= SOUNDS_LIKE
+
+
+def misheard(before: str, after: str, vocabulary: str) -> list[tuple[str, str]]:
+    """What Whisper wrote for the names `vocabulary` already held, and those names.
+
+    Only the runs of a few words corrected into words all in the vocabulary
+    count: the hotwords did not suffice for them.
+    """
+    terms = entries(vocabulary)
+    known = {fold(term) for term in terms} | {fold(w) for term in terms for w, _ in _words(term)}
+    old, new = _words(before), _words(after)
+    matcher = difflib.SequenceMatcher(None, [w for w, _ in old], [w for w, _ in new],
+                                      autojunk=False)
+    found: list[tuple[str, str]] = []
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag != "replace" or max(i2 - i1, j2 - j1) > SHORT_RUN:
+            continue
+        heard, meant = [w for w, _ in old[i1:i2]], [w for w, _ in new[j1:j2]]
+        if not (fold(" ".join(meant)) in known or all(fold(w) in known for w in meant)):
+            continue
+        if (not all(PLAIN.fullmatch(w) for w in heard)
+                or sum(map(len, heard)) < MIN_MISHEARD
+                or not _replaceable(heard, meant, terms)):
+            continue
+        pair = (" ".join(heard), " ".join(meant))
+        if pair not in found:
+            found.append(pair)
+    return found
+
+
+def learn_spellings(before: str, after: str, config: dict[str, Any],
+                    save: Callable[[dict[str, Any]], None]) -> dict[str, str]:
+    """Adds to config["replacements"] the misspellings the correction shows.
+
+    Called before `learn`, against the vocabulary the dictation was made
+    with. An entry already there for the misspelling — one switched off by
+    hand too — is left alone. `save` writes the whole [replacements] section;
+    the entries added are returned so that the user is told.
+    """
+    table = config["replacements"]
+    keys = {replacements.misspelling_key(key) for key in table}
+    added: dict[str, str] = {}
+    for heard, meant in misheard(before, after, str(config["model"]["vocabulary"])):
+        key = replacements.misspelling_key(heard)
+        if key and key not in keys:
+            keys.add(key)
+            added[heard] = meant
+    if added:
+        table = {**table, **added}
+        save(table)
+        config["replacements"] = table
     return added

@@ -443,7 +443,9 @@ Some names Whisper never writes right, even with them in `vocabulary`: *Alarmor*
 *Ollama*, *au Stinger* for *Hostinger*. Save what it writes and what you mean as a
 replacement — in the **Replacements** list of `whisper-desk settings`, next to the
 vocabulary (**Add…**, **Edit…**, **Remove**), or by hand in the `[replacements]` section
-of `config.toml` — and it is written your way wherever it appears:
+of `config.toml` — and it is written your way wherever it appears. Correcting in the
+history a name the vocabulary already holds saves the replacement for you (see
+*History*).
 
 ```toml
 [replacements]
@@ -543,6 +545,16 @@ and the command say which words were added; untick *Add the corrected names and 
 to the vocabulary* (or add `--no-learn`) to fix the text alone, and remove a word in
 **Settings** like any other. Everything stays in `config.toml`, on this machine.
 `bench/dictionary/` measures it (see *Measuring the transcription*).
+
+A name already in `vocabulary` that Whisper still writes wrong is beyond what the
+vocabulary can do: correct it once more, and what Whisper wrote is saved with the name as
+a replacement (see *Replacements*) — *"le ticket ouvert par Opal"* corrected into
+*"…par Opoil"* saves `"Opal" = "Opoil"`, and *Opal* is written *Opoil* from then on. Only
+a run of three words at most, that sounds like the name, is saved: a change of mind
+(*OVH* → *Scaleway*), an ordinary word put for another (*pool* → *pull*), a word of one or
+two letters or a term of the vocabulary itself never are, nor a misspelling that already
+has an entry — one you switched off by leaving its spelling empty included. The window and
+the command say which replacements were saved; remove one in **Settings** like any other.
 
 ### Statistics
 
@@ -842,7 +854,7 @@ to test all three from any of them.
 | `src/whisper_desk/overlay_protocol.py` | the line protocol between the daemon and the overlay |
 | `src/whisper_desk/history.py` | dictation history (JSON Lines), search, purge |
 | `src/whisper_desk/stats.py` | usage statistics worked out from the history |
-| `src/whisper_desk/vocabulary.py` | the words a corrected dictation teaches the vocabulary |
+| `src/whisper_desk/vocabulary.py` | the words a corrected dictation teaches the vocabulary, and the replacements |
 | `src/whisper_desk/history_window.py` | history window (GTK3, separate process) |
 | `src/whisper_desk/tomlwrite.py` | writing `config.toml` while keeping its comments |
 | `src/whisper_desk/settings_window.py` | settings window (GTK3, separate process) |
@@ -946,13 +958,17 @@ vocabulary learned so far — one per language — and without; 8 control senten
 that the grown vocabulary mars nothing else. `--replacements` adds a step: each first
 dictation is said again with the vocabulary learned, and where the name is still written
 wrong, what Whisper wrote is saved as a replacement for it; the other sentence is then
-transcribed with the vocabulary and the replacements. On CUDA, the venv's NVIDIA libraries
+transcribed with the vocabulary and the replacements. `--from-corrections` saves instead
+the replacements whisper-desk takes on its own from that second correction, and reads the
+written corrections again with their names already in the vocabulary: the replacements
+taken against those wanted, and none for the grammar fixes. On CUDA, the venv's NVIDIA libraries
 go in `LD_LIBRARY_PATH`, as the `whisper-desk` launcher does:
 
 ```sh
 python3 bench/dictionary/measure.py -v
 ~/.local/share/whisper-desk/venv/bin/python bench/dictionary/measure.py --audio -v
 ~/.local/share/whisper-desk/venv/bin/python bench/dictionary/measure.py --audio --replacements -v
+~/.local/share/whisper-desk/venv/bin/python bench/dictionary/measure.py --audio --from-corrections -v
 ```
 
 `bench/whisper/` measures a dictation said low or whispered, from the microphone to the
