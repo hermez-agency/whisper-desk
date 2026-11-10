@@ -919,6 +919,8 @@
       <b>Correct…</b> fixes what Whisper got wrong, and the names and words you corrected join the
       vocabulary: correct <i>“animal link”</i> into <i>“Animalink”</i> once, and the next time it is
       written right. A grammar fix teaches nothing; the words learned are shown, and stay on your machine.
+      A name already in the vocabulary that Whisper still gets wrong? Correct it once more, and what
+      it wrote is saved as a replacement: <i>“Opal”</i> is written <i>“Opoil”</i> from then on.
     </p>
     <pre data-copy><span class="p">$ </span>whisper-desk history                  <span class="c"># the 20 latest, numbered from 1 (the latest)</span>
 <span class="p">$ </span>whisper-desk history invoice friday   <span class="c"># search: every word, case and accents ignored</span>
@@ -1179,7 +1181,7 @@ margin = <span class="n">96</span>
           <tr><td><code>overlay.py</code></td><td>X11 overlay (separate process)</td></tr>
           <tr><td><code>overlay_protocol.py</code></td><td>the line protocol between the daemon and the overlay</td></tr>
           <tr><td><code>history.py</code></td><td>dictation history (JSON Lines), search, purge</td></tr>
-          <tr><td><code>vocabulary.py</code></td><td>the words a corrected dictation teaches the vocabulary</td></tr>
+          <tr><td><code>vocabulary.py</code></td><td>the words a corrected dictation teaches the vocabulary, and the replacements</td></tr>
           <tr><td><code>history_window.py</code></td><td>history window (GTK3, separate process)</td></tr>
           <tr><td><code>tomlwrite.py</code></td><td>writing <code>config.toml</code> while keeping its comments</td></tr>
           <tr><td><code>settings_window.py</code></td><td>settings window (GTK3, separate process)</td></tr>

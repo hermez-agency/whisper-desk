@@ -16,6 +16,11 @@ the first dictation is said again with the vocabulary learned; where the
 name is still written wrong, the user saves what Whisper wrote and the name
 as a replacement. Is the name right in the other sentence, said apart, with
 the vocabulary and the replacements — and do the controls stay as they were?
+--from-corrections saves, instead of the misspelling picked out by hand, the
+replacements whisper-desk takes on its own from that second correction
+(vocabulary.misheard); the written corrections are then also read a second
+time, every name already in the vocabulary: are the replacements taken those
+a user would save, and do the grammar fixes take none?
 
 --audio needs the whisper-desk venv (whisper-desk's own Python) and the
 recordings next to this file; the models are those already downloaded. On
@@ -80,6 +85,24 @@ def written(verbose: bool) -> None:
           f"controls quiet {quiet}/{len(corrections) - len(teaching)}")
 
 
+def written_replacements(verbose: bool) -> None:
+    """Each correction made again, its names already in the vocabulary."""
+    corrections = rows("corrections.tsv")
+    known = ", ".join(word for row in corrections for word in row["learned"].split("|") if word)
+    wanted = taken = right = 0
+    for row in corrections:
+        expected = {tuple(pair.split(">")) for pair in row["replaced"].split("|") if pair}
+        got = set(vocabulary.misheard(row["before"], row["after"], known))
+        wanted, taken, right = wanted + len(expected), taken + len(got), right + len(got & expected)
+        if verbose and got != expected:
+            print(f"    {row['id']}: {sorted(got)} instead of {sorted(expected)}")
+    quiet = sum(not vocabulary.misheard(r["before"], r["after"], known)
+                for r in corrections if not r["learned"])
+    print(f"{'written, corrected again':<28} replacements {right}/{wanted} wanted, "
+          f"{taken - right} unwanted   controls quiet "
+          f"{quiet}/{sum(not r['learned'] for r in corrections)}")
+
+
 def transcribe(whisper, row: dict[str, str], part: str, hotwords: str | None) -> str:
     segments, _ = whisper.transcribe(
         str(HERE / "audio" / f"{row['id']}-{part}.opus"), language=row["lang"],
@@ -114,7 +137,8 @@ def misspelled(heard: str, said: str, term: str) -> str | None:
     return heard[heard_tokens[span[0]].start():heard_tokens[span[-1]].end()]
 
 
-def audio(model: str, device: str, verbose: bool, with_replacements: bool) -> None:
+def audio(model: str, device: str, verbose: bool, with_replacements: bool,
+          from_corrections: bool = False) -> None:
     from faster_whisper import WhisperModel
 
     whisper = WhisperModel(model, device=device,
@@ -141,9 +165,17 @@ def audio(model: str, device: str, verbose: bool, with_replacements: bool) -> No
     if with_replacements:
         for row in names:
             heard = transcribe(whisper, row, "first", learned_vocabulary.get(row["lang"]))
-            wrong = misspelled(heard, row["first"], row["term"])
-            if wrong:
-                learned_replacements.setdefault(row["lang"], {})[wrong] = row["term"]
+            table = learned_replacements.setdefault(row["lang"], {})
+            if from_corrections:
+                taken = vocabulary.misheard(heard, row["first"],
+                                            learned_vocabulary.get(row["lang"], ""))
+                for wrong, meant in taken:
+                    table.setdefault(wrong, meant)
+                wrong = taken or None
+            else:
+                wrong = misspelled(heard, row["first"], row["term"])
+                if wrong:
+                    table[wrong] = row["term"]
             if verbose:
                 print(f"    {row['id']}: {heard!r} -> {wrong!r}")
 
@@ -154,7 +186,7 @@ def audio(model: str, device: str, verbose: bool, with_replacements: bool) -> No
         if with_replacements:
             after = [replacements.apply(text, learned_replacements.get(row["lang"], {}))
                      for row, text in zip(rows_, after)]
-            label += "+repl"
+            label += "+auto" if from_corrections else "+repl"
         pairs_before = [(row["next"], text) for row, text in zip(rows_, before)]
         pairs_after = [(row["next"], text) for row, text in zip(rows_, after)]
         line = f"{model + ' (' + device + ')':<28} {label:<9} WER {wer(pairs_before):6.1%} -> {wer(pairs_after):6.1%}"
@@ -184,13 +216,17 @@ def main() -> None:
     parser.add_argument("--models", default="small:cpu,large-v3-turbo:cuda")
     parser.add_argument("--replacements", action="store_true",
                         help="with --audio: the misspellings left saved as replacements")
+    parser.add_argument("--from-corrections", action="store_true",
+                        help="with --replacements: those whisper-desk takes from the correction")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
     written(args.verbose)
+    written_replacements(args.verbose)
     if args.audio:
         for spec in args.models.split(","):
             model, device = spec.split(":")
-            audio(model, device, args.verbose, args.replacements)
+            audio(model, device, args.verbose, args.replacements or args.from_corrections,
+                  args.from_corrections)
 
 
 if __name__ == "__main__":

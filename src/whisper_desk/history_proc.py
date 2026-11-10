@@ -2,7 +2,7 @@
 
 The window is a view: this side reads and rewrites the history, copies,
 asks the daemon to type a text again, writes the purge setting, and adds
-the words a correction teaches to the vocabulary.
+the words a correction teaches to the vocabulary or the replacements.
 """
 
 from __future__ import annotations
@@ -104,11 +104,21 @@ class HistoryController:
             return self.snapshot("Nothing was changed")
         if not history.correct(entry, text):
             return self.snapshot("This dictation is no longer in the history")
+        spellings = vocabulary.learn_spellings(
+            entry.text, text, self.config,
+            lambda table: config_module.update({}, tables={"replacements": table}),
+        ) if learn else {}
         added = vocabulary.learn(entry.text, text, self.config, config_module.update) if learn else []
-        if not added:
+        if not added and not spellings:
             return self.snapshot("Dictation corrected")
         self._reload_daemon()
-        return self.snapshot(f"Dictation corrected — added to the vocabulary: {', '.join(added)}")
+        status = "Dictation corrected"
+        if added:
+            status += f" — added to the vocabulary: {', '.join(added)}"
+        if spellings:
+            status += " — replaced from now on: " + ", ".join(
+                f"{heard} → {meant}" for heard, meant in spellings.items())
+        return self.snapshot(status)
 
     def _reload_daemon(self) -> None:
         """The daemon keeps what it read: the purge limit, the vocabulary."""

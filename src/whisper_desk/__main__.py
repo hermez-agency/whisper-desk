@@ -140,8 +140,16 @@ def _history_line(number: int, entry, width: int | None) -> str:
     return head + text
 
 
+def _save_replacements(table: dict) -> None:
+    config_module.update({}, tables={"replacements": table})
+
+
 def _correct(entry, text: str, config: dict, learn: bool) -> int:
-    """Rewrites a dictation and teaches the vocabulary the words corrected."""
+    """Rewrites a dictation and teaches the vocabulary the words corrected.
+
+    A name already in the vocabulary that Whisper still wrote wrong is saved
+    as a replacement instead.
+    """
     from . import history, vocabulary
     from .client import send
 
@@ -150,9 +158,15 @@ def _correct(entry, text: str, config: dict, learn: bool) -> int:
     if not history.correct(entry, text):
         return _print_error("that dictation is no longer in the history")
     print(f"Corrected: {text.strip()}")
+    spellings = vocabulary.learn_spellings(
+        entry.text, text, config, _save_replacements) if learn else {}
     added = vocabulary.learn(entry.text, text, config, config_module.update) if learn else []
     if added:
         print(f"Added to the vocabulary: {', '.join(added)}")
+    if spellings:
+        print("Replaced from now on: " + ", ".join(
+            f"{heard} → {meant}" for heard, meant in spellings.items()))
+    if added or spellings:
         try:
             send("reload", timeout=10, autostart=False)
         except Exception:
@@ -826,7 +840,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     history_parser.add_argument(
         "--no-learn", dest="learn", action="store_false",
-        help="with --correct: leaves the vocabulary as it is",
+        help="with --correct: leaves the vocabulary and the replacements as they are",
     )
     history_parser.add_argument("--delete", type=int, metavar="N", help="deletes dictation N")
     history_parser.add_argument("--clear", action="store_true", help="deletes every dictation")
