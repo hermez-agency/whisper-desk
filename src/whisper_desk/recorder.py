@@ -38,6 +38,7 @@ MIN_SEGMENT_CHUNKS = 4         # under 400 ms, it is not a sentence
 SILENT_INPUT_PEAK = 30.0       # below this peak, the input is mute, not discreet
 # Margin kept after the last voice, so a word ending is not cut off.
 TRIM_MARGIN_SECONDS = 0.3
+MARGIN_CHUNKS = round(TRIM_MARGIN_SECONDS * CHUNKS_PER_SECOND)
 
 
 def _rms(chunk: bytes) -> float:
@@ -60,6 +61,7 @@ class Recorder:
         on_level: Callable[[float, list[float]], None] | None = None,
         on_segment: Callable[[bytes], None] | None = None,
         bands: int = 0,
+        on_draft: Callable[[bytes], None] | None = None,
     ):
         self.config = config["recording"]
         self.on_level = on_level
@@ -67,6 +69,11 @@ class Recorder:
         self.bands = bands
         # Set in "as you go" mode: called for every finished sentence.
         self.on_segment = on_segment
+        # Called with a sentence as soon as its margin is recorded, before the
+        # pause is long enough to end it: the model can start on it while the
+        # pause is still being waited for. If the pause holds, on_segment gets
+        # the very same bytes; if the voice comes back, the draft is forgotten.
+        self.on_draft = on_draft
         self._stop = threading.Event()
         self._process: subprocess.Popen[bytes] | None = None
         self.reason = "unknown"
@@ -127,6 +134,11 @@ class Recorder:
         spoke_once = False
         last_voice = started
         segment_start = 0        # start index of the sentence in progress
+        voice_end = 0            # end index of the sentence, margin included
+        drafting = streaming and self.on_draft is not None and (
+            TRIM_MARGIN_SECONDS < segment_silence
+        )
+        drafted = False          # the sentence in progress went out as a draft
 
         try:
             while not self._stop.is_set():
@@ -158,12 +170,21 @@ class Recorder:
                     speaking = True
                     spoke_once = True
                     last_voice = now
+                    voice_end = len(frames) + MARGIN_CHUNKS
+                    drafted = False
+
+                if drafting and speaking and not drafted and len(frames) >= voice_end:
+                    drafted = True
+                    draft = self._sentence(frames, segment_start, voice_end)
+                    if draft:
+                        self.on_draft(draft)
 
                 # A short pause ends a sentence: it is sent without stopping listening.
                 if streaming and speaking and now - last_voice > segment_silence:
-                    segment = self._slice(frames, segment_start, segment_silence)
+                    segment = self._sentence(frames, segment_start, voice_end)
                     segment_start = len(frames)
                     speaking = False
+                    drafted = False
                     if segment:
                         self.on_segment(segment)
                     continue
@@ -188,10 +209,22 @@ class Recorder:
         # manual stop, the user has just spoken and cutting here would eat
         # their last second and a half.
         trailing = silence_seconds if self.reason == "silence" else 0.0
+        if streaming and drafted:
+            # Stopped during the pause that follows a draft: nothing was said
+            # since, and the sentence is the draft already in the model.
+            return self._sentence(frames, segment_start, voice_end)
         if streaming:
             # Whatever is left after the last pause.
             return self._slice(frames, segment_start, trailing)
         return self._slice(frames, 0, trailing)
+
+    @staticmethod
+    def _sentence(frames: list[bytes], start: int, end: int) -> bytes:
+        """The frames of a sentence, up to the margin after its last voice."""
+        chunks = frames[start:end]
+        if len(chunks) < MIN_SEGMENT_CHUNKS:
+            return b""
+        return b"".join(chunks)
 
     @staticmethod
     def _slice(frames: list[bytes], start: int, trailing_silence: float) -> bytes:

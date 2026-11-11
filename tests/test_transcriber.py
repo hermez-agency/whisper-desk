@@ -370,6 +370,29 @@ class DownloadTest(unittest.TestCase):
             Transcriber(settings()).load()
             self.assertEqual(os.environ["HF_HUB_DISABLE_XET"], "1")
 
+    @requires_numpy
+    def test_the_model_runs_once_as_soon_as_it_is_loaded(self):
+        """The first sentence dictated does not pay for the first pass."""
+        model = mock.Mock()
+        model.transcribe.return_value = (iter([Segment("Sous-titrage FR")]), None)
+        fake = type(sys)("faster_whisper")
+        fake.WhisperModel = lambda *args, **kwargs: model
+        with mock.patch.dict(sys.modules, {"faster_whisper": fake}):
+            Transcriber(settings()).load()
+        model.transcribe.assert_called_once()
+        audio = model.transcribe.call_args.args[0]
+        self.assertEqual(len(audio), transcriber.WARM_UP_SAMPLES)
+        self.assertFalse(model.transcribe.call_args.kwargs["vad_filter"])
+
+    def test_a_failed_warm_up_does_not_fail_the_load(self):
+        fake = type(sys)("faster_whisper")
+        fake.WhisperModel = lambda *args, **kwargs: object()
+        with mock.patch.dict(sys.modules, {"faster_whisper": fake}):
+            model = Transcriber(settings())
+            model.load()
+        self.assertTrue(model.is_loaded)
+        self.assertIsNone(model.error)
+
     def test_a_choice_of_the_user_about_xet_is_kept(self):
         fake = type(sys)("faster_whisper")
         fake.WhisperModel = lambda *args, **kwargs: object()

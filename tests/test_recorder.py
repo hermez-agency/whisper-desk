@@ -242,6 +242,64 @@ class RecordTest(unittest.TestCase):
         self.assertEqual(tail, b"")
         self.assertEqual(segments, [])
 
+    def draft_in_time(self, chunks: list[bytes], **overrides):
+        """Plays the frames back at their own pace, the drafts collected too."""
+        drafts: list[bytes] = []
+        segments: list[bytes] = []
+        settings = {"segment_silence_seconds": 0.6, **overrides}
+        instance = Recorder(
+            self.config(**settings), on_segment=segments.append, on_draft=drafts.append
+        )
+        ticks = itertools.count(1)
+        clock = types.SimpleNamespace(monotonic=lambda: next(ticks) / 10)
+        stdout = FakeStdout(chunks, on_exhausted=instance.stop)
+        with fake_capture(FakeProcess(stdout)), mock.patch.object(recorder, "time", clock):
+            tail = instance.record()
+        return drafts, segments, tail
+
+    def test_a_sentence_goes_out_as_a_draft_before_its_pause_ends_it(self):
+        voice, pause = [tone(9000)] * 5, [constant(20)] * 10
+        drafts, segments, _ = self.draft_in_time(voice + pause)
+        self.assertEqual(len(drafts), 1)
+        self.assertEqual(segments, drafts)
+
+    def test_the_sentence_ends_with_a_margin_after_its_last_voice(self):
+        _, segments, _ = self.draft_in_time([tone(9000)] * 5 + [constant(20)] * 10)
+        self.assertEqual(len(segments[0]), (5 + recorder.MARGIN_CHUNKS) * CHUNK_BYTES)
+
+    def test_a_voice_back_within_the_pause_makes_a_new_draft(self):
+        voice, breath = [tone(9000)] * 5, [constant(20)] * 4
+        drafts, segments, _ = self.draft_in_time(voice + breath + voice + [constant(20)] * 10)
+        self.assertEqual(len(drafts), 2)
+        self.assertEqual(len(segments), 1)
+        self.assertNotEqual(drafts[0], segments[0])
+        self.assertEqual(drafts[1], segments[0])
+
+    def test_a_stop_during_the_pause_hands_the_draft_back(self):
+        """The shortcut pressed 0.4 s after the last word: the model has it already."""
+        drafts, segments, tail = self.draft_in_time([tone(9000)] * 5 + [constant(20)] * 4)
+        self.assertEqual(segments, [])
+        self.assertEqual(drafts, [tail])
+
+    def test_a_stop_before_the_margin_keeps_all_the_speech(self):
+        drafts, _, tail = self.draft_in_time([tone(9000)] * 5 + [constant(20)] * 2)
+        self.assertEqual(drafts, [])
+        self.assertEqual(len(tail), 7 * CHUNK_BYTES)
+
+    def test_without_the_as_you_go_dictation_there_is_no_draft(self):
+        drafts, _, tail = self.draft_in_time(
+            [tone(9000)] * 5 + [constant(20)] * 10, streaming=False
+        )
+        self.assertEqual(drafts, [])
+        self.assertTrue(tail)
+
+    def test_a_pause_too_short_for_a_margin_makes_no_draft(self):
+        drafts, segments, _ = self.draft_in_time(
+            [tone(9000)] * 5 + [constant(20)] * 10, segment_silence_seconds=0.2
+        )
+        self.assertEqual(drafts, [])
+        self.assertEqual(len(segments), 1)
+
     def listen(self, bands: int):
         """Records twelve frames of voice and returns what the overlay saw."""
         measures: list[tuple[float, list[float]]] = []

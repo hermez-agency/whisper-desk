@@ -4,6 +4,28 @@
 
 ### Added
 
+- **Lower latency** (Wispr Flow's "4× faster than typing"): a sentence is at the cursor about
+  when the pause that ends it does, instead of a transcription later. The model starts on
+  the sentence 0.3 s into the pause, from the very sound the pause then sends; when the
+  pause reaches 0.6 s (`segment_silence_seconds`) its text is ready, and if you speak again
+  first that early pass is dropped and the sentence goes on (`Recorder.on_draft`, the
+  daemon's `Draft`). The shortcut pressed during that pause hands the sentence already in
+  the model over. The sentence now ends 0.3 s after its last voice (the margin it was
+  meant to keep), so that the early pass and the sentence are the same sound. The model is
+  also run once on silence as soon as it is loaded: the first sentence of the day no longer
+  pays twice the time for the first pass.
+- `bench/latency/measure.py`: 27 dictations of three sentences made from the control
+  recordings, played in real time into the daemon's own dictation, the time from the end of
+  each sentence's voice to its text, against another copy of whisper-desk (`--src`):
+  - faster-whisper `large-v3-turbo` (CUDA, float16): sentence ended by a pause, median
+    1.11 s → 0.76 s; first sentence after the load 1.43 s → 0.83 s; last sentence, shortcut
+    pressed 1.2 s after it 1.10 s → 0.78 s, 0.45 s after 0.95 s → 0.77 s, 0.2 s after
+    0.70 s → 0.68 s; word error rate 4.9 % → 4.7 %;
+  - faster-whisper `small` (CPU, int8): 2.14 s → 1.79 s; first sentence 2.19 s → 1.82 s;
+    shortcut 1.2 s after 2.21 s → 1.87 s, 0.45 s after 2.07 s → 1.93 s, 0.2 s after
+    1.81 s → 1.86 s; word error rate 6.1 % → 5.2 %.
+  The cost: the early passes of pauses the voice goes on after — 96 passes through the
+  model for 54 sentences, 63 before (the same on the GPU and the CPU).
 - **Replacements learned from a correction** (Wispr Flow's dictionary fed by what you
   correct): a name already in `vocabulary` that Whisper still writes wrong is beyond what
   the vocabulary can do — corrected in the history (**Correct…**, `whisper-desk history

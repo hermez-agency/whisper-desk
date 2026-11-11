@@ -679,8 +679,13 @@ Super + J  ─→  whisper-desk toggle  ─→  Unix socket  ─→  daemon (mod
 ```
 
 The daemon keeps the model loaded at all times, and transcribes one sentence while the
-microphone is already recording the next. Only the two ends of that chain — capture and
-keystroke — change from one host to another; the rest is shared.
+microphone is already recording the next. It does not even wait for the pause to end the
+sentence: 0.3 s into it, the model starts on what was said, and when the pause reaches
+0.6 s the text is ready to insert — if you speak again first, that early pass is dropped
+and the sentence goes on. The model is also run once on silence as soon as it is loaded,
+so that the first sentence of the day does not pay for its first pass. `bench/latency/`
+measures it (see Development). Only the two ends of that chain — capture and keystroke —
+change from one host to another; the rest is shared.
 
 Three Wayland constraints shaped this architecture:
 
@@ -996,6 +1001,20 @@ than the one spoken, the word error rate and the seconds per sentence:
 
 ```sh
 ~/.local/share/whisper-desk/venv/bin/python bench/languages/measure.py -v
+```
+
+`bench/latency/` measures the time from the end of a sentence said to its text handed to the
+cursor. The 84 control recordings `bench/whisper/` lists, three at a time in each language,
+make 27 dictations played in real time — 100 ms of sound every 100 ms — into the daemon's own
+dictation: a sentence, a 1 s pause, a sentence, a 0.45 s breath that does not end it, a last
+sentence, then the shortcut pressed 0.2 s, 0.45 s or 1.2 s later. The first dictation runs on
+a model just loaded. `--src` runs another copy of whisper-desk, to compare with the one
+before a change:
+
+```sh
+git archive origin/main src | tar -x -C /tmp/before
+~/.local/share/whisper-desk/venv/bin/python bench/latency/measure.py --model large-v3-turbo:cuda
+~/.local/share/whisper-desk/venv/bin/python bench/latency/measure.py --model large-v3-turbo:cuda --src /tmp/before/src
 ```
 
 ## License

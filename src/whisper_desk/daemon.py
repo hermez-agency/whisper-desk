@@ -39,6 +39,10 @@ class ModelUnavailable(RuntimeError):
     """The model could neither be downloaded nor loaded."""
 
 
+class Draft(bytes):
+    """A sentence heard up to a short pause, not yet ended by it."""
+
+
 def socket_path() -> Path:
     """The daemon's socket, in the host's runtime directory.
 
@@ -79,12 +83,16 @@ class Session:
         self.pending = lists.Pending()
         self.listened = 0.0             # seconds the microphone stayed open
         self.queue: queue.Queue[bytes | None] = queue.Queue()
+        # The last draft and its text: the sentence the pause then ends is
+        # most often the same, and its text is ready the moment it does.
+        self.draft: tuple[bytes, str] | None = None
         self.overlay = OverlayProcess(service.config, on_event=self._on_overlay_event)
         self.recorder = Recorder(
             service.config,
             on_level=self._on_level,
             on_segment=self.queue.put,
             bands=self.overlay.bars,
+            on_draft=lambda pcm: self.queue.put(Draft(pcm)),
         )
         self.writer: output.CursorWriter | None = None
 
@@ -298,26 +306,24 @@ class Session:
                 if self.pending.held:
                     self._insert(self.pending.flush())
                 return
-            if not self.recording_over.is_set():
-                self.overlay.set_state("working")
-            started = time.monotonic()
-            try:
-                text = self.service.transcriber.transcribe(segment, " ".join(self.heard))
-            except Exception as error:
-                self.error = str(error)
-                logger.exception("Transcription failed")
+            if isinstance(segment, Draft):
+                # Something newer is waiting: the draft is stale, or its
+                # sentence is already here and goes through as it is.
+                if self.queue.empty():
+                    self._transcribe_draft(segment)
                 continue
-            finally:
-                if not self.recording_over.is_set():
-                    self.overlay.set_state("listening")
+            draft, self.draft = self.draft, None
+            if draft is not None and draft[0] == segment:
+                logger.info("Sentence transcribed during the pause: %d characters.", len(draft[1]))
+                text = draft[1]
+            else:
+                text = self._transcribe(segment)
+                if text is None:
+                    continue
             if self.cancelled.is_set():
                 # The shortcut was pressed while this sentence was being
                 # transcribed: it goes no further than here.
                 return
-            logger.info(
-                "Sentence transcribed in %.2f s: %d characters.",
-                time.monotonic() - started, len(text),
-            )
             logger.debug("Transcribed: %r", text)
             if not text:
                 continue
@@ -331,6 +337,42 @@ class Session:
                     continue
                 text = ready
             self._insert(text)
+
+    def _transcribe_draft(self, segment: bytes) -> None:
+        """Transcribes a sentence while the pause that may end it goes on.
+
+        Nothing is inserted from here: the text waits for the pause to end the
+        sentence. The window is left alone, as the user may be speaking again.
+        """
+        started = time.monotonic()
+        try:
+            text = self.service.transcriber.transcribe(segment, " ".join(self.heard))
+        except Exception:
+            # The sentence itself will be transcribed again, and fail aloud.
+            logger.debug("Draft transcription failed", exc_info=True)
+            return
+        logger.debug("Draft transcribed in %.2f s.", time.monotonic() - started)
+        self.draft = (segment, text)
+
+    def _transcribe(self, segment: bytes) -> str | None:
+        """A sentence ended by a pause or by the end of listening; None on failure."""
+        if not self.recording_over.is_set():
+            self.overlay.set_state("working")
+        started = time.monotonic()
+        try:
+            text = self.service.transcriber.transcribe(segment, " ".join(self.heard))
+        except Exception as error:
+            self.error = str(error)
+            logger.exception("Transcription failed")
+            return None
+        finally:
+            if not self.recording_over.is_set():
+                self.overlay.set_state("listening")
+        logger.info(
+            "Sentence transcribed in %.2f s: %d characters.",
+            time.monotonic() - started, len(text),
+        )
+        return text
 
     def _insert(self, text: str) -> None:
         """Inserts a transcribed sentence after those already inserted."""

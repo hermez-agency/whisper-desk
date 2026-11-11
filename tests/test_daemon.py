@@ -136,6 +136,35 @@ class DeafRecorder(FakeRecorder):
         pass
 
 
+class DraftingRecorder(FakeRecorder):
+    """Sends drafts as well: ("draft" | "segment", pcm), in order.
+
+    A draft is only followed by what comes next once the model has it, as
+    when the pause goes on while the model works — unless the model is held.
+    """
+
+    def __init__(self, events, transcriber: "FakeTranscriber", hold_first: bool = False):
+        super().__init__()
+        self.events = list(events)
+        self.transcriber = transcriber
+        self.hold_first = hold_first
+
+    def record(self) -> bytes:
+        for index, (kind, pcm) in enumerate(self.events):
+            if kind == "draft":
+                self.on_draft(pcm)
+                if self.transcriber.release.is_set():
+                    wait_until(lambda: pcm in self.transcriber.seen)
+            else:
+                self.on_segment(pcm)
+            if self.hold_first and index == 0:
+                self.transcriber.entered.wait(TIMEOUT)
+        self.transcriber.release.set()
+        self.listening.set()
+        self.stopped.wait(TIMEOUT)
+        return self.tail
+
+
 class FakeTranscriber:
     """One text per segment, held inside the model as long as the test wants."""
 
@@ -196,6 +225,7 @@ class DictationCase(unittest.TestCase):
         """A daemon whose microphone, model and window belong to the test."""
         def build_recorder(*_args, **kwargs):
             self.recorder.on_segment = kwargs["on_segment"]
+            self.recorder.on_draft = kwargs.get("on_draft")
             return self.recorder
 
         with mock.patch.object(daemon, "Recorder", build_recorder), \
@@ -499,6 +529,47 @@ class ReplacementsTest(DictationCase):
         self.recorder.segments[:] = [b"Animal link.", b"Thanks."]
         self.dictate()
         self.assertEqual(self.transcriber.contexts, ["", "Animalink."])
+
+
+class DraftTest(DictationCase):
+    """A sentence transcribed during the pause is inserted when the pause ends it."""
+
+    def dictate(self, events, hold_first: bool = False) -> None:
+        if hold_first:
+            self.transcriber.release.clear()
+        self.recorder = DraftingRecorder(events, self.transcriber, hold_first)
+        with self.service() as service:
+            self.listening(service)
+            service.toggle()
+            self.assertTrue(wait_until(lambda: service.session is None))
+
+    def test_the_text_of_the_draft_is_inserted_without_a_second_pass(self):
+        self.dictate([("draft", b"Hello."), ("segment", b"Hello.")])
+        self.assertEqual(self.transcriber.seen, [b"Hello."])
+        self.assertEqual(self.delivered, ["Hello."])
+
+    def test_a_draft_is_never_inserted_on_its_own(self):
+        self.dictate([("draft", b"Hello.")])
+        self.assertEqual(self.delivered, [])
+
+    def test_a_draft_the_voice_went_on_after_is_not_inserted(self):
+        self.dictate([("draft", b"Hello"), ("segment", b"Hello there.")])
+        self.assertEqual(self.transcriber.seen, [b"Hello", b"Hello there."])
+        self.assertEqual(self.delivered, ["Hello there."])
+
+    def test_a_draft_whose_sentence_is_already_there_is_skipped(self):
+        self.dictate(
+            [("segment", b"Hello."), ("draft", b"Goodbye."), ("segment", b"Goodbye.")],
+            hold_first=True,
+        )
+        self.assertEqual(self.transcriber.seen, [b"Hello.", b"Goodbye."])
+        self.assertEqual(self.delivered, ["Hello.", " Goodbye."])
+
+    def test_the_draft_hears_what_came_before(self):
+        self.dictate([
+            ("segment", b"Hello."), ("draft", b"Goodbye."), ("segment", b"Goodbye."),
+        ])
+        self.assertEqual(self.transcriber.contexts, ["", "Hello."])
 
 
 class SpokenPunctuationTest(DictationCase):

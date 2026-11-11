@@ -35,14 +35,14 @@ dictionary" on the features page, words added as you correct them (read on 2026-
 | **100+ languages** | every Whisper language; `language = "auto"` detects one language per sentence | done | medium | — |
 | **Switching languages mid-dictation** (FR/EN) | `language = "fr, en"` (**French and English** in the settings): each sentence in whichever of the listed languages it was said in, never a third one; measured in `bench/languages/` (#39). One language per sentence: a sentence mixing both is written in one | partial | medium | M |
 | **Whisper mode** — dictating very quietly | heard from some 25 dB under an ordinary voice: automatic threshold floor 60 instead of 180, a hold that keeps a low sentence open over its soft syllables, a low sentence raised to an ordinary level before Whisper; measured in `bench/whisper/` (#36). Threshold not re-learned during the dictation; no model tuned on whispers | partial | medium | M |
-| **Latency** — "4× faster than typing" | sentence by sentence as you speak, model kept in memory, GPU when there is one; no measure yet | partial | high | M |
+| **Latency** — "4× faster than typing" | sentence by sentence as you speak, model kept in memory, GPU when there is one; the model starts on a sentence 0.3 s into the pause and warmed up at load, measured in `bench/latency/` (in PR): 0.76 s from the end of a sentence to the cursor on the GPU, 1.79 s on the CPU. The 0.6 s pause is still waited for; the CPU pays for its 30 s window | partial | high | M |
 
 ## Features
 
 | Wispr Flow | whisper-desk | Status | Value | Effort |
 |---|---|---|---|---|
 | **Works in any app** | insertion at the cursor through the clipboard and a paste shortcut (uinput, Mutter, SendKeys, System Events) | done | — | — |
-| **Personal dictionary**, fed by the words you correct | `vocabulary` in the settings window, filled by hand; fed by the corrections made in the history (**Correct…**, `history --correct`), `vocabulary.py`, measured in `bench/dictionary/` (#34); replacement entries ("misheard → meant", Wispr Flow's "Correct a misspelling") in `[replacements]` and the settings window, `replacements.py` (#38), also saved on their own when a name the vocabulary already held is corrected again, measured in `bench/dictionary/ --from-corrections` (in PR). Not learned from an edit made in the app dictated into (whisper-desk cannot see it); no replacements per language | partial | high | M |
+| **Personal dictionary**, fed by the words you correct | `vocabulary` in the settings window, filled by hand; fed by the corrections made in the history (**Correct…**, `history --correct`), `vocabulary.py`, measured in `bench/dictionary/` (#34); replacement entries ("misheard → meant", Wispr Flow's "Correct a misspelling") in `[replacements]` and the settings window, `replacements.py` (#38), also saved on their own when a name the vocabulary already held is corrected again, measured in `bench/dictionary/ --from-corrections` (#40). Not learned from an edit made in the app dictated into (whisper-desk cannot see it); no replacements per language | partial | high | M |
 | **Snippets** — a spoken cue inserts a longer text | `[snippets]` in `config.toml`, `snippets.py`: alone or inside a sentence, case and punctuation ignored, longest cue wins, multi-line texts; measured in `bench/snippets/`; edited in the settings window too (#25). No rich text (bold, links) | partial | high | S |
 | **Styles** — tone adapted to the app (formal in docs, casual in chat) | — | missing | medium | L |
 | **Command Mode** — select text, say how to rewrite it | — (would need a local model, e.g. Ollama) | missing | high | L |
@@ -212,7 +212,7 @@ dictionary" on the features page, words added as you correct them (read on 2026-
   another way in the next sentence (*Ananaling*, then *Animal Inc.*). Left to do: proposing
   a replacement from a correction made in the history when the vocabulary did not suffice,
   replacements per language.
-- 2026-11-09 — **Replacements learned from a correction** (in PR, partial): a name already in
+- 2026-11-09 — **Replacements learned from a correction** (merged, #40, partial): a name already in
   `vocabulary` that Whisper still writes wrong, corrected in the history (**Correct…**,
   `history --correct`), saves what Whisper wrote and the name in `[replacements]` — the
   step that was saved by hand in #38. Taken only for a run of three words at most, corrected
@@ -227,3 +227,20 @@ dictionary" on the features page, words added as you correct them (read on 2026-
   *Leadz*, *au poil* → *Opoil* are taken (ordinary words the voice did say as the name);
   *C plus plus* → *C++* is not (too unlike). Left to do: learning from an edit made in place
   in the app, replacements per language, a cap on a long vocabulary.
+- 2026-11-11 — **Latency** (in PR, partial): a sentence is at the cursor about when the pause
+  that ends it does. The model starts on it 0.3 s into the pause (the sentence now ends 0.3 s
+  after its last voice, so the early pass and the sentence are the same sound); at 0.6 s its
+  text is inserted, and a voice back before drops the early pass. The shortcut pressed during
+  that pause hands over the sentence already in the model. The model runs once on silence at
+  load, so the first sentence no longer pays for the first pass. Measure (`bench/latency/`, 27
+  dictations of three control sentences played in real time into the daemon's dictation,
+  time from the end of a sentence's voice to its text): `large-v3-turbo` (GPU) sentence ended
+  by a pause, median 1.11 s → 0.76 s, first sentence after the load 1.43 s → 0.83 s,
+  shortcut pressed 1.2 s / 0.45 s / 0.2 s after the last one 1.10 / 0.95 / 0.70 s → 0.78 /
+  0.77 / 0.68 s, WER 4.9 % → 4.7 %; `small` (CPU) 2.14 s → 1.79 s, first 2.19 s → 1.82 s,
+  shortcut 2.21 / 2.07 / 1.81 s → 1.87 / 1.93 / 1.86 s, WER 6.1 % → 5.2 %. Measured on the
+  way: the beam (5 against 1) costs 0.02 s on the GPU, 0.03 s on the CPU — left as it is;
+  the time goes into the encoder's 30 s window. Cost: the early passes of pauses the voice
+  goes on after, 96 passes through the model for 54 sentences instead of 63, GPU and CPU alike.
+  Left to do: a pause shorter than 0.6 s that still ends the sentence when it is complete
+  (a full stop heard), a smaller CPU model for the early passes.
