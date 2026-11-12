@@ -25,6 +25,11 @@ NO_SPEECH_LIMIT = 0.6
 # ordinary voice: raised to the level of one first, Whisper and its voice
 # detector hear the whisper better (bench/whisper/). Full scale is 1.
 VOICE_LEVEL = 0.05
+# The first pass through a freshly loaded model costs it twice as much as the
+# next ones (0.6 s against 0.3 s for large-v3-turbo on a GPU, bench/latency/):
+# a second of silence run through it at load time, and the first sentence
+# dictated no longer pays for it.
+WARM_UP_SAMPLES = 16000
 # Beyond +30 dB, it is the noise of the room being raised, not a voice.
 MAX_GAIN = 30.0
 # The loudest sample is kept below clipping.
@@ -263,6 +268,27 @@ class Transcriber:
 
         self.model_name, self.device, self.compute_type = name, device, compute_type
         logger.info("Model %s loaded on %s (%s).", name, device, compute_type)
+        self._warm_up()
+
+    def _warm_up(self) -> None:
+        """Runs the model once on silence, the result thrown away."""
+        try:
+            import numpy as np
+
+            segments, _info = self._model.transcribe(
+                np.zeros(WARM_UP_SAMPLES, dtype=np.float32),
+                beam_size=int(self.config["beam_size"]),
+                # The voice detector would cut the silence away, and with it
+                # the pass through the model this is all about.
+                vad_filter=False,
+                condition_on_previous_text=False,
+            )
+            # A generator: the model only runs as it is read.
+            for _segment in segments:
+                pass
+        except Exception:
+            # A dictation the model cannot run will say so itself.
+            logger.debug("Warm-up failed", exc_info=True)
 
     def prompt(self, context: str = "") -> str | None:
         """The user's vocabulary, extended by what they have just dictated.
