@@ -45,6 +45,12 @@ developer_syntax = true
 # "2. Envoyer le devis" on lines of their own ("premièrement", "firstly", "one", "two"
 # too). A sentence that may open a list waits for the next one before it is inserted.
 lists = true
+# How formally the text is written, as in a document or a chat message:
+# "formal" as Whisper punctuates it; "casual" without the full stop that ends the
+# dictation ("On se voit demain" — the full stops between sentences stay);
+# "very_casual" without it nor the capital each sentence opens on ("on se voit
+# demain"), names of the vocabulary, acronyms and "I" left as they are.
+style = "formal"
 # Loads the model when the service starts: the first dictation is instant.
 preload = true
 

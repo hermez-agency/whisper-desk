@@ -70,6 +70,14 @@ class SnapshotTest(ControllerCase):
         self.save(language="fr, en")
         self.assertEqual(tomllib.loads(self.path.read_text(encoding="utf-8"))["model"]["language"], "fr, en")
 
+    def test_the_writing_style_is_a_choice(self):
+        snapshot = self.controller.snapshot()
+        self.assertEqual(snapshot["values"]["style"], "formal")
+        self.assertEqual([value for value, _label in snapshot["choices"]["style"]],
+                         ["formal", "casual", "very_casual"])
+        self.save(style="casual")
+        self.assertEqual(tomllib.loads(self.path.read_text(encoding="utf-8"))["model"]["style"], "casual")
+
     def test_each_model_says_its_size_its_speed_and_if_it_is_here(self):
         labels = dict(self.controller.snapshot()["choices"]["model"])
         self.assertEqual(labels["auto"], "Automatic — small on this machine")

@@ -70,6 +70,10 @@ DEFAULTS: dict[str, Any] = {
         # Writes the numbered lists said aloud: "un, des œufs, deux, du lait" or
         # "firstly… secondly…" become "1. Des œufs" and "2. Du lait".
         "lists": True,
+        # How formally the text is written (Wispr Flow's Styles): "formal" as
+        # Whisper punctuates it, "casual" without the dictation's final full
+        # stop, "very_casual" without it nor the sentences' opening capitals.
+        "style": "formal",
         # Loaded when the daemon starts: the first dictation is instant.
         "preload": True,
     },

@@ -383,6 +383,26 @@ pause comes before the second item, the first one is a sentence later at the cur
 Rules run on your machine; `lists = false` in `[model]` keeps the words. `bench/lists/`
 measures them on recordings (see Development).
 
+### Writing style: formal or casual
+
+A chat message rarely ends on a full stop. Pick a style in the settings window (**Style**)
+or with `style` in `[model]`, and the dictation is written in it:
+
+| `style` | *"Ça marche. On se voit demain."* is written |
+|---|---|
+| `"formal"` (default) | `Ça marche. On se voit demain.` — as Whisper punctuates it |
+| `"casual"` | `Ça marche. On se voit demain` — no full stop at the end |
+| `"very_casual"` | `ça marche. on se voit demain` — no capitals at the sentences' start either |
+
+With the as-you-go dictation, each sentence is typed without its full stop, which comes
+before the next sentence if you go on: only the dictation's last one is left out. A
+question or exclamation mark, an ellipsis and the full stop of an abbreviation (*etc.*,
+*M.*, an initial) stay. The very casual style only lowers the capital a sentence opens
+on: names in the middle of a sentence, the names of your `vocabulary` and replacements,
+acronyms (*OK*, *API*), mixed-case names (*GitHub*) and English *I* keep theirs, and so
+does a snippet's text. Rules run on your machine. One style for every app for now; Wispr
+Flow's *Excited* style (more exclamation marks) is not there.
+
 ### Dictating under your breath
 
 In an open space, next to someone asleep, on a call: speak low, or whisper, close to the
@@ -615,6 +635,7 @@ hesitations = true            # "euh", "um" and stuttered words left out
 spoken_punctuation = true     # "virgule", "point", "à la ligne", "comma", "new line"
 developer_syntax = true       # "camel case user name" is written userName
 lists = true                  # "un, des œufs, deux, du lait" is written as a numbered list
+style = "formal"              # "casual": no final full stop; "very_casual": no capitals either
 
 [recording]
 backend = "auto"              # auto | arecord | parec | rec | sox | ffmpeg

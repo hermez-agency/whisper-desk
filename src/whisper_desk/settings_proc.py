@@ -50,6 +50,12 @@ MODELS = (
     ("large-v3", "slowest, the most accurate"),
     ("distil-large-v3", "fast on a GPU, English only"),
 )
+# Wispr Flow's Styles, by local rules (style.py).
+STYLES = (
+    ("formal", "Formal — capitals and full punctuation"),
+    ("casual", "Casual — no full stop at the end"),
+    ("very_casual", "Very casual — no capitals, no full stop at the end"),
+)
 MODES = (
     ("cursor", "Insert at the cursor"),
     ("clipboard", "Copy to the clipboard"),
@@ -70,6 +76,7 @@ FIELDS = {
     "language": ("model", "language"),
     "model": ("model", "name"),
     "vocabulary": ("model", "vocabulary"),
+    "style": ("model", "style"),
     "device": ("recording", "device"),
     "binding": ("hotkey", "binding"),
     "mode": ("output", "mode"),
@@ -210,6 +217,7 @@ class SettingsController:
             "choices": {
                 "language": with_current(LANGUAGES, values["language"]),
                 "model": with_current(model_choices(), values["model"]),
+                "style": with_current(STYLES, values["style"]),
                 "device": with_current(
                     capture.devices(str(self.config["recording"]["backend"])), values["device"]
                 ),

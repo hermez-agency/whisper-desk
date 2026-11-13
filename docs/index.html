@@ -848,6 +848,16 @@
       <code>lists = false</code> keeps the words.
     </p>
 
+    <h3>Formal or casual</h3>
+    <p>
+      Choose how formally the dictation is written. <strong>Formal</strong> keeps
+      Whisper’s punctuation; <strong>casual</strong> leaves the final full stop out, as in a
+      chat message — <em>“Ça marche. On se voit demain”</em>; <strong>very casual</strong>
+      the opening capitals too — <em>“ça marche. on se voit demain”</em>. Names, acronyms
+      and your vocabulary keep their capitals. <code>style = "casual"</code>, or
+      <b>Style</b> in the settings window.
+    </p>
+
     <h3>Dictating under your breath</h3>
     <p>
       In an open space or next to someone asleep, speak low or whisper close to the
@@ -1008,6 +1018,7 @@ hesitations = <span class="n">true</span>            <span class="c"># "euh", "u
 spoken_punctuation = <span class="n">true</span>     <span class="c"># "virgule", "point", "à la ligne", "comma", "new line"</span>
 developer_syntax = <span class="n">true</span>       <span class="c"># "camel case user name" is written userName</span>
 lists = <span class="n">true</span>                  <span class="c"># "un, des œufs, deux, du lait" is written as a numbered list</span>
+style = <span class="s">"formal"</span>              <span class="c"># "casual": no final full stop; "very_casual": no capitals either</span>
 
 <span class="k">[recording]</span>
 backend = <span class="s">"auto"</span>              <span class="c"># auto | arecord | parec | rec | sox | ffmpeg</span>
