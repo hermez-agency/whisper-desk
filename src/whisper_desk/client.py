@@ -26,8 +26,13 @@ class DaemonSilent(DaemonUnavailable):
 
 def _connect(timeout: float) -> socket.socket:
     client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    client.settimeout(timeout)
-    client.connect(str(socket_path()))
+    try:
+        client.settimeout(timeout)
+        client.connect(str(socket_path()))
+    except OSError:
+        # Left to the collector, it warns on stderr in the middle of a command.
+        client.close()
+        raise
     return client
 
 
