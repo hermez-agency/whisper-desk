@@ -4,6 +4,14 @@
 
 ### Added
 
+- **Writing styles** (Wispr Flow's Styles): `style` in `[model]`, or **Style** in the
+  settings window. `"formal"` (the default) writes the dictation as Whisper punctuates it;
+  `"casual"` without the full stop that ends it, as in a chat message — *"Ça marche. On se
+  voit demain"*; `"very_casual"` without it nor the capital each sentence opens on — *"ça
+  marche. on se voit demain"*. As you dictate, each sentence is typed without its full stop,
+  which comes before the next sentence if you go on. Question and exclamation marks,
+  ellipses and an abbreviation's full stop stay; names of the vocabulary and replacements,
+  acronyms, mixed-case names, English *I* and snippets keep their capitals (`style.py`).
 - **Lower latency** (Wispr Flow's "4× faster than typing"): a sentence is at the cursor about
   when the pause that ends it does, instead of a transcription later. The model starts on
   the sentence 0.3 s into the pause, from the very sound the pause then sends; when the

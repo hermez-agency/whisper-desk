@@ -628,6 +628,48 @@ class ListsTest(DictationCase):
         self.assertEqual(self.delivered, ["One, eggs.", " Two, milk."])
 
 
+class StyleTest(DictationCase):
+    """A casual style keeps the dictation's last full stop back, a very casual one its capitals."""
+
+    def dictate(self, style: str, segments: list[bytes]) -> None:
+        self.recorder.segments[:] = segments
+        with mock.patch.dict(CONFIG["model"], {"style": style}):
+            with self.service() as service:
+                self.listening(service)
+                service.toggle()
+                self.assertTrue(wait_until(lambda: service.session is None))
+
+    def test_formal_leaves_the_text_as_transcribed(self):
+        self.dictate("formal", [b"See you tomorrow.", b"Bye."])
+        self.assertEqual(self.delivered, ["See you tomorrow.", " Bye."])
+
+    def test_casual_types_a_full_stop_only_before_another_sentence(self):
+        self.dictate("casual", [b"See you tomorrow.", b"Bye."])
+        self.assertEqual(self.delivered, ["See you tomorrow", ". Bye"])
+
+    def test_a_mark_said_after_a_pause_takes_the_full_stop_s_place(self):
+        self.dictate("casual", [b"See you tomorrow.", b"?"])
+        self.assertEqual(self.delivered, ["See you tomorrow", "?"])
+
+    def test_very_casual_drops_the_capitals_too(self):
+        with mock.patch.dict(CONFIG["model"], {"vocabulary": "Animalink"}):
+            self.dictate("very_casual", [b"Animalink is live. Great.", b"Thanks Marie."])
+        self.assertEqual(self.delivered, ["Animalink is live. great", ". thanks Marie"])
+
+    def test_a_snippet_keeps_its_capitals(self):
+        with mock.patch.dict(CONFIG, {"snippets": {"my address": "12 Elm Street"}}):
+            self.dictate("very_casual", [b"My address."])
+        self.assertEqual(self.delivered, ["12 Elm Street"])
+
+    def test_the_history_keeps_the_text_as_it_was_typed(self):
+        recorded: list[str] = []
+        with mock.patch.object(daemon.history, "append", lambda text, **_: recorded.append(text)), \
+                mock.patch.dict(CONFIG, {"output": {**CONFIG["output"], "history": True,
+                                                    "history_days": 30}}):
+            self.dictate("casual", [b"See you tomorrow.", b"Bye."])
+        self.assertEqual(recorded, ["See you tomorrow. Bye"])
+
+
 class HistoryTest(DictationCase):
     """One entry per dictation, whatever the number of sentences it took."""
 

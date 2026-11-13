@@ -18,7 +18,9 @@ learned from corrections, "Personal dictionary" on the features page (read on 20
 mode, "Flow even works when you're whispering" on the features page (read on 2026-11-03);
 dictionary replacements, [Teach Flow your words with the dictionary](https://docs.wisprflow.ai/articles/4052411709-teach-flow-your-words-with-the-dictionary),
 "Correct a misspelling" (read on 2026-11-06); replacements from corrections, "Personal
-dictionary" on the features page, words added as you correct them (read on 2026-11-09).
+dictionary" on the features page, words added as you correct them (read on 2026-11-09);
+styles, [How to setup Flow Styles](https://docs.wisprflow.ai/articles/2368263928-how-to-setup-flow-styles)
+and [Personalized Style](https://wisprflow.ai/post/personalized-style) (read on 2026-11-13).
 
 **Status**: done · partial · missing · out of scope.
 **Effort**: S (a session) · M (a few sessions) · L (to split into several gaps).
@@ -35,7 +37,7 @@ dictionary" on the features page, words added as you correct them (read on 2026-
 | **100+ languages** | every Whisper language; `language = "auto"` detects one language per sentence | done | medium | — |
 | **Switching languages mid-dictation** (FR/EN) | `language = "fr, en"` (**French and English** in the settings): each sentence in whichever of the listed languages it was said in, never a third one; measured in `bench/languages/` (#39). One language per sentence: a sentence mixing both is written in one | partial | medium | M |
 | **Whisper mode** — dictating very quietly | heard from some 25 dB under an ordinary voice: automatic threshold floor 60 instead of 180, a hold that keeps a low sentence open over its soft syllables, a low sentence raised to an ordinary level before Whisper; measured in `bench/whisper/` (#36). Threshold not re-learned during the dictation; no model tuned on whispers | partial | medium | M |
-| **Latency** — "4× faster than typing" | sentence by sentence as you speak, model kept in memory, GPU when there is one; the model starts on a sentence 0.3 s into the pause and warmed up at load, measured in `bench/latency/` (in PR): 0.76 s from the end of a sentence to the cursor on the GPU, 1.79 s on the CPU. The 0.6 s pause is still waited for; the CPU pays for its 30 s window | partial | high | M |
+| **Latency** — "4× faster than typing" | sentence by sentence as you speak, model kept in memory, GPU when there is one; the model starts on a sentence 0.3 s into the pause and warmed up at load, measured in `bench/latency/` (#41): 0.76 s from the end of a sentence to the cursor on the GPU, 1.79 s on the CPU. The 0.6 s pause is still waited for; the CPU pays for its 30 s window | partial | high | M |
 
 ## Features
 
@@ -44,7 +46,7 @@ dictionary" on the features page, words added as you correct them (read on 2026-
 | **Works in any app** | insertion at the cursor through the clipboard and a paste shortcut (uinput, Mutter, SendKeys, System Events) | done | — | — |
 | **Personal dictionary**, fed by the words you correct | `vocabulary` in the settings window, filled by hand; fed by the corrections made in the history (**Correct…**, `history --correct`), `vocabulary.py`, measured in `bench/dictionary/` (#34); replacement entries ("misheard → meant", Wispr Flow's "Correct a misspelling") in `[replacements]` and the settings window, `replacements.py` (#38), also saved on their own when a name the vocabulary already held is corrected again, measured in `bench/dictionary/ --from-corrections` (#40). Not learned from an edit made in the app dictated into (whisper-desk cannot see it); no replacements per language | partial | high | M |
 | **Snippets** — a spoken cue inserts a longer text | `[snippets]` in `config.toml`, `snippets.py`: alone or inside a sentence, case and punctuation ignored, longest cue wins, multi-line texts; measured in `bench/snippets/`; edited in the settings window too (#25). No rich text (bold, links) | partial | high | S |
-| **Styles** — tone adapted to the app (formal in docs, casual in chat) | — | missing | medium | L |
+| **Styles** — tone adapted to the app (formal in docs, casual in chat) | `style.py`: one style for every app, `style` in `[model]` or **Style** in the settings window — *formal* (as Whisper punctuates it), *casual* (no final full stop), *very casual* (no sentence-opening capitals either) (in PR). No style per app (the focused app is not known), no *Excited* style | partial | medium | L |
 | **Command Mode** — select text, say how to rewrite it | — (would need a local model, e.g. Ollama) | missing | high | L |
 | **Developer syntax** — camelCase, snake_case, CLI commands, file tagging in Cursor | `casing.py`: a name said after its style ("camel case user name" → `userName`, snake, pascal, kebab, constant case) written in it, Whisper's glued and hyphenated forms understood; measured in `bench/casing/` (#28). Not guessed from context without the style said; no CLI commands, no file tagging | partial | medium | M |
 | **History** of dictations | `whisper-desk history` and its window: search, copy, insert again, purge | done | — | — |
@@ -227,7 +229,7 @@ dictionary" on the features page, words added as you correct them (read on 2026-
   *Leadz*, *au poil* → *Opoil* are taken (ordinary words the voice did say as the name);
   *C plus plus* → *C++* is not (too unlike). Left to do: learning from an edit made in place
   in the app, replacements per language, a cap on a long vocabulary.
-- 2026-11-11 — **Latency** (in PR, partial): a sentence is at the cursor about when the pause
+- 2026-11-11 — **Latency** (merged, #41, partial): a sentence is at the cursor about when the pause
   that ends it does. The model starts on it 0.3 s into the pause (the sentence now ends 0.3 s
   after its last voice, so the early pass and the sentence are the same sound); at 0.6 s its
   text is inserted, and a voice back before drops the early pass. The shortcut pressed during
@@ -244,3 +246,21 @@ dictionary" on the features page, words added as you correct them (read on 2026-
   goes on after, 96 passes through the model for 54 sentences instead of 63, GPU and CPU alike.
   Left to do: a pause shorter than 0.6 s that still ends the sentence when it is complete
   (a full stop heard), a smaller CPU model for the early passes.
+- 2026-11-13 — **Styles** (in PR, partial): Wispr Flow's Formal, Casual and Very Casual, by
+  local rules, `style` in `[model]` or **Style** in the settings window. *Formal* (the
+  default) writes the text as before; *casual* leaves out the full stop that ends the
+  dictation — with the as-you-go dictation each sentence is typed without it and the full
+  stop comes before the next sentence, so only the last one goes, and a mark said after a
+  pause takes its place; *very casual* leaves it out too and lowers the capital each
+  sentence opens on (after a full stop, a line break, a list item's number, an opening
+  quote). Kept: question and exclamation marks, ellipses, an abbreviation's or an initial's
+  full stop (*etc.*, *M.*, *J.*); the capitals of the vocabulary and the replacements,
+  acronyms, mixed-case names, English *I*, the text of a snippet. The history holds the
+  text as typed. A feature, no quality measure: 24 new tests (rules, the daemon's
+  sentence-by-sentence insertion, the settings window). Differences with Wispr Flow: one
+  style for every app (Wispr Flow picks it per app category: personal messages, work
+  messages, email, other); *casual* drops the full stop at any length (Wispr Flow up to 10
+  sentences); no *Excited* style (more exclamation marks — where to put them would take a
+  model). Left to do: knowing the focused app (X11 `_NET_ACTIVE_WINDOW`, macOS
+  `System Events`, WSL `GetForegroundWindow`; GNOME on Wayland gives it to no client) and
+  a style per app category.

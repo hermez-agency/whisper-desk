@@ -105,6 +105,9 @@ class SettingsWindow(Gtk.Window):
         self.model = self._combo("Model")
         self._hint("Larger models understand better and ask for more time and memory. "
                    "A new model is downloaded once, in the background.")
+        self.style = self._combo("Style")
+        self._hint("Casual leaves the full stop out at the end, as in a chat message; "
+                   "very casual the capitals too.")
         self.vocabulary = Gtk.Entry()
         self.vocabulary.set_placeholder_text("Animalink, Kubernetes, pull request…")
         self._field("Vocabulary", self.vocabulary)
@@ -284,6 +287,7 @@ class SettingsWindow(Gtk.Window):
         if choices and values:
             self._fill(self.language, choices["language"], values["language"])
             self._fill(self.model, choices["model"], values["model"])
+            self._fill(self.style, choices["style"], values["style"])
             self._fill(self.device, choices["device"], values["device"])
             self._fill(self.mode, choices["mode"], values["mode"])
             self._fill(self.position, choices["position"], values["position"])
@@ -319,6 +323,7 @@ class SettingsWindow(Gtk.Window):
         return {
             "language": self.language.get_active_id(),
             "model": self.model.get_active_id(),
+            "style": self.style.get_active_id(),
             "vocabulary": self.vocabulary.get_text(),
             "device": self.device.get_active_id(),
             "binding": self.binding,

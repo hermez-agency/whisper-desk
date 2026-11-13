@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from . import config as config_module
-from . import history, host, hotkey, inject, lists, punctuation, replacements, snippets
+from . import history, host, hotkey, inject, lists, punctuation, replacements, snippets, style
 from . import output
 from .capture import CaptureUnavailable
 from .overlay_proc import OverlayProcess
@@ -81,6 +81,9 @@ class Session:
         self.heard: list[str] = []
         # A sentence that may open a numbered list, waiting for its next item.
         self.pending = lists.Pending()
+        # The full stop a casual style keeps back from the last sentence
+        # inserted: typed only if another sentence follows it.
+        self.full_stop = ""
         self.listened = 0.0             # seconds the microphone stayed open
         self.queue: queue.Queue[bytes | None] = queue.Queue()
         # The last draft and its text: the sentence the pause then ends is
@@ -376,7 +379,14 @@ class Session:
 
     def _insert(self, text: str) -> None:
         """Inserts a transcribed sentence after those already inserted."""
-        text = snippets.apply(text, self.service.config["snippets"])
+        config = self.service.config
+        writing = style.resolve(config)
+        # Before the snippets: their text is written as it was saved.
+        if writing == "very_casual":
+            text = style.lower_starts(text, style.names(config))
+        text = snippets.apply(text, config["snippets"])
+        if writing != "formal":
+            text, self.full_stop = style.hold_full_stop(style.rejoin(self.full_stop, text))
         # Later sentences are separated from the previous insertion by a
         # space, unless one opens on a mark or follows a line break.
         spacing = punctuation.separator(self.parts[-1], text) if self.parts else ""
