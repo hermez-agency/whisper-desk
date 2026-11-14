@@ -20,7 +20,8 @@ dictionary replacements, [Teach Flow your words with the dictionary](https://doc
 "Correct a misspelling" (read on 2026-11-06); replacements from corrections, "Personal
 dictionary" on the features page, words added as you correct them (read on 2026-11-09);
 styles, [How to setup Flow Styles](https://docs.wisprflow.ai/articles/2368263928-how-to-setup-flow-styles)
-and [Personalized Style](https://wisprflow.ai/post/personalized-style) (read on 2026-11-13).
+and [Personalized Style](https://wisprflow.ai/post/personalized-style) (read on 2026-11-13);
+backtrack after a pause, "Let's meet at 2… actually 3" on the features page (read on 2026-11-14).
 
 **Status**: done · partial · missing · out of scope.
 **Effort**: S (a session) · M (a few sessions) · L (to split into several gaps).
@@ -29,7 +30,7 @@ and [Personalized Style](https://wisprflow.ai/post/personalized-style) (read on 
 
 | Wispr Flow | whisper-desk | Status | Value | Effort |
 |---|---|---|---|---|
-| **Backtrack** — a correction said mid-sentence keeps only the corrected version | `backtrack.py`: "non, plutôt", "ou plutôt", "je veux dire", "no wait", "actually", "I mean", "or rather"… carried out by local rules; measured in `bench/backtrack/` | partial | high | S |
+| **Backtrack** — a correction said mid-sentence keeps only the corrected version | `backtrack.py`: "non, plutôt", "ou plutôt", "je veux dire", "no wait", "actually", "I mean", "or rather"… carried out by local rules; measured in `bench/backtrack/`; a correction said after the pause that ended its sentence erases and retypes that sentence, measured in `bench/backtrack/ --pauses` (in PR). Only the last sentence; no phrase longer than three words replaced without a word to line up with | partial | high | S |
 | **Filler removal** — "um", "uh", pauses | Whisper drops most hesitations by itself; `hesitations.py` removes those it writes ("euh", "hum", "um", "uh", "erm") and words or runs of up to three words said twice in a row, keeping intended doubles; measured in `bench/hesitations/`. A hesitation Whisper mishears as a word ("A", "« E »") stays | done | high | S |
 | **Auto punctuation** — inferred from pauses and tone, spoken marks ("comma") | Whisper's own punctuation and capitals; spoken marks and line breaks ("virgule", "point d'interrogation", "à la ligne", "comma", "new paragraph") written by `punctuation.py`, measured in `bench/punctuation/` (#26); quotes and brackets said aloud ("ouvrez les guillemets", "fermez la parenthèse", "open quote", "close paren") written « », " " and ( ) (#31). No square brackets or braces, no punctuation inferred from tone beyond Whisper's | partial | medium | S |
 | **Numbered lists** — spoken enumerations become a formatted list | `lists.py`: items numbered aloud (*un, deux*, *premièrement*, *firstly*, *number one*, or the figures Whisper writes) written one per line, "1. …", the words before as a title with a colon; goes on across pauses with the as-you-go dictation; measured in `bench/lists/` (#33). No bulleted lists, no nested lists | partial | medium | S |
@@ -46,7 +47,7 @@ and [Personalized Style](https://wisprflow.ai/post/personalized-style) (read on 
 | **Works in any app** | insertion at the cursor through the clipboard and a paste shortcut (uinput, Mutter, SendKeys, System Events) | done | — | — |
 | **Personal dictionary**, fed by the words you correct | `vocabulary` in the settings window, filled by hand; fed by the corrections made in the history (**Correct…**, `history --correct`), `vocabulary.py`, measured in `bench/dictionary/` (#34); replacement entries ("misheard → meant", Wispr Flow's "Correct a misspelling") in `[replacements]` and the settings window, `replacements.py` (#38), also saved on their own when a name the vocabulary already held is corrected again, measured in `bench/dictionary/ --from-corrections` (#40). Not learned from an edit made in the app dictated into (whisper-desk cannot see it); no replacements per language | partial | high | M |
 | **Snippets** — a spoken cue inserts a longer text | `[snippets]` in `config.toml`, `snippets.py`: alone or inside a sentence, case and punctuation ignored, longest cue wins, multi-line texts; measured in `bench/snippets/`; edited in the settings window too (#25). No rich text (bold, links) | partial | high | S |
-| **Styles** — tone adapted to the app (formal in docs, casual in chat) | `style.py`: one style for every app, `style` in `[model]` or **Style** in the settings window — *formal* (as Whisper punctuates it), *casual* (no final full stop), *very casual* (no sentence-opening capitals either) (in PR). No style per app (the focused app is not known), no *Excited* style | partial | medium | L |
+| **Styles** — tone adapted to the app (formal in docs, casual in chat) | `style.py`: one style for every app, `style` in `[model]` or **Style** in the settings window — *formal* (as Whisper punctuates it), *casual* (no final full stop), *very casual* (no sentence-opening capitals either) (#42). No style per app (the focused app is not known), no *Excited* style | partial | medium | L |
 | **Command Mode** — select text, say how to rewrite it | — (would need a local model, e.g. Ollama) | missing | high | L |
 | **Developer syntax** — camelCase, snake_case, CLI commands, file tagging in Cursor | `casing.py`: a name said after its style ("camel case user name" → `userName`, snake, pascal, kebab, constant case) written in it, Whisper's glued and hyphenated forms understood; measured in `bench/casing/` (#28). Not guessed from context without the style said; no CLI commands, no file tagging | partial | medium | M |
 | **History** of dictations | `whisper-desk history` and its window: search, copy, insert again, purge | done | — | — |
@@ -246,7 +247,7 @@ and [Personalized Style](https://wisprflow.ai/post/personalized-style) (read on 
   goes on after, 96 passes through the model for 54 sentences instead of 63, GPU and CPU alike.
   Left to do: a pause shorter than 0.6 s that still ends the sentence when it is complete
   (a full stop heard), a smaller CPU model for the early passes.
-- 2026-11-13 — **Styles** (in PR, partial): Wispr Flow's Formal, Casual and Very Casual, by
+- 2026-11-13 — **Styles** (merged, #42, partial): Wispr Flow's Formal, Casual and Very Casual, by
   local rules, `style` in `[model]` or **Style** in the settings window. *Formal* (the
   default) writes the text as before; *casual* leaves out the full stop that ends the
   dictation — with the as-you-go dictation each sentence is typed without it and the full
@@ -264,3 +265,25 @@ and [Personalized Style](https://wisprflow.ai/post/personalized-style) (read on 
   model). Left to do: knowing the focused app (X11 `_NET_ACTIVE_WINDOW`, macOS
   `System Events`, WSL `GetForegroundWindow`; GNOME on Wayland gives it to no client) and
   a style per app category.
+- 2026-11-14 — **Corrections said after a pause** (in PR, partial): Wispr Flow's own example,
+  *"Let's meet at 2… actually 3"*, with a pause long enough to end the sentence — the case
+  the 2026-10-15 session left out, the first part being already typed. A sentence that opens on a correction
+  marker now corrects the last one inserted: only what differs is erased with backspaces
+  (uinput, GNOME, SendKeys `{BS n}`, System Events key code 51) and typed again, the history
+  keeps the corrected text, `model.corrections` switches it off with the rest. A pause ends
+  the sentence even without the full stop Whisper sometimes leaves out. After a full stop,
+  a weak marker (*non*, *pardon*, *actually*, *I mean*, *sorry*) only corrects a number, a
+  day or a month said again in three words at most; after a question the next sentence is
+  an answer. A number corrected keeps the words after it (*"5 chairs. I mean 6."* → *"6
+  chairs."*), in a sentence too. Measure (`bench/backtrack/ --pauses`, 24 corrections + 12
+  controls, each sentence recorded apart and transcribed with the first as its context):
+  written sentences exact 0/24 → 24/24; `small` (CPU) corrections carried out 23/24, exact
+  0/24 → 16/24, WER 79.8 % → 13.4 %; `large-v3-turbo` (GPU) 23/24, exact 0/24 → 17/24, WER
+  79.0 % → 9.2 %; no control rewritten (0/12, both models). The 30 in-sentence corrections:
+  `large-v3-turbo` unchanged (19/30), `small` 17/30 → 18/30. What is left inexact is the
+  transcription: "14h" for *14 heures*, "six" for *6*, "$600" for *600 dollars*, *Mary*
+  heard as "marry". Known limits: only the last sentence of the dictation; the backspaces
+  go wherever the cursor is (moved during the pause, they erase the wrong text) and assume
+  one backspace per character typed (an editor that auto-closes brackets or auto-indents may
+  differ); nothing is erased with the clipboard output alone. Left to do: *scratch that* /
+  *efface ça* said alone to drop the last sentence, a correction of an earlier sentence.

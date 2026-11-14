@@ -264,6 +264,20 @@ class CursorWriter:
         self.failure = ""
         return True
 
+    def erase(self, count: int) -> bool:
+        """Deletes the last `count` characters inserted, False if they may still be there.
+
+        Not after a failed paste: the cursor never received that text, and the
+        backspaces would eat into what the user had typed before it.
+        """
+        if self.stranded or self.failure:
+            return False
+        if not self.keyboard.erase(count):
+            logger.warning("Backspaces failed (%s keyboard).", self.keyboard.name)
+            return False
+        logger.info("Erased %d characters before the cursor.", count)
+        return True
+
     def close(self) -> None:
         if self.settings["restore_clipboard"]:
             if self.stranded:

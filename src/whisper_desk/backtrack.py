@@ -12,7 +12,7 @@ _BOUNDARY = r"(?:[,;:]|\.\.\.|…|—|–|-)"
 # Strong markers say "replace what I just said" with no doubt: when nothing in
 # the correction points at what it replaces, the same number of words is.
 _STRONG = (
-    r"(?:non|ah non|euh non|enfin non)\s*[,.]?\s*(?:plutôt|pardon|je veux dire|attends|en fait)"
+    r"(?:non|ah non|euh non|enfin non)\s*[,.]?\s*(?:plutôt|pardon|je veux dire|attends?|en fait)"
     r"|ou plutôt|enfin non"
     r"|(?:no|oh no)\s*[,.]?\s*(?:wait|actually|I mean|sorry)"
     r"|or rather|make that|scratch that"
@@ -32,6 +32,12 @@ _MARKER = re.compile(
 _UNPAUSED = re.compile(r"ou plutôt|or rather", re.IGNORECASE)
 # The strong markers may also open a new sentence: "Mardi. Non, plutôt mercredi."
 _SENTENCE_END = re.compile(r"[.!?…]\s*$")
+# A weak one only after a statement, and only to put a number, a day or a month
+# in the place of another: "Let's meet at 2. Actually 3." A question's next
+# sentence is its answer: "Tu viens à 3 ? Non, à 4." stays.
+_STATEMENT_END = re.compile(r"(?:\.|…)\s*$")
+# A sentence that is nothing but a correction of the one before it.
+_OPENING = re.compile(rf"\s*(?:{_STRONG}|{_WEAK})(?!\w)", re.IGNORECASE)
 
 _WEEKDAYS = {
     "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche",
@@ -93,6 +99,24 @@ def _anchor(before: list[str], after: list[str]) -> int | None:
     return None
 
 
+def _restates(before: list[str], after: list[str], cut: int | None) -> bool:
+    """Whether a short sentence puts a number, a day or a month in place of the last one's."""
+    if cut is None or len(after) > _MAX_BLIND:
+        return False
+    replaced = {_kind(word) for word in before[cut:]} - {None}
+    return any(_kind(word) in replaced for word in after)
+
+
+def _left_over(replaced: list[str], after: list[str]) -> list[str]:
+    """What follows the number a short restatement ends on: "5 people. I mean 6." keeps "people"."""
+    if len(after) >= len(replaced) or _kind(after[-1]) is None:
+        return []
+    for index, word in enumerate(replaced):
+        if _kind(word) == _kind(after[-1]):
+            return replaced[index + 1:]
+    return []
+
+
 def _sentence_start(text: str) -> int:
     """Start of the sentence the end of `text` belongs to."""
     match = None
@@ -108,9 +132,12 @@ def _correct_once(text: str) -> str | None:
         if (not match["cut"].strip() and not _SENTENCE_END.search(head)
                 and not _UNPAUSED.fullmatch(match["marker"])):
             continue  # no pause before it: an ordinary word of the sentence
+        restated = False
         if _SENTENCE_END.search(head):
             if not strong:
-                continue  # "Tu viens ? Non, tu restes." is an answer, not a correction
+                if not _STATEMENT_END.search(head):
+                    continue  # "Tu viens ? Non, tu restes." is an answer, not a correction
+                restated = True
             head = _SENTENCE_END.sub("", head)
         start = _sentence_start(head)
         before = head[start:].split()
@@ -122,6 +149,8 @@ def _correct_once(text: str) -> str | None:
         if not before or not after:
             continue
         cut = _anchor(before, after)
+        if restated and not _restates(before, after, cut):
+            continue
         if cut is None:
             if not strong or len(after) > _MAX_BLIND or len(after) >= len(before):
                 continue
@@ -129,7 +158,7 @@ def _correct_once(text: str) -> str | None:
             if (cut > 1 and _bare(before[cut - 1]) in _DETERMINERS
                     and _bare(after[0]) not in _DETERMINERS):
                 cut -= 1
-        kept = before[:cut] + after
+        kept = before[:cut] + after + _left_over(before[cut:], after)
         if cut == 0:
             kept[0] = kept[0][:1].upper() + kept[0][1:]
         return head[:start] + " ".join(kept) + rest[tail_at:]
@@ -144,3 +173,21 @@ def apply(text: str) -> str:
             break
         text = corrected
     return text
+
+
+def across(previous: str, sentence: str) -> str | None:
+    """`previous` and `sentence` as one text, when `sentence` opens on a correction of it.
+
+    A pause in the middle of a correction ends the sentence: "On se voit mardi."
+    is already at the cursor when "Non, plutôt mercredi." is said. None when
+    the sentence corrects nothing of what came before.
+    """
+    if not previous.strip() or not _OPENING.match(sentence):
+        return None
+    previous = previous.rstrip()
+    # The pause ended the sentence, whether Whisper wrote its full stop or not.
+    if not _SENTENCE_END.search(previous) and not re.search(r"[,;:]$", previous):
+        previous += "."
+    joined = previous + " " + sentence.lstrip()
+    corrected = apply(joined)
+    return None if corrected == joined else corrected

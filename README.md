@@ -267,9 +267,20 @@ written.
 The markers understood: *non plutôt*, *ou plutôt*, *non pardon*, *non attends*, *enfin non*,
 *je veux dire*, *pardon* — and *no wait*, *actually*, *I mean*, *sorry*, *or rather*,
 *make that*, *scratch that*. They only count after a short pause (a comma in the
-transcription): *c'est plutôt bien* or *I actually think* stay as they are. The correction
-works within what is transcribed in one go: if your pause before *non, plutôt* is long
-enough to split the sentence (`segment_silence_seconds`), the first part is already typed.
+transcription): *c'est plutôt bien* or *I actually think* stay as they are.
+
+A correction may also come after a pause long enough to end the sentence
+(`segment_silence_seconds`), once the sentence is already typed: whisper-desk then erases
+what changes with backspaces and types the corrected version — *"On se voit mardi."*,
+pause, *"Non, plutôt mercredi."* leaves **On se voit mercredi.**, `ardi.` erased and
+`ercredi.` typed. Only the last sentence of the dictation is corrected that way, and only
+when the next one opens on the marker. After a full stop, *non*, *pardon*, *actually*,
+*I mean* or *sorry* only correct a number, a day or a month said again in three words at
+most — *"Let's meet at 2."*, pause, *"Actually 3."*; after a question, the next sentence
+is an answer: *"Tu viens mardi ?"* *"Non, je reste."* stays. Don't move the cursor
+during the pause: the backspaces go wherever it is. With `mode = "clipboard"` alone,
+nothing is typed, so nothing is erased.
+
 Rules run on your machine, no language model involved; `corrections = false` in `[model]`
 turns them off. `bench/backtrack/` measures them on recordings (see Development).
 
@@ -898,8 +909,9 @@ to test all three from any of them.
 
 `bench/` holds reproducible before/after measures of what changes the text. The first,
 `bench/backtrack/`, is a corpus of 46 sentences (30 corrections said aloud, French and
-English, 16 control sentences where *plutôt*, *non* or *actually* are no correction),
-with their expected text and synthetic recordings made by `bench/backtrack/synthesize.py`
+English, 16 control sentences where *plutôt*, *non* or *actually* are no correction) —
+and, in `pauses.tsv`, 36 pairs of sentences said apart, a pause between them (24 where
+the second corrects the first, 12 where it does not) —, with their expected text and synthetic recordings made by `bench/backtrack/synthesize.py`
 with two [Piper](https://github.com/rhasspy/piper) voices: `fr_FR-siwis-medium`, trained on
 the [SIWIS corpus](https://datashare.is.ed.ac.uk/handle/10283/2353) (CC BY 4.0), and
 `en_US-ljspeech-medium`, trained on [LJ Speech](https://keithito.com/LJ-Speech-Dataset/)
@@ -908,6 +920,7 @@ the [SIWIS corpus](https://datashare.is.ed.ac.uk/handle/10283/2353) (CC BY 4.0),
 ```sh
 python3 bench/backtrack/measure.py -v                 # on the written sentences
 ~/.local/share/whisper-desk/venv/bin/python bench/backtrack/measure.py --audio -v
+~/.local/share/whisper-desk/venv/bin/python bench/backtrack/measure.py --pauses --audio -v
 ```
 
 It prints the word error rate against the expected text, before and after the
