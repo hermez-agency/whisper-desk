@@ -1,0 +1,37 @@
+id	lang	first	second	expected
+p-fr01	fr	On se voit mardi.	Non, plutôt mercredi.	On se voit mercredi.
+p-fr02	fr	Le rendez-vous est à 14 heures.	Non, plutôt 15 heures.	Le rendez-vous est à 15 heures.
+p-fr03	fr	Envoie le dossier à Paul.	Non, je veux dire à Marie.	Envoie le dossier à Marie.
+p-fr04	fr	Achète du lait.	Ou plutôt du pain.	Achète du pain.
+p-fr05	fr	La réunion est en mars.	Non, pardon, en avril.	La réunion est en avril.
+p-fr06	fr	Il nous faut trois chaises.	Non, plutôt quatre.	Il nous faut quatre chaises.
+p-fr07	fr	Le train part à 8 heures.	Pardon, 9 heures.	Le train part à 9 heures.
+p-fr08	fr	J'ai réservé pour vendredi.	Enfin non, samedi.	J'ai réservé pour samedi.
+p-fr09	fr	Le budget est de 500 euros.	Non, 600 euros.	Le budget est de 600 euros.
+p-fr10	fr	Appelle le client demain matin.	Non, plutôt demain soir.	Appelle le client demain soir.
+p-fr11	fr	La livraison est prévue pour lundi.	Non, attends, mardi.	La livraison est prévue pour mardi.
+p-fr12	fr	Range le fichier dans le dossier projets.	Ou plutôt dans le dossier archives.	Range le fichier dans le dossier archives.
+p-en01	en	Let's meet at 2.	Actually 3.	Let's meet at 3.
+p-en02	en	The call is on Monday.	No wait, Tuesday.	The call is on Tuesday.
+p-en03	en	Send the report to John.	No, I mean to Mary.	Send the report to Mary.
+p-en04	en	Buy some milk.	Or rather some bread.	Buy some bread.
+p-en05	en	We need 5 chairs.	I mean 6.	We need 6 chairs.
+p-en06	en	The budget is 500 dollars.	No, actually 600 dollars.	The budget is 600 dollars.
+p-en07	en	The flight lands in May.	No wait, in June.	The flight lands in June.
+p-en08	en	Ship it on Friday.	Actually, on Thursday.	Ship it on Thursday.
+p-en09	en	The meeting is in room 12.	No, room 14.	The meeting is in room 14.
+p-en10	en	Call me tomorrow morning.	Or rather tomorrow evening.	Call me tomorrow evening.
+p-en11	en	Book a table for four people.	Make that five.	Book a table for five people.
+p-en12	en	The deadline is March 3.	Sorry, March 5.	The deadline is March 5.
+p-ctl01	fr	Tu viens mardi ?	Non, je reste à la maison.	Tu viens mardi ? Non, je reste à la maison.
+p-ctl02	fr	Il fait beau aujourd'hui.	Non, je ne sortirai pas.	Il fait beau aujourd'hui. Non, je ne sortirai pas.
+p-ctl03	fr	J'ai lu ton message.	Pardon, je n'avais pas répondu.	J'ai lu ton message. Pardon, je n'avais pas répondu.
+p-ctl04	fr	Le devis est prêt.	En fait, il manque une ligne.	Le devis est prêt. En fait, il manque une ligne.
+p-ctl05	fr	On a vendu 3 voitures.	Non, ce n'est pas assez.	On a vendu 3 voitures. Non, ce n'est pas assez.
+p-ctl06	fr	Je pense que c'est bien.	Je veux dire que ça me plaît.	Je pense que c'est bien. Je veux dire que ça me plaît.
+p-ctl07	en	Are you coming on Friday?	No, I am staying home.	Are you coming on Friday? No, I am staying home.
+p-ctl08	en	The tests passed.	Actually, all of them did.	The tests passed. Actually, all of them did.
+p-ctl09	en	I read your email.	Sorry for the late reply.	I read your email. Sorry for the late reply.
+p-ctl10	en	We sold 3 cars this week.	No, that is not enough.	We sold 3 cars this week. No, that is not enough.
+p-ctl11	en	I like this design.	I mean it, it is great.	I like this design. I mean it, it is great.
+p-ctl12	en	The meeting is at 10.	Actually, I will be late.	The meeting is at 10. Actually, I will be late.

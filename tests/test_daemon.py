@@ -670,6 +670,92 @@ class StyleTest(DictationCase):
         self.assertEqual(recorded, ["See you tomorrow. Bye"])
 
 
+class CorrectionAfterAPauseTest(DictationCase):
+    """A correction said after the pause that ended its sentence rewrites that sentence."""
+
+    def dictate(self, segments: list[bytes], model: dict | None = None,
+                mode: str = "cursor", erases: bool = True) -> None:
+        test = self
+
+        class Writer:
+            keyboard = mock.Mock()
+            keyboard.name = "test"
+            failure = ""
+
+            def __init__(self, *_args):
+                pass
+
+            def prepare(self):
+                pass
+
+            def close(self):
+                pass
+
+            def erase(self, count):
+                if erases:
+                    test.delivered.append(f"<{count}")
+                return erases
+
+        self.recorder.segments[:] = segments
+        with mock.patch.object(daemon.output, "CursorWriter", Writer), \
+                mock.patch.dict(CONFIG, {"output": {**CONFIG["output"], "mode": mode},
+                                         "model": model or {}}):
+            with self.service() as service:
+                self.listening(service)
+                service.toggle()
+                self.assertTrue(wait_until(lambda: service.session is None))
+
+    def setUp(self):
+        super().setUp()
+        self.recorded: list[str] = []
+        self.enterContext(mock.patch.object(
+            daemon.history, "append", lambda text, **_: self.recorded.append(text)))
+
+    def test_only_what_differs_is_erased_and_typed_again(self):
+        self.dictate([b"On se voit mardi.", "Non, plutôt mercredi.".encode()])
+        self.assertEqual(self.delivered, ["On se voit mardi.", "<5", "ercredi."])
+
+    def test_the_rest_of_the_correction_goes_on(self):
+        self.dictate([b"Let's meet at 2.", b"Actually 3. See you there."])
+        self.assertEqual(self.delivered, ["Let's meet at 2.", "<2", "3. See you there."])
+
+    def test_the_history_keeps_the_corrected_text(self):
+        with mock.patch.dict(CONFIG, {"output": {**CONFIG["output"], "history": True,
+                                                 "history_days": 30}}):
+            self.dictate([b"Bonjour.", b"On se voit mardi.", "Non, plutôt mercredi.".encode()])
+        self.assertEqual(self.recorded, ["Bonjour. On se voit mercredi."])
+
+    def test_two_corrections_in_a_row(self):
+        self.dictate([b"Je pars lundi.", "Non, plutôt mardi.".encode(),
+                      "Non, plutôt jeudi.".encode()])
+        self.assertEqual(self.delivered, ["Je pars lundi.", "<6", "mardi.", "<6", "jeudi."])
+
+    def test_a_casual_style_keeps_its_full_stop_back(self):
+        self.dictate([b"See you on Monday.", b"No wait, Tuesday."], {"style": "casual"})
+        self.assertEqual(self.delivered, ["See you on Monday", "<6", "Tuesday"])
+
+    def test_a_sentence_that_corrects_nothing_is_inserted(self):
+        self.dictate([b"Tu viens mardi ?", b"Non, je reste."])
+        self.assertEqual(self.delivered, ["Tu viens mardi ?", " Non, je reste."])
+
+    def test_corrections_can_be_turned_off(self):
+        self.dictate([b"On se voit mardi.", "Non, plutôt mercredi.".encode()],
+                     {"corrections": False})
+        self.assertEqual(self.delivered, ["On se voit mardi.", " Non, plutôt mercredi."])
+
+    def test_backspaces_that_fail_leave_the_sentence_as_said(self):
+        self.dictate([b"On se voit mardi.", "Non, plutôt mercredi.".encode()], erases=False)
+        self.assertEqual(self.delivered, ["On se voit mardi.", " Non, plutôt mercredi."])
+
+    def test_the_clipboard_alone_has_nothing_to_erase(self):
+        self.dictate([b"On se voit mardi.", "Non, plutôt mercredi.".encode()], mode="clipboard")
+        self.assertEqual(self.delivered, ["On se voit mardi.", " Non, plutôt mercredi."])
+
+    def test_a_list_laid_out_is_not_corrected(self):
+        self.dictate([b"One, eggs.", b"Two, milk.", b"No wait, 3."])
+        self.assertFalse(any(item.startswith("<") for item in self.delivered))
+
+
 class HistoryTest(DictationCase):
     """One entry per dictation, whatever the number of sentences it took."""
 

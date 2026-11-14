@@ -65,6 +65,7 @@ KEY_CODES = {
     "enter": 28,
     "space": 57,
     "tab": 15,
+    "backspace": 14,
 }
 
 MODIFIERS = ("ctrl", "shift", "alt", "super")
@@ -148,6 +149,10 @@ class Keyboard:
 
     def press(self, keys: Iterable[str], hold: float = 0.02) -> bool:
         raise NotImplementedError
+
+    def erase(self, count: int) -> bool:
+        """Deletes the `count` characters before the cursor."""
+        return all(self.press(["backspace"]) for _ in range(count))
 
 
 class UinputKeyboard(Keyboard):
@@ -356,7 +361,9 @@ class MutterKeyboard(Keyboard):
 # SendKeys: "^" Ctrl, "%" Alt, "+" Shift. No Windows key — it is reserved by the
 # system, which is also why the global shortcut under WSL is taken on Ctrl+Alt.
 SENDKEYS_MODIFIERS = {"ctrl": "^", "alt": "%", "shift": "+"}
-SENDKEYS_KEYS = {"insert": "{INS}", "enter": "{ENTER}", "space": " ", "tab": "{TAB}"}
+SENDKEYS_KEYS = {
+    "insert": "{INS}", "enter": "{ENTER}", "space": " ", "tab": "{TAB}", "backspace": "{BS}",
+}
 
 
 def sendkeys_sequence(keys: Iterable[str]) -> str | None:
@@ -386,6 +393,14 @@ class SendKeysKeyboard(Keyboard):
                 "simulated) — prefer 'ctrl+v'."
             )
             return False
+        return self._send(sequence)
+
+    def erase(self, count: int) -> bool:
+        # One PowerShell for all of them: each one costs a fraction of a second.
+        return count <= 0 or self._send(f"{{BS {count}}}")
+
+    @staticmethod
+    def _send(sequence: str) -> bool:
         script = (
             "Add-Type -AssemblyName System.Windows.Forms;"
             f"[System.Windows.Forms.SendKeys]::SendWait({host.powershell_literal(sequence)})"
@@ -401,7 +416,7 @@ APPLESCRIPT_MODIFIERS = {
     "shift": "shift down",
     "super": "command down",
 }
-APPLESCRIPT_KEY_CODES = {"enter": 36, "tab": 48, "space": 49, "insert": 114}
+APPLESCRIPT_KEY_CODES = {"enter": 36, "tab": 48, "space": 49, "insert": 114, "backspace": 51}
 
 
 def applescript_command(keys: Iterable[str]) -> str | None:
@@ -439,10 +454,25 @@ class AppleScriptKeyboard(Keyboard):
         if script is None:
             logger.warning("Paste shortcut cannot be translated into AppleScript.")
             return False
+        return self._run([script])
+
+    def erase(self, count: int) -> bool:
+        if count <= 0:
+            return True
+        return self._run([
+            'tell application "System Events"',
+            f"repeat {count} times",
+            f"key code {APPLESCRIPT_KEY_CODES['backspace']}",
+            "end repeat",
+            "end tell",
+        ])
+
+    def _run(self, lines: list[str]) -> bool:
+        command = ["osascript"]
+        for line in lines:
+            command += ["-e", line]
         try:
-            result = subprocess.run(
-                ["osascript", "-e", script], capture_output=True, timeout=10
-            )
+            result = subprocess.run(command, capture_output=True, timeout=10)
         except (OSError, subprocess.SubprocessError) as error:
             logger.warning("osascript unavailable: %s", error)
             return False

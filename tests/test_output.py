@@ -132,6 +132,23 @@ class CursorWriterTest(unittest.TestCase):
         writer.close()
         writer.clipboard.restore.assert_called_once()
 
+    def test_backspaces_erase_what_was_pasted(self):
+        writer = self.writer(pastes=True)
+        writer.keyboard.erase = mock.Mock(return_value=True)
+        with self.assertLogs(output.logger, "INFO"):
+            writer.write("On se voit mardi.")
+            self.assertTrue(writer.erase(5))
+        writer.keyboard.erase.assert_called_once_with(5)
+
+    def test_nothing_is_erased_after_a_failed_paste(self):
+        """The cursor never got that text: backspaces would eat the user's own."""
+        writer = self.writer(pastes=False)
+        writer.keyboard.erase = mock.Mock(return_value=True)
+        with self.assertLogs(output.logger, "WARNING"):
+            writer.write("On se voit mardi.")
+        self.assertFalse(writer.erase(5))
+        writer.keyboard.erase.assert_not_called()
+
     def test_shift_insert_fills_the_primary_selection_too(self):
         """A VTE terminal pastes the primary selection on Shift+Insert."""
         with forced_host(host.LINUX):

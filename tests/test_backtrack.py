@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import context  # noqa: F401  (adds src/ to the import path)
 
-from whisper_desk.backtrack import apply
+from whisper_desk.backtrack import across, apply
 
 CORPUS = Path(__file__).resolve().parents[1] / "bench" / "backtrack" / "corpus.tsv"
 # Sentences of the corpus the rules still get wrong: the measure counts them,
@@ -66,6 +66,65 @@ class CorrectionTest(unittest.TestCase):
             apply("Je pars lundi, non, plutôt mardi, non, plutôt jeudi."),
             "Je pars jeudi.",
         )
+
+
+class RestatedTest(unittest.TestCase):
+    """A weak marker after a full stop: a number, a day or a month said again."""
+
+    def test_a_number_said_again_after_a_full_stop(self):
+        self.assertEqual(apply("Let's meet at 2. Actually 3."), "Let's meet at 3.")
+
+    def test_the_words_after_the_number_are_kept(self):
+        self.assertEqual(apply("We need 5 chairs. I mean 6."), "We need 6 chairs.")
+        self.assertEqual(apply("Il a 3 ans. Non, 4."), "Il a 4 ans.")
+
+    def test_a_day_said_again(self):
+        self.assertEqual(apply("Je pars lundi. Pardon, mardi."), "Je pars mardi.")
+
+    def test_a_question_s_next_sentence_is_its_answer(self):
+        text = "Tu viens à 3 h ? Non, à 4 h."
+        self.assertEqual(apply(text), text)
+
+    def test_nothing_to_line_up_with_is_no_correction(self):
+        for text in ("Tu viens demain. Non, tu restes.", "It costs 5 dollars. Actually, that is cheap."):
+            self.assertEqual(apply(text), text)
+
+
+class AcrossTest(unittest.TestCase):
+    """A correction said after the pause that ended its sentence."""
+
+    def test_the_next_sentence_corrects_the_one_before(self):
+        self.assertEqual(across("On se voit mardi.", "Non, plutôt mercredi."), "On se voit mercredi.")
+        self.assertEqual(across("Let's meet at 2.", "Actually 3."), "Let's meet at 3.")
+
+    def test_what_follows_the_correction_is_kept(self):
+        self.assertEqual(
+            across("Envoie le dossier à Paul.", "Non, je veux dire à Marie. Merci."),
+            "Envoie le dossier à Marie. Merci.",
+        )
+
+    def test_the_pause_ends_a_sentence_whisper_left_without_its_full_stop(self):
+        self.assertEqual(across("Le train part à 8h", "Pardon, 9h."), "Le train part à 9h.")
+        self.assertIsNone(across("Le train part à 8h", "Pardon, je me suis trompé."))
+
+    def test_attend_written_without_its_s(self):
+        self.assertEqual(across("On livre lundi.", "Non attend, mardi."), "On livre mardi.")
+
+    def test_a_sentence_that_does_not_open_on_a_correction(self):
+        self.assertIsNone(across("On se voit mardi.", "Il faut plutôt mercredi, non, jeudi."))
+
+    def test_an_answer_or_a_new_thought_corrects_nothing(self):
+        for previous, sentence in (
+            ("Tu viens mardi ?", "Non, je reste."),
+            ("Il fait beau.", "Non, je ne viendrai pas."),
+            ("Let's meet at 2.", "Actually, I think we should cancel."),
+            ("Bonjour.", "Pardon, je n'avais pas vu ton message."),
+        ):
+            with self.subTest(sentence):
+                self.assertIsNone(across(previous, sentence))
+
+    def test_nothing_before_corrects_nothing(self):
+        self.assertIsNone(across("", "Non, plutôt mercredi."))
 
 
 class LeftAloneTest(unittest.TestCase):
