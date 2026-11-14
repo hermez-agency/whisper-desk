@@ -19,7 +19,8 @@ from pathlib import Path
 from typing import Any
 
 from . import config as config_module
-from . import history, host, hotkey, inject, lists, punctuation, replacements, snippets, style
+from . import backtrack, history, host, hotkey, inject, lists, punctuation, replacements
+from . import snippets, style
 from . import output
 from .capture import CaptureUnavailable
 from .overlay_proc import OverlayProcess
@@ -84,6 +85,12 @@ class Session:
         # The full stop a casual style keeps back from the last sentence
         # inserted: typed only if another sentence follows it.
         self.full_stop = ""
+        # The last sentence inserted as it was heard, the text typed for it
+        # (its leading space included) and the full stop held back before it:
+        # what a correction said after a pause needs to type it again.
+        self.last_said: str | None = None
+        self.last_typed = ""
+        self.full_stop_before = ""
         self.listened = 0.0             # seconds the microphone stayed open
         self.queue: queue.Queue[bytes | None] = queue.Queue()
         # The last draft and its text: the sentence the pause then ends is
@@ -333,6 +340,9 @@ class Session:
             # Before the context: the model hears the name as it is spelled.
             text = replacements.apply(text, self.service.config["replacements"])
             self.heard.append(text)
+            if self._correct_last(text):
+                continue
+            said = text
             if self.service.config["model"].get("lists", True):
                 ready = self.pending.feed(text, punctuation.join(self.parts))
                 if ready is None:
@@ -340,6 +350,8 @@ class Session:
                     continue
                 text = ready
             self._insert(text)
+            # A list laid out from several sentences is no one sentence to correct.
+            self.last_said = said if text == said else None
 
     def _transcribe_draft(self, segment: bytes) -> None:
         """Transcribes a sentence while the pause that may end it goes on.
@@ -377,8 +389,8 @@ class Session:
         )
         return text
 
-    def _insert(self, text: str) -> None:
-        """Inserts a transcribed sentence after those already inserted."""
+    def _render(self, text: str, full_stop: str, before: str) -> tuple[str, str, str]:
+        """A sentence as it is typed after `before`: its spacing, its text, the full stop held back."""
         config = self.service.config
         writing = style.resolve(config)
         # Before the snippets: their text is written as it was saved.
@@ -386,23 +398,71 @@ class Session:
             text = style.lower_starts(text, style.names(config))
         text = snippets.apply(text, config["snippets"])
         if writing != "formal":
-            text, self.full_stop = style.hold_full_stop(style.rejoin(self.full_stop, text))
+            text, full_stop = style.hold_full_stop(style.rejoin(full_stop, text))
         # Later sentences are separated from the previous insertion by a
         # space, unless one opens on a mark or follows a line break.
-        spacing = punctuation.separator(self.parts[-1], text) if self.parts else ""
+        return punctuation.separator(before, text), text, full_stop
+
+    def _insert(self, text: str) -> None:
+        """Inserts a transcribed sentence after those already inserted."""
+        self.full_stop_before = self.full_stop
+        spacing, text, self.full_stop = self._render(
+            text, self.full_stop, self.parts[-1] if self.parts else ""
+        )
         self.parts.append(text)
+        self.last_typed = spacing + text
         self.overlay.set_text(text)
-        if not self.capture:
-            delivered = output.deliver(
-                spacing + text,
-                self.service.config,
-                writer=self.writer,
-                overlay=self.overlay,
+        self._deliver(spacing + text)
+
+    def _deliver(self, typed: str) -> None:
+        if self.capture:
+            return
+        delivered = output.deliver(
+            typed,
+            self.service.config,
+            writer=self.writer,
+            overlay=self.overlay,
+        )
+        if not delivered and not self.delivery_failure:
+            self.delivery_failure = (
+                self.writer.failure if self.writer and self.writer.failure else "clipboard"
             )
-            if not delivered and not self.delivery_failure:
-                self.delivery_failure = (
-                    self.writer.failure if self.writer and self.writer.failure else "clipboard"
-                )
+
+    def _correct_last(self, text: str) -> bool:
+        """Carries out on the last sentence inserted a correction said after a pause.
+
+        "On se voit mardi." is at the cursor when "Non, plutôt mercredi." is
+        said: only what differs is erased and typed again — "ardi." becomes
+        "ercredi.". False when the sentence corrects nothing, or when the text
+        at the cursor cannot be trusted to be the one inserted.
+        """
+        if not self.service.config["model"].get("corrections", True):
+            return False
+        if self.last_said is None or self.pending.held or not self.parts:
+            return False
+        if not self.capture and self.writer is None:
+            return False  # nothing at a cursor to correct: the clipboard holds one sentence
+        corrected = backtrack.across(self.last_said, text)
+        if corrected is None:
+            return False
+        before = self.parts[-2] if len(self.parts) > 1 else ""
+        spacing, fixed, full_stop = self._render(corrected, self.full_stop_before, before)
+        typed = spacing + fixed
+        kept = len(os.path.commonprefix([self.last_typed, typed]))
+        if not self.capture:
+            assert self.writer is not None
+            erased = len(self.last_typed) - kept
+            if erased and not self.writer.erase(erased):
+                return False
+            if typed[kept:]:
+                self._deliver(typed[kept:])
+        logger.info("Correction said after a pause: the last sentence typed again.")
+        self.parts[-1] = fixed
+        self.last_typed = typed
+        self.full_stop = full_stop
+        self.last_said = corrected
+        self.overlay.set_text(fixed)
+        return True
 
     def stop(self) -> None:
         self.stopping.set()

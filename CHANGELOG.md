@@ -4,6 +4,28 @@
 
 ### Added
 
+- **Corrections said after a pause** (Wispr Flow's Backtrack, *"Let's meet at 2… actually
+  3"*): a correction that opens the sentence after the pause that ended the previous one now
+  corrects that sentence, already typed. *"On se voit mardi."*, pause, *"Non, plutôt
+  mercredi."* leaves *"On se voit mercredi."*: only what differs is erased with backspaces
+  (`ardi.`) and typed again (`ercredi.`). The last sentence of the dictation only, and the
+  history keeps the corrected text. After a full stop, the weak markers (*non*, *pardon*,
+  *actually*, *I mean*, *sorry*) correct a number, a day or a month said again in three
+  words at most — *"We need 5 chairs. I mean 6."* gives *"We need 6 chairs."*; after a
+  question the next sentence stays an answer. A number corrected keeps the words after it
+  (*"trois chaises, non, plutôt quatre"* → *"quatre chaises"*), and *non attend* written
+  without its *s* is understood (`backtrack.across`, `Keyboard.erase`, `CursorWriter.erase`).
+- `bench/backtrack/measure.py --pauses`: 36 pairs of sentences recorded apart
+  (`pauses.tsv`), 24 where the second corrects the first, 12 where it does not, each half
+  through the Transcriber with the first as the second's context, as the daemon does:
+  - written sentences: corrections exact 0/24 → 24/24, WER 75.6 % → 0.0 %;
+  - faster-whisper `small` (CPU, int8): corrections carried out 23/24, exact 0/24 → 16/24,
+    WER 79.8 % → 13.4 %;
+  - `large-v3-turbo` (CUDA, float16): carried out 23/24, exact 0/24 → 17/24, WER 79.0 % →
+    9.2 %;
+  - controls: none rewritten (0/12) with either model, WER unchanged (2.6 %, 1.7 %).
+  The in-sentence corpus is unchanged with `large-v3-turbo` (19/30) and goes from 17/30 to
+  18/30 with `small` (WER 18.0 % → 16.0 %).
 - **Writing styles** (Wispr Flow's Styles): `style` in `[model]`, or **Style** in the
   settings window. `"formal"` (the default) writes the dictation as Whisper punctuates it;
   `"casual"` without the full stop that ends it, as in a chat message — *"Ça marche. On se

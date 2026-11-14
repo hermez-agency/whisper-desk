@@ -77,6 +77,41 @@ class SendKeysTest(unittest.TestCase):
         self.assertIsNone(inject.sendkeys_sequence(["ctrl"]))
 
 
+class EraseTest(unittest.TestCase):
+    """Backspaces, for a correction said after its sentence was typed."""
+
+    def test_one_backspace_per_character(self):
+        keyboard = inject.NullKeyboard()
+        with mock.patch.object(keyboard, "press", return_value=True) as press:
+            self.assertTrue(keyboard.erase(3))
+        self.assertEqual(press.call_args_list, [mock.call(["backspace"])] * 3)
+
+    def test_a_refused_backspace_stops_there(self):
+        keyboard = inject.NullKeyboard()
+        with mock.patch.object(keyboard, "press", return_value=False) as press:
+            self.assertFalse(keyboard.erase(3))
+        press.assert_called_once()
+
+    def test_windows_sends_them_all_at_once(self):
+        with mock.patch.object(inject.host, "run_powershell", return_value="") as run:
+            self.assertTrue(inject.SendKeysKeyboard().erase(5))
+        run.assert_called_once()
+        self.assertIn("{BS 5}", run.call_args.args[0])
+
+    def test_macos_repeats_the_delete_key(self):
+        result = mock.Mock(returncode=0)
+        with mock.patch.object(inject.subprocess, "run", return_value=result) as run:
+            self.assertTrue(inject.AppleScriptKeyboard().erase(4))
+        command = run.call_args.args[0]
+        self.assertIn("repeat 4 times", command)
+        self.assertIn("key code 51", command)
+
+    def test_nothing_to_erase_sends_nothing(self):
+        with mock.patch.object(inject.host, "run_powershell") as run:
+            self.assertTrue(inject.SendKeysKeyboard().erase(0))
+        run.assert_not_called()
+
+
 class AppleScriptTest(unittest.TestCase):
     def test_common_paste(self):
         self.assertEqual(
