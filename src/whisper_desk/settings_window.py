@@ -640,6 +640,13 @@ class SettingsWindow(Gtk.Window):
 
     def _on_key(self, _widget: Gtk.Widget, event: Gdk.EventKey) -> bool:
         if not self.capturing:
+            ctrl = event.state & Gtk.accelerator_get_default_mod_mask() == Gdk.ModifierType.CONTROL_MASK
+            if ctrl and Gdk.keyval_to_lower(event.keyval) == Gdk.KEY_s:
+                self._on_save(None)
+                return True
+            if ctrl and Gdk.keyval_to_lower(event.keyval) == Gdk.KEY_w:
+                self.close()
+                return True
             return False
         if event.keyval == Gdk.KEY_Escape:
             send({"action": "hotkey", "accel": self.binding})
