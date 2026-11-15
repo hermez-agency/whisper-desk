@@ -17,7 +17,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from . import capture, hotkey, replacements, snippets, update, window_proc
+from . import capture, hotkey, inject, replacements, settings_schema, snippets, update, window_proc
 from . import config as config_module
 from .recorder import CHANNELS, CHUNK_BYTES, MIN_THRESHOLD, RATE, _rms
 from .spectrum import visual_level
@@ -71,23 +71,40 @@ UPDATES = (
     ("notify", "Only tell me"),
     ("off", "Never check"),
 )
+HOTKEY_ACTIONS = (("toggle", "Press once to start, again to transcribe"),)
+COMPUTE_DEVICES = (
+    ("auto", "Automatic"),
+    ("cuda", "Graphics card (NVIDIA)"),
+    ("cpu", "Processor"),
+)
+COMPUTE_TYPES = (
+    ("auto", "Automatic"),
+    ("float16", "float16 — graphics card, accurate"),
+    ("int8_float16", "int8_float16 — graphics card, light"),
+    ("int8", "int8 — processor, light"),
+)
+BACKENDS = (
+    ("auto", "Automatic"),
+    ("arecord", "arecord (ALSA)"),
+    ("parec", "parec (PulseAudio)"),
+    ("rec", "rec (SoX)"),
+    ("sox", "sox"),
+    ("ffmpeg", "ffmpeg"),
+)
+KEYBOARDS = (
+    ("auto", "Automatic"),
+    ("uinput", "uinput (Linux)"),
+    ("mutter", "GNOME remote desktop (Linux)"),
+    ("windows", "SendKeys (WSL)"),
+    ("applescript", "AppleScript (macOS)"),
+    ("none", "Never paste: the text stays in the clipboard"),
+)
 # Where each value of the window lives in config.toml.
 FIELDS = {
-    "language": ("model", "language"),
-    "model": ("model", "name"),
-    "vocabulary": ("model", "vocabulary"),
-    "style": ("model", "style"),
-    "device": ("recording", "device"),
-    "binding": ("hotkey", "binding"),
-    "mode": ("output", "mode"),
-    "overlay": ("overlay", "enabled"),
-    "position": ("overlay", "position"),
-    "accent": ("overlay", "accent"),
-    "updates": ("update", "auto_update"),
+    setting.field: (setting.section, setting.key)
+    for setting in settings_schema.settings()
+    if not setting.is_table
 }
-COLOUR = re.compile(r"^#[0-9a-fA-F]{6}$")
-
-
 def size_label(size: float) -> str:
     return f"{size / 1e9:.1f} GB" if size >= 1e9 else f"{size / 1e6:.0f} MB"
 
@@ -208,22 +225,38 @@ class SettingsController:
         ]
         return values
 
+    def defaults(self) -> dict[str, Any]:
+        """What each value of the window is when config.toml says nothing."""
+        defaults: dict[str, Any] = {
+            field: config_module.DEFAULTS[section][key] for field, (section, key) in FIELDS.items()
+        }
+        defaults["updates"] = update.auto_mode(config_module.DEFAULTS)
+        return defaults
+
     def snapshot(self) -> dict[str, Any]:
         values = self.values()
         binding = hotkey.resolve_binding(self.config)
         return {
+            "layout": settings_schema.layout(),
+            "defaults": self.defaults(),
             "values": values,
             "hotkey": {"binding": values["binding"], "label": hotkey.label(binding)},
             "choices": {
-                "language": with_current(LANGUAGES, values["language"]),
-                "model": with_current(model_choices(), values["model"]),
-                "style": with_current(STYLES, values["style"]),
-                "device": with_current(
-                    capture.devices(str(self.config["recording"]["backend"])), values["device"]
-                ),
-                "mode": with_current(MODES, values["mode"]),
-                "position": with_current(POSITIONS, values["position"]),
-                "updates": with_current(UPDATES, values["updates"]),
+                name: with_current(choices, str(values[field]))
+                for name, field, choices in (
+                    ("language", "language", LANGUAGES),
+                    ("model", "model", model_choices()),
+                    ("style", "style", STYLES),
+                    ("device", "device", capture.devices(str(self.config["recording"]["backend"]))),
+                    ("mode", "mode", MODES),
+                    ("position", "position", POSITIONS),
+                    ("updates", "updates", UPDATES),
+                    ("hotkey_action", "hotkey_action", HOTKEY_ACTIONS),
+                    ("compute_device", "model_device", COMPUTE_DEVICES),
+                    ("compute_type", "compute_type", COMPUTE_TYPES),
+                    ("backend", "backend", BACKENDS),
+                    ("keyboard", "keyboard", KEYBOARDS),
+                )
             },
         }
 
@@ -258,6 +291,23 @@ class SettingsController:
         resolved = hotkey.resolve_binding({"hotkey": {"binding": binding}})
         return {"hotkey": {"binding": binding, "label": hotkey.label(resolved)}}
 
+    def validated(self, values: dict[str, Any]) -> tuple[dict[str, Any], str]:
+        """The values as they are written, and what is wrong with the first that is not."""
+        known = settings_schema.by_field()
+        checked: dict[str, Any] = {}
+        for field, value in values.items():
+            setting = known.get(field)
+            if setting is None or setting.is_table:
+                continue
+            value, error = settings_schema.check(setting, value)
+            if not error and setting.kind == "paste" and value.lower() != "auto" \
+                    and not inject.parse_shortcut(value):
+                error = f"{setting.label}: none of these keys is known"
+            if error:
+                return {}, error
+            checked[field] = value
+        return checked, ""
+
     def changes(self, values: dict[str, Any]) -> dict[str, dict[str, Any]]:
         """Only what differs from the file: the rest is left exactly as written."""
         changes: dict[str, dict[str, Any]] = {}
@@ -269,11 +319,6 @@ class SettingsController:
             if field == "updates":
                 # A boolean written by hand reads as its word.
                 current = update.auto_mode(self.config)
-                value = str(value).strip()
-            elif isinstance(current, bool):
-                value = bool(value)
-            else:
-                value = str(value).strip()
             if value != current:
                 changes.setdefault(section, {})[key] = value
         return changes
@@ -321,10 +366,10 @@ class SettingsController:
         return table
 
     def save(self, values: dict[str, Any]) -> dict[str, Any]:
-        accent = values.get("accent", self.config["overlay"]["accent"])
-        if not COLOUR.match(str(accent)):
-            return {"status": f"The colour {accent} is not of the form #rrggbb", "saved": False}
-        changes = self.changes(values)
+        checked, error = self.validated(values)
+        if error:
+            return {"status": error, "saved": False}
+        changes = self.changes(checked)
         tables = {}
         if "snippets" in values:
             try:
@@ -350,7 +395,7 @@ class SettingsController:
         self.config = config_module.load()
 
         notes = []
-        if "binding" in changes.get("hotkey", {}):
+        if {"binding", "name"} & set(changes.get("hotkey", {})):
             try:
                 installed = self.install_hotkey(self.config, self.command)
                 notes.append(f"shortcut {hotkey.label(installed)} installed")

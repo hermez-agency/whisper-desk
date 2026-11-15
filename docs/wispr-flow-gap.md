@@ -53,7 +53,7 @@ backtrack after a pause, "Let's meet at 2… actually 3" on the features page (r
 | **Command Mode** — select text, say how to rewrite it | — (would need a local model, e.g. Ollama) | missing | high | L |
 | **Developer syntax** — camelCase, snake_case, CLI commands, file tagging in Cursor | `casing.py`: a name said after its style ("camel case user name" → `userName`, snake, pascal, kebab, constant case) written in it, Whisper's glued and hyphenated forms understood; measured in `bench/casing/` (#28). Not guessed from context without the style said; no CLI commands, no file tagging | partial | medium | M |
 | **History** of dictations | `whisper-desk history` and its window: search, copy, insert again, purge | done | — | — |
-| **Settings** | `whisper-desk settings`: language, model, microphone, shortcut, output, vocabulary, snippets, overlay | done | — | — |
+| **Settings** | `whisper-desk settings`: every key of `config.toml`, in eight tabs (Dictation, Microphone, Shortcut and output, Words, Overlay, History, Advanced, Updates), each with its help and default, **Restore defaults** per section, invalid values refused before saving, keyboard only; `tests/test_settings_schema.py` fails when a key has no setting | done | — | — |
 | **Overlay** | X11 overlay: live level, sentence transcribed, states, cancel | done | — | — |
 | **Usage dashboard** — words dictated, speed, streak, top apps | `whisper-desk stats` (`stats.py`): dictations, words in all, today and over 7 days, words per minute, days in a row, worked out from the history (#32). No top apps (the history does not record the app), no rank among users | partial | low | S |
 | **Mobile apps, cross-device sync** | — | out of scope (account, cloud) | — | — |
@@ -308,3 +308,13 @@ backtrack after a pause, "Let's meet at 2… actually 3" on the features page (r
   voice. Known limits: the backspaces go wherever the cursor is, as for #44; with the
   clipboard output alone nothing is erased. Left to do: a correction of an earlier
   sentence, *efface tout* for the whole dictation.
+- 2026-11-15 — **Complete settings window** (in PR, done): the settings window caught up with
+  `config.toml` — it set about a third of its keys, the rest only in the file. Inventory of
+  what was missing: `[hotkey]` name, action; `[model]` device, compute_type, beam_size,
+  initial_prompt, context, corrections, hesitations, spoken_punctuation, developer_syntax,
+  lists, preload; `[recording]` backend, max_seconds, streaming, segment_silence_seconds,
+  silence_seconds, start_timeout_seconds, threshold; `[output]` paste_shortcut, keyboard,
+  restore_clipboard, notify, history, history_days; `[overlay]` width, height, bars, margin.
+  All of them are now in eight tabs, each with its help and default, **Restore defaults** per
+  section and values refused before saving. A feature, no quality measure:
+  `tests/test_settings_schema.py` fails when a key of `config.example.toml` has no setting.
