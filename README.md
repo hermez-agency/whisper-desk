@@ -621,25 +621,42 @@ not counted.
 
 ## Configuration
 
-The essentials are set in a window, without touching any file:
+Every option of `config.toml` is set in a window, without touching any file:
 
 ```sh
 whisper-desk settings
 ```
 
 <p align="center">
-  <img src="docs/settings-window.png" alt="The settings window: language, model, microphone, shortcut, output, overlay" width="520">
+  <img src="docs/settings-window.png" alt="The settings window, Dictation tab" width="560">
 </p>
 
-Language; model, with its download size and an indication of its speed (and whether it is
-already on disk); microphone, from the list of the capture tool's own sources, with a
-**Test** gauge; shortcut, captured by pressing the new combination; output mode;
-domain vocabulary; replacements, each misspelling with the spelling meant; snippets, each
-cue with its text; overlay position and colour.
-**Save** writes `config.toml` — only the values that changed, your comments kept —
-reloads the daemon and, for a new shortcut, installs it. Two snippets with the same cue
-(*Mon adresse.* and *mon adresse*) are refused: whisper-desk would not know which to type;
-so are two replacements with the same misspelling. Like the overlay, the window needs GTK3 for the system Python.
+Eight tabs — `Alt` + the underlined letter jumps to one, `Ctrl+PageUp` / `Ctrl+PageDown`
+move between them, `Ctrl+S` saves, the whole window works from the keyboard:
+
+| Tab | What it sets |
+|---|---|
+| **Dictation** | language, model (with its download size and speed), style; spoken punctuation, hesitations, spoken corrections, numbered lists, developer syntax |
+| **Microphone** | device, with a **Test** gauge; capture tool; sentence-by-sentence insertion, pause between sentences, silence that ends the dictation, time to give up, longest dictation, voice threshold |
+| **Shortcut and output** | shortcut, captured by pressing the new combination, its name and action; output mode, paste shortcut, way of pasting, clipboard given back, notifications |
+| **Words** | vocabulary; replacements, each misspelling with the spelling meant; snippets, each cue with its text |
+| **Overlay** | shown or not, position, distance to the edge, accent colour, size, equalizer bars |
+| **History** | keep a history, for how many days |
+| **Advanced** | compute device, precision, beam size, priming sentence, context, preloading |
+| **Updates** | what the daily check does |
+
+Each setting has a short label, one sentence of help and its default value; **Restore
+defaults**, on every section, puts them back (the replacements and snippets you wrote
+are left alone). A value out of range or malformed is refused in the window, the field is
+shown, and nothing is written. **Save** writes `config.toml` — only the values that
+changed, your comments and unknown sections kept — reloads the daemon, which applies them
+at once (the next dictation), and, for a new shortcut, installs it. Two snippets with the
+same cue (*Mon adresse.* and *mon adresse*) are refused: whisper-desk would not know
+which to type; so are two replacements with the same misspelling. A test
+(`tests/test_settings_schema.py`) fails when a key is added to `config.example.toml`
+without its setting in the window. Like the overlay, the window needs GTK3 for the system Python.
+
+The headings use Bricolage Grotesque when that font is installed.
 
 Everything, the rest included, is configurable in **`~/.config/whisper-desk/config.toml`**:
 
@@ -906,6 +923,7 @@ to test all three from any of them.
 | `src/whisper_desk/history_window.py` | history window (GTK3, separate process) |
 | `src/whisper_desk/tomlwrite.py` | writing `config.toml` while keeping its comments |
 | `src/whisper_desk/settings_window.py` | settings window (GTK3, separate process) |
+| `src/whisper_desk/settings_schema.py` | the settings by tab, and what each accepts (read by both sides of the window) |
 | `src/whisper_desk/window_proc.py` | driving the GTK windows over JSON lines |
 | `src/whisper_desk/welcome_window.py` | first-launch window (GTK3, separate process) |
 | `src/whisper_desk/tray_window.py` | tray icon (AppIndicator, separate process) |

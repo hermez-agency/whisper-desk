@@ -143,6 +143,61 @@ class SaveTest(ControllerCase):
         self.assertIs(config_module.load(self.path)["overlay"]["enabled"], False)
 
 
+class EveryOptionTest(ControllerCase):
+    def written(self):
+        return tomllib.loads(self.path.read_text(encoding="utf-8"))
+
+    def test_the_window_gets_the_defaults_and_the_layout(self):
+        snapshot = self.controller.snapshot()
+        self.assertEqual(snapshot["defaults"]["beam_size"], 5)
+        self.assertEqual(snapshot["defaults"]["updates"], "install")
+        self.assertEqual(snapshot["layout"][0]["id"], "dictation")
+
+    def test_options_of_each_section_are_written_where_they_live(self):
+        reply = self.save(beam_size=3, corrections=False, model_device="cpu", threshold="400",
+                          max_seconds=60, history_days=30, notify=True, bars=9,
+                          paste_shortcut="ctrl+v", keyboard="none", segment_silence_seconds=0.8)
+        self.assertTrue(reply["saved"], reply)
+        data = self.written()
+        self.assertEqual(data["model"]["beam_size"], 3)
+        self.assertIs(data["model"]["corrections"], False)
+        self.assertEqual(data["model"]["device"], "cpu")
+        self.assertEqual(data["recording"]["threshold"], 400)
+        self.assertEqual(data["recording"]["max_seconds"], 60)
+        self.assertEqual(data["recording"]["segment_silence_seconds"], 0.8)
+        self.assertEqual(data["output"]["history_days"], 30)
+        self.assertIs(data["output"]["notify"], True)
+        self.assertEqual(data["output"]["paste_shortcut"], "ctrl+v")
+        self.assertEqual(data["overlay"]["bars"], 9)
+        self.assertIn("# my own comment", self.path.read_text(encoding="utf-8"))
+        self.assertIn("reload", self.sent)
+
+    def test_an_invalid_value_writes_nothing(self):
+        before = self.path.read_text(encoding="utf-8")
+        for values in ({"beam_size": 0}, {"threshold": "loud"}, {"width": "wide"},
+                       {"paste_shortcut": "ctrl+"}, {"paste_shortcut": "hyper+nonsense"},
+                       {"hotkey_name": ""}):
+            reply = self.save(**values)
+            self.assertFalse(reply["saved"], values)
+            self.assertTrue(reply["status"])
+        self.assertEqual(self.path.read_text(encoding="utf-8"), before)
+        self.assertEqual(self.sent, [])
+
+    def test_restoring_a_default_writes_it_back(self):
+        self.save(beam_size=8)
+        self.save(beam_size=self.controller.defaults()["beam_size"])
+        self.assertEqual(self.written()["model"]["beam_size"], 5)
+
+    def test_a_threshold_written_as_a_number_is_not_rewritten(self):
+        self.controller.config["recording"]["threshold"] = 400
+        self.assertEqual(self.controller.changes(self.controller.validated(
+            {"threshold": "400"})[0]), {})
+
+    def test_a_new_desktop_name_installs_the_shortcut_again(self):
+        self.save(hotkey_name="dictation")
+        self.assertEqual(len(self.installed), 1)
+
+
 class UpdatesTest(ControllerCase):
     def test_the_window_gets_the_default(self):
         self.assertEqual(self.controller.values()["updates"], "install")
