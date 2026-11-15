@@ -2,8 +2,9 @@
 
     python3 bench/backtrack/synthesize.py --piper path/to/piper --voices path/to/voices
 
-The two sentences of each row of pauses.tsv are recorded apart, <id>-1 and <id>-2:
-the daemon hears them as two sentences, the pause between them having ended the first.
+The two sentences of each row of pauses.tsv and discard.tsv are recorded apart,
+<id>-1 and <id>-2: the daemon hears them as two sentences, the pause between them
+having ended the first.
 
 The voices are those of the recordings in audio/, chosen for their licence:
 fr_FR-siwis-medium (SIWIS corpus, CC BY 4.0) and en_US-ljspeech-medium (LJ Speech,
@@ -38,8 +39,10 @@ def main() -> None:
     only = set(filter(None, args.only.split(",")))
     with (HERE / "corpus.tsv").open(encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle, delimiter="\t"))
-    with (HERE / "pauses.tsv").open(encoding="utf-8") as handle:
-        pauses = list(csv.DictReader(handle, delimiter="\t"))
+    pauses = []
+    for name in ("pauses.tsv", "discard.tsv"):
+        with (HERE / name).open(encoding="utf-8") as handle:
+            pauses += list(csv.DictReader(handle, delimiter="\t"))
     with tempfile.TemporaryDirectory() as scratch:
         wav = Path(scratch) / "sentence.wav"
         for row in rows:

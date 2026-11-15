@@ -670,8 +670,8 @@ class StyleTest(DictationCase):
         self.assertEqual(recorded, ["See you tomorrow. Bye"])
 
 
-class CorrectionAfterAPauseTest(DictationCase):
-    """A correction said after the pause that ended its sentence rewrites that sentence."""
+class CursorCase(DictationCase):
+    """A dictation typed at a cursor that backspaces reach."""
 
     def dictate(self, segments: list[bytes], model: dict | None = None,
                 mode: str = "cursor", erases: bool = True) -> None:
@@ -702,6 +702,7 @@ class CorrectionAfterAPauseTest(DictationCase):
                                          "model": model or {}}):
             with self.service() as service:
                 self.listening(service)
+                self.overlay = service.session.overlay
                 service.toggle()
                 self.assertTrue(wait_until(lambda: service.session is None))
 
@@ -710,6 +711,10 @@ class CorrectionAfterAPauseTest(DictationCase):
         self.recorded: list[str] = []
         self.enterContext(mock.patch.object(
             daemon.history, "append", lambda text, **_: self.recorded.append(text)))
+
+
+class CorrectionAfterAPauseTest(CursorCase):
+    """A correction said after the pause that ended its sentence rewrites that sentence."""
 
     def test_only_what_differs_is_erased_and_typed_again(self):
         self.dictate([b"On se voit mardi.", "Non, plutôt mercredi.".encode()])
@@ -754,6 +759,67 @@ class CorrectionAfterAPauseTest(DictationCase):
     def test_a_list_laid_out_is_not_corrected(self):
         self.dictate([b"One, eggs.", b"Two, milk.", b"No wait, 3."])
         self.assertFalse(any(item.startswith("<") for item in self.delivered))
+
+
+class ScratchThatTest(CursorCase):
+    """"Efface ça" said after a pause erases the sentence typed before it."""
+
+    def test_the_last_sentence_is_erased(self):
+        self.dictate([b"Bonjour.", b"On se voit mardi.", "Efface ça.".encode()])
+        self.assertEqual(self.delivered, ["Bonjour.", " On se voit mardi.", "<18"])
+
+    def test_the_sentence_meant_takes_its_place(self):
+        self.dictate([b"Hi Mark.", b"Scratch that. Hi Mary."])
+        self.assertEqual(self.delivered, ["Hi Mark.", "<8", "Hi Mary."])
+
+    def test_said_again_it_erases_the_sentence_before(self):
+        self.dictate([b"Hello.", b"Bye.", b"Scratch that.", b"Scratch that.", b"Thanks."])
+        self.assertEqual(self.delivered, ["Hello.", " Bye.", "<5", "<6", "Thanks."])
+
+    def test_a_casual_style_holds_the_full_stop_back_again(self):
+        self.dictate([b"See you tomorrow.", b"Bye.", b"Scratch that.", b"Thanks."],
+                     {"style": "casual"})
+        self.assertEqual(self.delivered,
+                         ["See you tomorrow", ". Bye", "<5", ". Thanks"])
+
+    def test_the_history_keeps_what_is_left(self):
+        with mock.patch.dict(CONFIG, {"output": {**CONFIG["output"], "history": True,
+                                                 "history_days": 30}}):
+            self.dictate([b"Bonjour.", b"On se voit mardi.", "Efface ça.".encode()])
+        self.assertEqual(self.recorded, ["Bonjour."])
+
+    def test_a_command_with_nothing_before_is_not_typed(self):
+        self.dictate([b"Scratch that.", b"Hello."])
+        self.assertEqual(self.delivered, ["Hello."])
+
+    def test_a_sentence_about_something_else_is_typed(self):
+        self.dictate([b"The board is full.", b"Delete that file."])
+        self.assertEqual(self.delivered, ["The board is full.", " Delete that file."])
+
+    def test_it_follows_the_corrections_setting(self):
+        self.dictate([b"Hi Mark.", b"Scratch that."], {"corrections": False})
+        self.assertEqual(self.delivered, ["Hi Mark.", " Scratch that."])
+
+    def test_the_clipboard_alone_has_nothing_to_erase(self):
+        self.dictate([b"Hi Mark.", b"Scratch that."], mode="clipboard")
+        self.assertEqual(self.delivered, ["Hi Mark."])
+
+    def test_backspaces_that_fail_type_nothing_more(self):
+        self.dictate([b"Hi Mark.", b"Scratch that."], erases=False)
+        self.assertEqual(self.delivered, ["Hi Mark."])
+
+    def test_a_sentence_held_for_a_list_is_dropped(self):
+        self.dictate([b"Shopping list.", b"One, eggs.", b"Scratch that.", b"Thanks."])
+        self.assertEqual(self.delivered, ["Shopping list.", " Thanks."])
+
+    def test_a_correction_after_it_corrects_nothing_erased(self):
+        self.dictate([b"Hi Mark.", b"Scratch that.", b"No wait, Tuesday."])
+        self.assertEqual(self.delivered, ["Hi Mark.", "<8", "No wait, Tuesday."])
+
+    def test_everything_erased_is_said_on_the_window(self):
+        self.dictate([b"Hi Mark.", b"Scratch that."])
+        self.assertEqual(self.delivered, ["Hi Mark.", "<8"])
+        self.assertEqual(self.overlay.final, ("done", "Erased", "Every sentence was erased"))
 
 
 class HistoryTest(DictationCase):

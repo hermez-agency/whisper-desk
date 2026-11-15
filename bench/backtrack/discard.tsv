@@ -1,0 +1,31 @@
+id	lang	first	second	expected
+d-fr01	fr	On se voit mardi à midi.	Efface ça.	
+d-fr02	fr	Je t'envoie le rapport ce soir.	Efface la dernière phrase.	
+d-fr03	fr	Le devis est de 500 euros.	Non, efface ça.	
+d-fr04	fr	Bonjour Marc.	Supprime ça. Bonjour Marie.	Bonjour Marie.
+d-fr05	fr	Le chat dort sur le canapé.	Efface ça, le chien dort sur le canapé.	Le chien dort sur le canapé.
+d-fr06	fr	Rappelle-moi demain matin.	Oups, efface ça.	
+d-fr07	fr	Il faut acheter du pain.	Effacez ça.	
+d-fr08	fr	Merci pour ton aide.	Supprime la dernière phrase.	
+d-fr09	fr	La réunion est annulée.	Efface ça. La réunion est reportée.	La réunion est reportée.
+d-fr10	fr	On part à huit heures.	Efface cela.	
+d-en01	en	Let's meet at noon.	Scratch that.	
+d-en02	en	I'll send the report tonight.	Delete that.	
+d-en03	en	The quote is five hundred dollars.	No, scratch that.	
+d-en04	en	Hi Mark.	Scratch that. Hi Mary.	Hi Mary.
+d-en05	en	The cat is asleep on the couch.	Scratch that, the dog is asleep on the couch.	The dog is asleep on the couch.
+d-en06	en	Remind me tomorrow morning.	Oops, delete that.	
+d-en07	en	We need more coffee.	Strike that.	
+d-en08	en	Thanks for your help.	Delete the last sentence.	
+d-en09	en	The meeting is cancelled.	Scratch that. The meeting is moved to Friday.	The meeting is moved to Friday.
+d-en10	en	We leave at eight.	Erase that.	
+d-ctl01	fr	Le tableau est plein.	Efface ça du tableau, s'il te plaît.	Le tableau est plein. Efface ça du tableau, s'il te plaît.
+d-ctl02	fr	Tu as vu la note ?	Il faut effacer ça demain.	Tu as vu la note ? Il faut effacer ça demain.
+d-ctl03	fr	J'ai fait une erreur.	Supprime ce fichier.	J'ai fait une erreur. Supprime ce fichier.
+d-ctl04	fr	Le texte est trop long.	On supprime la fin.	Le texte est trop long. On supprime la fin.
+d-ctl05	fr	Quelle journée.	Efface le tableau.	Quelle journée. Efface le tableau.
+d-ctl06	en	The board is full.	Please erase that board.	The board is full. Please erase that board.
+d-ctl07	en	I made a mistake.	Delete that file from the server.	I made a mistake. Delete that file from the server.
+d-ctl08	en	That was a close call.	Scratch that itch.	That was a close call. Scratch that itch.
+d-ctl09	en	The text is too long.	We should delete the ending.	The text is too long. We should delete the ending.
+d-ctl10	en	There's an old draft here.	Delete that?	There's an old draft here. Delete that?

@@ -281,6 +281,17 @@ is an answer: *"Tu viens mardi ?"* *"Non, je reste."* stays. Don't move the curs
 during the pause: the backspaces go wherever it is. With `mode = "clipboard"` alone,
 nothing is typed, so nothing is erased.
 
+To take a sentence back whole, say **efface ça** or **scratch that** after it, as a
+sentence of its own: the last sentence typed is erased with backspaces. Said again, it
+erases the one before, and so on. What you say after it in the same breath takes the
+erased sentence's place — *"Hi Mark."*, pause, *"Scratch that. Hi Mary."* leaves **Hi
+Mary.** Also understood: *efface cela*, *supprime ça*, *efface la dernière phrase*,
+*delete that*, *strike that*, *erase that*, *delete the last sentence*, with a *non*,
+*no*, *oups* or *oops* in front. Said in the flow of the dictation, without the pause,
+it drops the sentence before it all the same. *Efface ça du tableau*, *delete that file*
+or *delete that?* are typed as said. A sentence held back for a list that may be
+starting is dropped before it is typed.
+
 Rules run on your machine, no language model involved; `corrections = false` in `[model]`
 turns them off. `bench/backtrack/` measures them on recordings (see Development).
 
@@ -911,7 +922,9 @@ to test all three from any of them.
 `bench/backtrack/`, is a corpus of 46 sentences (30 corrections said aloud, French and
 English, 16 control sentences where *plutôt*, *non* or *actually* are no correction) —
 and, in `pauses.tsv`, 36 pairs of sentences said apart, a pause between them (24 where
-the second corrects the first, 12 where it does not) —, with their expected text and synthetic recordings made by `bench/backtrack/synthesize.py`
+the second corrects the first, 12 where it does not) — and, in `discard.tsv`, 30 more pairs
+(20 where the second is *efface ça* / *scratch that*, 10 where it only looks like it) —,
+with their expected text and synthetic recordings made by `bench/backtrack/synthesize.py`
 with two [Piper](https://github.com/rhasspy/piper) voices: `fr_FR-siwis-medium`, trained on
 the [SIWIS corpus](https://datashare.is.ed.ac.uk/handle/10283/2353) (CC BY 4.0), and
 `en_US-ljspeech-medium`, trained on [LJ Speech](https://keithito.com/LJ-Speech-Dataset/)
@@ -921,6 +934,7 @@ the [SIWIS corpus](https://datashare.is.ed.ac.uk/handle/10283/2353) (CC BY 4.0),
 python3 bench/backtrack/measure.py -v                 # on the written sentences
 ~/.local/share/whisper-desk/venv/bin/python bench/backtrack/measure.py --audio -v
 ~/.local/share/whisper-desk/venv/bin/python bench/backtrack/measure.py --pauses --audio -v
+~/.local/share/whisper-desk/venv/bin/python bench/backtrack/measure.py --discard --audio -v
 ```
 
 It prints the word error rate against the expected text, before and after the
