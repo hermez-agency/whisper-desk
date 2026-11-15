@@ -4,6 +4,27 @@
 
 ### Added
 
+- **"Efface ça" / "scratch that"**: said after a sentence, as a sentence of its own, it
+  erases the last sentence typed with backspaces; said again, the one before, and so on.
+  What follows it in the same breath takes the erased sentence's place — *"Hi Mark."*,
+  pause, *"Scratch that. Hi Mary."* leaves *"Hi Mary."*. Also *efface cela*, *supprime ça*,
+  *efface la dernière phrase*, *delete that*, *strike that*, *erase that*, *delete the last
+  sentence*, with *non*, *no*, *oups*, *oops* in front, and Whisper's *éface* or *suprime*.
+  Said without a pause, it drops the sentence before it in the transcription. *Efface ça du
+  tableau*, *delete that file* or *delete that?* stay as said. Under `model.corrections`;
+  the history keeps what is left (`backtrack.discarded`).
+- `bench/backtrack/measure.py --discard`: 30 pairs of sentences recorded apart
+  (`discard.tsv`), 20 where the second erases the first (French and English, alone or with
+  the sentence meant after it), 10 that only look like it, each half through the
+  Transcriber as the daemon does; text at the cursor exact:
+  - written sentences: 0/20 → 20/20, controls 10/10 kept;
+  - faster-whisper `small` (CPU, int8): commands carried out 12/20 (English 8/10, French
+    4/10), exact 0/20 → 11/20; one control erased (*Delete that?* heard without its
+    question mark);
+  - `large-v3-turbo` (CUDA, float16): carried out 16/20 (English 10/10, French 6/10), exact
+    0/20 → 15/20; the same control erased.
+  The French misses are the synthetic voice's *efface* heard as "Fais ça", "Et fasse ça",
+  "Coupe et faça". The corpus and `--pauses` measures are unchanged against `main`.
 - **Corrections said after a pause** (Wispr Flow's Backtrack, *"Let's meet at 2… actually
   3"*): a correction that opens the sentence after the pause that ended the previous one now
   corrects that sentence, already typed. *"On se voit mardi."*, pause, *"Non, plutôt

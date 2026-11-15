@@ -8,9 +8,10 @@ from pathlib import Path
 
 from . import context  # noqa: F401  (adds src/ to the import path)
 
-from whisper_desk.backtrack import across, apply
+from whisper_desk.backtrack import across, apply, discarded
 
 CORPUS = Path(__file__).resolve().parents[1] / "bench" / "backtrack" / "corpus.tsv"
+DISCARD = CORPUS.with_name("discard.tsv")
 # Sentences of the corpus the rules still get wrong: the measure counts them,
 # the test makes sure the list only ever shrinks.
 KNOWN_MISSES = {"fr15", "fr19"}
@@ -144,6 +145,66 @@ class LeftAloneTest(unittest.TestCase):
         self.assertEqual(apply(""), "")
 
 
+class DiscardedTest(unittest.TestCase):
+    """"Efface ça" said after a pause: the daemon erases the sentence before it."""
+
+    def test_the_command_alone(self):
+        for sentence in ("Efface ça.", "Scratch that.", "Delete that!", "Effacez cela.",
+                         "Supprime la dernière phrase.", "Delete the last sentence."):
+            with self.subTest(sentence):
+                self.assertEqual(discarded(sentence), "")
+
+    def test_a_word_before_it(self):
+        self.assertEqual(discarded("Non, efface ça."), "")
+        self.assertEqual(discarded("Oops, scratch that."), "")
+
+    def test_what_follows_is_the_sentence_meant(self):
+        self.assertEqual(discarded("Scratch that. Hi Mary."), "Hi Mary.")
+
+    def test_after_a_comma_it_opens_its_sentence(self):
+        self.assertEqual(discarded("Efface ça, le chien dort."), "Le chien dort.")
+
+    def test_spellings_whisper_writes(self):
+        self.assertEqual(discarded("Éface-ça."), "")
+        self.assertEqual(discarded("Suprime ça."), "")
+
+    def test_a_command_about_something_else(self):
+        for sentence in ("Efface ça du tableau.", "Delete that file.", "Scratch that itch.",
+                         "Delete that?", "Il faut effacer ça.", "Efface le tableau."):
+            with self.subTest(sentence):
+                self.assertIsNone(discarded(sentence))
+
+
+class DiscardInsideTest(unittest.TestCase):
+    """The command and the sentence it drops, in one transcription."""
+
+    def test_the_sentence_before_goes(self):
+        self.assertEqual(
+            apply("Rendez-vous à 3 heures. Efface ça. Rendez-vous à 4 heures."),
+            "Rendez-vous à 4 heures.",
+        )
+
+    def test_after_a_comma_its_own_sentence_goes(self):
+        self.assertEqual(apply("Hello. Lunch at noon, scratch that."), "Hello.")
+
+    def test_nothing_left(self):
+        self.assertEqual(apply("Lunch at noon. Scratch that."), "")
+
+    def test_what_follows_a_comma_opens_a_sentence(self):
+        self.assertEqual(apply("Hello. Scratch that, let's meet Thursday."), "Let's meet Thursday.")
+
+    def test_between_two_commas_it_replaces(self):
+        self.assertEqual(apply("See you Tuesday, scratch that, Wednesday."), "See you Wednesday.")
+
+    def test_a_word_before_it_is_no_sentence(self):
+        """The daemon's case: the command opens the transcription, the sentence is typed."""
+        self.assertEqual(apply("Non, efface ça."), "Non, efface ça.")
+        self.assertEqual(apply("Bonjour. Non, efface ça."), "")
+
+    def test_the_command_alone_is_left_to_the_daemon(self):
+        self.assertEqual(apply("Efface ça."), "Efface ça.")
+
+
 class CorpusTest(unittest.TestCase):
     """The sentences of the measure, written out, give the expected text."""
 
@@ -155,6 +216,15 @@ class CorpusTest(unittest.TestCase):
                 continue
             with self.subTest(row["id"]):
                 self.assertEqual(apply(row["spoken"]), row["expected"])
+
+    def test_the_discard_corpus(self):
+        with DISCARD.open(encoding="utf-8") as handle:
+            rows = list(csv.DictReader(handle, delimiter="\t"))
+        for row in rows:
+            with self.subTest(row["id"]):
+                rest = discarded(row["second"])
+                at_cursor = row["first"] + " " + row["second"] if rest is None else rest
+                self.assertEqual(at_cursor, row["expected"])
 
     def test_the_known_misses_are_still_missed(self):
         """A rule that fixes one of them: take it off the list."""

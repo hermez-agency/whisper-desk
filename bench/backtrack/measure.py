@@ -4,6 +4,8 @@
     python3 bench/backtrack/measure.py --audio      # through faster-whisper
     python3 bench/backtrack/measure.py --pauses     # a correction after a pause
     python3 bench/backtrack/measure.py --pauses --audio
+    python3 bench/backtrack/measure.py --discard    # "efface ça" after a pause
+    python3 bench/backtrack/measure.py --discard --audio
 
 --audio needs the whisper-desk venv (whisper-desk's own Python) and the
 recordings next to this file; the models are those already downloaded.
@@ -13,6 +15,11 @@ correction ("On se voit mardi." … "Non, plutôt mercredi."). With --audio each
 half goes through whisper-desk's Transcriber, the second with the first as its
 context, as the daemon does. Before: the two sentences typed one after the
 other; after: the first one corrected by the second.
+
+--discard reads discard.tsv: a sentence, the pause that ends it, then "efface
+ça" / "scratch that" — alone, or with the sentence meant in its place — and ten
+controls that only look like one. Before: the two sentences typed one after the
+other; after: what the daemon leaves at the cursor.
 """
 
 from __future__ import annotations
@@ -93,7 +100,8 @@ def decode(path: Path) -> bytes:
     ).stdout
 
 
-def paused_transcripts(model: str, device: str) -> dict[str, tuple[str, str]]:
+def paused_transcripts(model: str, device: str,
+                       name: str = "pauses.tsv") -> dict[str, tuple[str, str]]:
     import copy
 
     from whisper_desk import config, transcriber
@@ -105,7 +113,7 @@ def paused_transcripts(model: str, device: str) -> dict[str, tuple[str, str]]:
         settings["model"]["language"] = lang
         whisper = transcriber.Transcriber(settings)
         whisper.load()
-        for row in corpus("pauses.tsv"):
+        for row in corpus(name):
             if row["lang"] != lang:
                 continue
             first = whisper.transcribe(decode(HERE / "audio" / f"{row['id']}-1.opus"))
@@ -136,13 +144,50 @@ def report_pauses(label: str, raw: dict[str, tuple[str, str]], verbose: bool) ->
                     print(f"    {row['id']}: {raw[row['id']]!r} -> {fixed[row['id']]!r}")
 
 
+def at_cursor(first: str, second: str) -> tuple[str, bool]:
+    """What the daemon leaves at the cursor, and whether the command was carried out."""
+    rest = backtrack.discarded(second)
+    if rest is None:
+        return punctuation.join([first, second]), False
+    return rest, True
+
+
+def report_discard(label: str, raw: dict[str, tuple[str, str]], verbose: bool) -> None:
+    rows = corpus("discard.tsv")
+    for group, keep in (("commands", lambda r: "ctl" not in r["id"]),
+                        ("controls", lambda r: "ctl" in r["id"])):
+        chosen = [r for r in rows if keep(r)]
+        typed = {r["id"]: punctuation.join(list(raw[r["id"]])) for r in chosen}
+        after = {r["id"]: at_cursor(*raw[r["id"]]) for r in chosen}
+        carried = sum(after[r["id"]][1] for r in chosen)
+        exact_before = sum(words(r["expected"]) == words(typed[r["id"]]) for r in chosen)
+        exact = sum(words(r["expected"]) == words(after[r["id"]][0]) for r in chosen)
+        print(f"{label:<28} {group:<10} exact at the cursor {exact_before}/{len(chosen)}"
+              f" -> {exact}/{len(chosen)}   carried out {carried}/{len(chosen)}")
+        if verbose:
+            for row in chosen:
+                if words(row["expected"]) != words(after[row["id"]][0]):
+                    print(f"    {row['id']}: {raw[row['id']]!r} -> {after[row['id']][0]!r}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--audio", action="store_true")
     parser.add_argument("--pauses", action="store_true")
+    parser.add_argument("--discard", action="store_true")
     parser.add_argument("--models", default="small:cpu,large-v3-turbo:cuda")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
+    if args.discard:
+        report_discard("written sentences",
+                       {r["id"]: (r["first"], r["second"]) for r in corpus("discard.tsv")},
+                       args.verbose)
+        if args.audio:
+            for spec in args.models.split(","):
+                model, device = spec.split(":")
+                report_discard(f"{model} ({device})",
+                               paused_transcripts(model, device, "discard.tsv"), args.verbose)
+        return
     if args.pauses:
         report_pauses("written sentences",
                       {r["id"]: (r["first"], r["second"]) for r in corpus("pauses.tsv")},

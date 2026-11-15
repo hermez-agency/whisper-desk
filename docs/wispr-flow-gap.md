@@ -21,7 +21,9 @@ dictionary replacements, [Teach Flow your words with the dictionary](https://doc
 dictionary" on the features page, words added as you correct them (read on 2026-11-09);
 styles, [How to setup Flow Styles](https://docs.wisprflow.ai/articles/2368263928-how-to-setup-flow-styles)
 and [Personalized Style](https://wisprflow.ai/post/personalized-style) (read on 2026-11-13);
-backtrack after a pause, "Let's meet at 2… actually 3" on the features page (read on 2026-11-14).
+backtrack after a pause, "Let's meet at 2… actually 3" on the features page (read on 2026-11-14);
+"scratch that", the tracker's own left-to-do of 2026-11-14 (Wispr Flow's features page, read on
+2026-11-15, names Backtrack but no erase command).
 
 **Status**: done · partial · missing · out of scope.
 **Effort**: S (a session) · M (a few sessions) · L (to split into several gaps).
@@ -30,7 +32,7 @@ backtrack after a pause, "Let's meet at 2… actually 3" on the features page (r
 
 | Wispr Flow | whisper-desk | Status | Value | Effort |
 |---|---|---|---|---|
-| **Backtrack** — a correction said mid-sentence keeps only the corrected version | `backtrack.py`: "non, plutôt", "ou plutôt", "je veux dire", "no wait", "actually", "I mean", "or rather"… carried out by local rules; measured in `bench/backtrack/`; a correction said after the pause that ended its sentence erases and retypes that sentence, measured in `bench/backtrack/ --pauses` (in PR). Only the last sentence; no phrase longer than three words replaced without a word to line up with | partial | high | S |
+| **Backtrack** — a correction said mid-sentence keeps only the corrected version | `backtrack.py`: "non, plutôt", "ou plutôt", "je veux dire", "no wait", "actually", "I mean", "or rather"… carried out by local rules; measured in `bench/backtrack/`; a correction said after the pause that ended its sentence erases and retypes that sentence, measured in `bench/backtrack/ --pauses` (#44); *efface ça* / *scratch that* said alone erases the last sentence typed, again the one before, measured in `bench/backtrack/ --discard` (in PR). A correction rewrites only the last sentence; no phrase longer than three words replaced without a word to line up with | partial | high | S |
 | **Filler removal** — "um", "uh", pauses | Whisper drops most hesitations by itself; `hesitations.py` removes those it writes ("euh", "hum", "um", "uh", "erm") and words or runs of up to three words said twice in a row, keeping intended doubles; measured in `bench/hesitations/`. A hesitation Whisper mishears as a word ("A", "« E »") stays | done | high | S |
 | **Auto punctuation** — inferred from pauses and tone, spoken marks ("comma") | Whisper's own punctuation and capitals; spoken marks and line breaks ("virgule", "point d'interrogation", "à la ligne", "comma", "new paragraph") written by `punctuation.py`, measured in `bench/punctuation/` (#26); quotes and brackets said aloud ("ouvrez les guillemets", "fermez la parenthèse", "open quote", "close paren") written « », " " and ( ) (#31). No square brackets or braces, no punctuation inferred from tone beyond Whisper's | partial | medium | S |
 | **Numbered lists** — spoken enumerations become a formatted list | `lists.py`: items numbered aloud (*un, deux*, *premièrement*, *firstly*, *number one*, or the figures Whisper writes) written one per line, "1. …", the words before as a title with a colon; goes on across pauses with the as-you-go dictation; measured in `bench/lists/` (#33). No bulleted lists, no nested lists | partial | medium | S |
@@ -265,7 +267,7 @@ backtrack after a pause, "Let's meet at 2… actually 3" on the features page (r
   model). Left to do: knowing the focused app (X11 `_NET_ACTIVE_WINDOW`, macOS
   `System Events`, WSL `GetForegroundWindow`; GNOME on Wayland gives it to no client) and
   a style per app category.
-- 2026-11-14 — **Corrections said after a pause** (in PR, partial): Wispr Flow's own example,
+- 2026-11-14 — **Corrections said after a pause** (merged, #44, partial): Wispr Flow's own example,
   *"Let's meet at 2… actually 3"*, with a pause long enough to end the sentence — the case
   the 2026-10-15 session left out, the first part being already typed. A sentence that opens on a correction
   marker now corrects the last one inserted: only what differs is erased with backspaces
@@ -287,3 +289,22 @@ backtrack after a pause, "Let's meet at 2… actually 3" on the features page (r
   one backspace per character typed (an editor that auto-closes brackets or auto-indents may
   differ); nothing is erased with the clipboard output alone. Left to do: *scratch that* /
   *efface ça* said alone to drop the last sentence, a correction of an earlier sentence.
+- 2026-11-15 — **"Efface ça" / "scratch that"** (in PR, partial): the left-to-do of the session
+  before — a sentence taken back whole. Said after a pause, as a sentence of its own, *efface
+  ça*, *efface la dernière phrase*, *supprime ça*, *scratch that*, *delete that*, *strike
+  that*, *erase that* (a *non*, *no*, *oups*, *oops* in front allowed) erase the last
+  sentence typed with backspaces; said again, the one before; what follows in the same
+  breath is typed in its place (*"Scratch that. Hi Mary."*). Said without the pause, the
+  sentence before it goes from the transcription. A sentence held back for a list is
+  dropped before it is typed; the history keeps what is left; `model.corrections` switches
+  it off with the rest. Kept as said: the command with an object (*efface ça du tableau*,
+  *delete that file*), a question (*delete that?*), *scratch that itch*. Measure
+  (`bench/backtrack/ --discard`, 20 commands + 10 controls, each sentence recorded apart):
+  text at the cursor exact, written sentences 0/20 → 20/20; `small` (CPU) carried out
+  12/20 (EN 8/10, FR 4/10), exact 0/20 → 11/20; `large-v3-turbo` (GPU) carried out 16/20
+  (EN 10/10, FR 6/10), exact 0/20 → 15/20; one control erased with both models (*Delete
+  that?* heard without its question mark). The French misses are the synthetic voice's
+  *efface* heard as "Fais ça", "Et fasse ça", "Coupe et faça" — to check with a real
+  voice. Known limits: the backspaces go wherever the cursor is, as for #44; with the
+  clipboard output alone nothing is erased. Left to do: a correction of an earlier
+  sentence, *efface tout* for the whole dictation.

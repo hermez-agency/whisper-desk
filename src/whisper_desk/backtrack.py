@@ -62,6 +62,26 @@ _DETERMINERS = {
     "mon", "ma", "mes", "ton", "ta", "tes", "son", "sa", "ses",
     "the", "a", "an", "this", "that", "these", "those", "my", "your",
 }
+# "Scratch that" said as a sentence of its own drops the one before it. Only
+# with "that" or "the last sentence" after the verb: "efface ça du tableau" or
+# "delete that file" still say what to do with something else. Whisper often
+# writes "éface" or "suprime", which are no words: taken as the command too.
+_DISCARD = (
+    r"(?:[eé]ff?ace[rz]?|supp?rime[rz]?)[\s-]+(?:moi[\s-]+)?(?:ça|ca|cela|(?:la|ma) dernière phrase)"
+    r"|(?:scratch|delete|strike|erase)\s+(?:that|the last sentence)"
+)
+_DISCARD_LEADS = r"non|no|oh|ah|oups|oops"
+_DISCARD_LEAD = rf"(?:(?:{_DISCARD_LEADS})\s*[,.]?\s+)?"
+# The command ends its sentence, or opens the next one after a comma.
+_DISCARD_END = r"(?P<end>\s*[.!…]+(?=\s|$)|\s*$|\s*,(?=\s))"
+_DISCARD_OPENING = re.compile(
+    rf"\s*{_DISCARD_LEAD}(?:{_DISCARD})(?!\w){_DISCARD_END}\s*(?P<rest>.*)",
+    re.IGNORECASE | re.DOTALL,
+)
+_DISCARD_INSIDE = re.compile(
+    rf"(?P<cut>[.!?…]\s+|,\s+){_DISCARD_LEAD}(?:{_DISCARD})(?!\w){_DISCARD_END}\s*",
+    re.IGNORECASE,
+)
 # Beyond this many words, replacing "the same number of words" is a guess.
 _MAX_BLIND = 3
 # Never more corrections than this in one sentence: each one shortens the text,
@@ -165,10 +185,36 @@ def _correct_once(text: str) -> str | None:
     return None
 
 
-def apply(text: str) -> str:
-    """The text with the corrections said aloud carried out."""
+def _capitalised(text: str) -> str:
+    return text[:1].upper() + text[1:]
+
+
+def _discard_once(text: str) -> str | None:
+    for match in _DISCARD_INSIDE.finditer(text):
+        after_comma = match["end"].strip() == ","
+        if match["cut"].strip() == "," and after_comma:
+            continue  # "mardi, scratch that, mercredi" replaces, it drops nothing
+        # After a full stop the sentence before goes; after a comma, the one it ends.
+        head = text[: match.start()]
+        start = _sentence_start(head)
+        if re.fullmatch(rf"\s*(?:{_DISCARD_LEADS})", head[start:], re.IGNORECASE):
+            continue  # "Non, efface ça.": the command opens its sentence, the daemon's case
+        rest = text[match.end():]
+        if after_comma:
+            rest = _capitalised(rest)
+        return (head[:start] + rest).strip()
+    return None
+
+
+def apply(text: str, discard: bool = True) -> str:
+    """The text with the corrections said aloud carried out.
+
+    discard: "efface ça" drops the sentence before it, too.
+    """
     for _ in range(_MAX_PASSES):
         corrected = _correct_once(text)
+        if corrected is None and discard:
+            corrected = _discard_once(text)
         if corrected is None:
             break
         text = corrected
@@ -189,5 +235,20 @@ def across(previous: str, sentence: str) -> str | None:
     if not _SENTENCE_END.search(previous) and not re.search(r"[,;:]$", previous):
         previous += "."
     joined = previous + " " + sentence.lstrip()
-    corrected = apply(joined)
+    # "Scratch that." erases the sentence rather than rewrites it: the daemon does that.
+    corrected = apply(joined, discard=False)
     return None if corrected == joined else corrected
+
+
+def discarded(sentence: str) -> str | None:
+    """What is left of `sentence` once the "scratch that" it opens on is taken out.
+
+    "Efface ça." said after a pause drops the sentence already typed; what
+    follows the command in the same breath is a sentence of its own. None
+    when the sentence opens on no such command.
+    """
+    match = _DISCARD_OPENING.fullmatch(sentence)
+    if match is None:
+        return None
+    rest = match["rest"].strip()
+    return _capitalised(rest) if match["end"].strip() == "," else rest

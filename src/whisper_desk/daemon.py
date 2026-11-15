@@ -85,12 +85,14 @@ class Session:
         # The full stop a casual style keeps back from the last sentence
         # inserted: typed only if another sentence follows it.
         self.full_stop = ""
-        # The last sentence inserted as it was heard, the text typed for it
-        # (its leading space included) and the full stop held back before it:
-        # what a correction said after a pause needs to type it again.
+        # The last sentence inserted as it was heard: what a correction said
+        # after a pause rewrites.
         self.last_said: str | None = None
-        self.last_typed = ""
-        self.full_stop_before = ""
+        # For each of the parts, the text typed for it (its leading space
+        # included) and the full stop held back before it: what a correction
+        # needs to type it again, and "scratch that" to erase it.
+        self.typed: list[tuple[str, str]] = []
+        self.erased = 0                 # sentences dropped by "scratch that"
         self.listened = 0.0             # seconds the microphone stayed open
         self.queue: queue.Queue[bytes | None] = queue.Queue()
         # The last draft and its text: the sentence the pause then ends is
@@ -239,6 +241,8 @@ class Session:
             return  # already said by cancel()
         if self.error:
             self._fail("Transcription failed", self.error)
+        elif not self.parts and self.erased:
+            self.overlay.set_state("done", "Erased", "Every sentence was erased")
         elif not self.parts:
             self._report_silence()
         elif self.delivery_failure == "keyboard":
@@ -339,9 +343,15 @@ class Session:
                 continue
             # Before the context: the model hears the name as it is spelled.
             text = replacements.apply(text, self.service.config["replacements"])
-            self.heard.append(text)
             if self._correct_last(text):
+                self.heard.append(text)
                 continue
+            rest = self._discard_last(text)
+            if rest is not None:
+                if not rest:
+                    continue
+                text = rest
+            self.heard.append(text)
             said = text
             if self.service.config["model"].get("lists", True):
                 ready = self.pending.feed(text, punctuation.join(self.parts))
@@ -405,12 +415,12 @@ class Session:
 
     def _insert(self, text: str) -> None:
         """Inserts a transcribed sentence after those already inserted."""
-        self.full_stop_before = self.full_stop
+        full_stop_before = self.full_stop
         spacing, text, self.full_stop = self._render(
             text, self.full_stop, self.parts[-1] if self.parts else ""
         )
         self.parts.append(text)
-        self.last_typed = spacing + text
+        self.typed.append((spacing + text, full_stop_before))
         self.overlay.set_text(text)
         self._deliver(spacing + text)
 
@@ -446,23 +456,68 @@ class Session:
         if corrected is None:
             return False
         before = self.parts[-2] if len(self.parts) > 1 else ""
-        spacing, fixed, full_stop = self._render(corrected, self.full_stop_before, before)
+        last_typed, full_stop_before = self.typed[-1]
+        spacing, fixed, full_stop = self._render(corrected, full_stop_before, before)
         typed = spacing + fixed
-        kept = len(os.path.commonprefix([self.last_typed, typed]))
+        kept = len(os.path.commonprefix([last_typed, typed]))
         if not self.capture:
             assert self.writer is not None
-            erased = len(self.last_typed) - kept
+            erased = len(last_typed) - kept
             if erased and not self.writer.erase(erased):
                 return False
             if typed[kept:]:
                 self._deliver(typed[kept:])
         logger.info("Correction said after a pause: the last sentence typed again.")
         self.parts[-1] = fixed
-        self.last_typed = typed
+        self.typed[-1] = (typed, full_stop_before)
         self.full_stop = full_stop
         self.last_said = corrected
         self.overlay.set_text(fixed)
         return True
+
+    def _discard_last(self, text: str) -> str | None:
+        """Erases the last sentence when `text` opens on "efface ça" / "scratch that".
+
+        What the sentence says after the command, to be inserted in its place;
+        None when it opens on no such command, which is then typed as said.
+        Said again, the command erases the sentence before, and so on.
+        """
+        if not self.service.config["model"].get("corrections", True):
+            return None
+        rest = backtrack.discarded(text)
+        if rest is None:
+            return None
+        self.last_said = None
+        if self.pending.held:
+            # Held back for a list that may start: it never reached the cursor.
+            self.pending.held.pop()
+            self._forget_heard()
+            logger.info("Sentence held back dropped by a spoken command.")
+        elif not self.parts:
+            logger.info("Nothing typed yet for the spoken command to erase.")
+        elif not self.capture and self.writer is None:
+            # The clipboard holds the last sentence alone: nothing at a cursor to erase.
+            logger.info("Spoken command to erase ignored: no text at a cursor.")
+        else:
+            typed, full_stop_before = self.typed[-1]
+            if not self.capture:
+                assert self.writer is not None
+                if not self.writer.erase(len(typed)):
+                    # Typing the command as words would not bring the sentence back.
+                    return rest
+            logger.info("Last sentence erased by a spoken command.")
+            self.parts.pop()
+            self.typed.pop()
+            self.full_stop = full_stop_before
+            self._forget_heard()
+        self.overlay.set_text(self.parts[-1] if self.parts else "")
+        return rest
+
+    def _forget_heard(self) -> None:
+        """Takes a sentence erased out of the model's context: its words were not meant."""
+        if self.heard:
+            self.heard.pop()
+        self.erased += 1
 
     def stop(self) -> None:
         self.stopping.set()
