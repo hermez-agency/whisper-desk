@@ -669,6 +669,26 @@ class StyleTest(DictationCase):
             self.dictate("casual", [b"See you tomorrow.", b"Bye."])
         self.assertEqual(recorded, ["See you tomorrow. Bye"])
 
+    def test_the_app_in_front_has_its_own_style(self):
+        asked: list[bool] = []
+        with mock.patch.dict(CONFIG, {"app_styles": {"Slack": "very casual"}}), \
+                mock.patch.object(daemon.focus, "focused_app",
+                                  lambda: asked.append(True) or ["slack", "Slack"]):
+            self.dictate("formal", [b"See you tomorrow.", b"Bye."])
+        self.assertEqual(asked, [True])
+        self.assertEqual(self.delivered, ["see you tomorrow", ". bye"])
+
+    def test_another_app_keeps_the_general_style(self):
+        with mock.patch.dict(CONFIG, {"app_styles": {"slack": "casual"}}), \
+                mock.patch.object(daemon.focus, "focused_app", lambda: ["firefox"]):
+            self.dictate("formal", [b"See you tomorrow.", b"Bye."])
+        self.assertEqual(self.delivered, ["See you tomorrow.", " Bye."])
+
+    def test_no_app_is_asked_for_without_a_style_per_app(self):
+        with mock.patch.object(daemon.focus, "focused_app", lambda: self.fail("asked")):
+            self.dictate("casual", [b"See you tomorrow."])
+        self.assertEqual(self.delivered, ["See you tomorrow"])
+
 
 class CursorCase(DictationCase):
     """A dictation typed at a cursor that backspaces reach."""

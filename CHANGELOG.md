@@ -363,6 +363,18 @@
 
 ### Changed
 
+- **A style per app** (Wispr Flow's styles by app): the **Style per app** list of the
+  settings window (Dictation tab, Add… / Edit… / Remove) or `[app_styles]` in
+  `config.toml` gives an application a style of its own, over `style` — *casual* in Slack,
+  *formal* in Thunderbird. The application is the one in front when the shortcut is pressed
+  (`focus.py`): its X11 class through `xprop`, its app id under Sway (`swaymsg`) and Hyprland
+  (`hyprctl`), its name on macOS (System Events), its process under WSL (PowerShell,
+  `GetForegroundWindow`); case, spaces and dashes do not matter. Asked only when the list
+  holds an application, in the background while the dictation starts; an answer that does not
+  come within 3 s leaves `style`. GNOME and KDE on Wayland name no native window: there, only
+  the applications that run through XWayland are recognised. Two entries for the same
+  application, or one without a style, are refused before saving. The settings capture
+  (`docs/settings-window.png`) shows the new list.
 - The repository moved to `hermez-agency/whisper-desk`: the installation command, the
   README and the site point there. `whisper-desk update` on an installation made before
   the move reads the new home instead of `SalvadorCardona/whisper-desk`, and `install.sh`

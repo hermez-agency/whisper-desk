@@ -6,7 +6,8 @@ settings_proc.py sends it the values and the choices on stdin, and receives
 on stdout what the user asks for, one JSON object per line:
 
     stdin   {"values": {..., "snippets": [[cue, text], ...],
-                         "replacements": [[misspelling, spelling], ...]}, "choices": {...},
+                         "replacements": [[misspelling, spelling], ...],
+                         "app_styles": [[app, style], ...]}, "choices": {...},
              "hotkey": {"binding", "label"}}
             {"level": 0.42, "meter": "..."}  {"status": "...", "saved": true}
     stdout  {"action": "save", "values": {...}}
@@ -324,6 +325,32 @@ class SettingsWindow(Gtk.Window):
 
         return frame, lambda: [[row[0], row[1]] for row in self.snippets], write
 
+    def _make_app_styles(self, _setting: dict):
+        self.app_styles = Gtk.ListStore(str, str)
+        self.app_style_view = self._table_view(self.app_styles, ("App", "Style"),
+                                               self._on_edit_app_style)
+        # The style is kept by its name in config.toml, and shown by its label.
+        self.app_style_view.get_column(1).set_cell_data_func(
+            self.app_style_view.get_column(1).get_cells()[0], self._render_app_style
+        )
+        frame = self._framed(self.app_style_view, 90)
+
+        def write(rows):
+            self.app_styles.clear()
+            for app, style in rows:
+                self.app_styles.append([app, style])
+
+        return frame, lambda: [[row[0], row[1]] for row in self.app_styles], write
+
+    def _style_label(self, value: str) -> str:
+        for choice, label in self.choices.get("style", []):
+            if choice == value:
+                return label.split(" — ")[0]
+        return value
+
+    def _render_app_style(self, _column, renderer, model, tree_iter, _data=None) -> None:
+        renderer.props.text = self._style_label(model[tree_iter][1])
+
     def _table_view(self, model: Gtk.ListStore, titles: tuple, edit, snippets: bool = False):
         view = Gtk.TreeView(model=model)
         view.set_headers_visible(True)
@@ -354,9 +381,13 @@ class SettingsWindow(Gtk.Window):
         return frame
 
     def _add_table_buttons(self, page: Gtk.Grid, row: int, kind: str) -> int:
-        add, edit, remove = ((self._on_add_replacement, self._on_edit_replacement,
-                              self._on_remove_replacement) if kind == "replacements" else
-                             (self._on_add_snippet, self._on_edit_snippet, self._on_remove_snippet))
+        add, edit, remove = {
+            "replacements": (self._on_add_replacement, self._on_edit_replacement,
+                             self._on_remove_replacement),
+            "snippets": (self._on_add_snippet, self._on_edit_snippet, self._on_remove_snippet),
+            "app_styles": (self._on_add_app_style, self._on_edit_app_style,
+                           self._on_remove_app_style),
+        }[kind]
         buttons = Gtk.Box(spacing=8)
         for label, handler in (("Add…", add), ("Edit…", edit), ("Remove", remove)):
             button = Gtk.Button(label=label)
@@ -604,6 +635,66 @@ class SettingsWindow(Gtk.Window):
         if answer != Gtk.ResponseType.OK or not misspelling or not spelling:
             return None
         return misspelling, spelling
+
+    def _on_add_app_style(self, _button: Gtk.Button) -> None:
+        edited = self._app_style_dialog("New style per app", "", "casual")
+        if edited:
+            tree_iter = self.app_styles.append(list(edited))
+            self.app_style_view.get_selection().select_iter(tree_iter)
+
+    def _on_edit_app_style(self, _button: Gtk.Button | None) -> None:
+        model, tree_iter = self.app_style_view.get_selection().get_selected()
+        if tree_iter is None:
+            self.status.set_text("Select an app first.")
+            return
+        edited = self._app_style_dialog("Edit the style of the app",
+                                        model[tree_iter][0], model[tree_iter][1])
+        if edited:
+            model[tree_iter][0], model[tree_iter][1] = edited
+
+    def _on_remove_app_style(self, _button: Gtk.Button) -> None:
+        model, tree_iter = self.app_style_view.get_selection().get_selected()
+        if tree_iter is not None:
+            model.remove(tree_iter)
+
+    def _app_style_dialog(self, title: str, app: str, style: str) -> tuple[str, str] | None:
+        """The app and its style as the user leaves them, or None if cancelled."""
+        dialog = Gtk.Dialog(title=title, transient_for=self, modal=True)
+        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+        dialog.add_button("OK", Gtk.ResponseType.OK).get_style_context().add_class("suggested-action")
+        dialog.set_default_response(Gtk.ResponseType.OK)
+        dialog.set_default_size(420, -1)
+        box = dialog.get_content_area()
+        box.set_spacing(8)
+        box.set_border_width(14)
+        app_label = Gtk.Label.new_with_mnemonic("_App")
+        app_label.set_xalign(0.0)
+        app_entry = Gtk.Entry()
+        app_entry.set_text(app)
+        app_entry.set_placeholder_text("slack")
+        app_entry.set_activates_default(True)
+        app_label.set_mnemonic_widget(app_entry)
+        style_label = Gtk.Label.new_with_mnemonic("_Style")
+        style_label.set_xalign(0.0)
+        combo = Gtk.ComboBoxText()
+        self._fill(combo, self.choices.get("style", []), style)
+        style_label.set_mnemonic_widget(combo)
+        hint = Gtk.Label(label="The name your system gives the app: slack, firefox, code on Linux, "
+                               "Slack on macOS, WINWORD on Windows. Case, spaces and dashes "
+                               "do not matter.")
+        hint.set_xalign(0.0)
+        hint.set_line_wrap(True)
+        hint.get_style_context().add_class("hint")
+        for widget in (app_label, app_entry, style_label, combo, hint):
+            box.pack_start(widget, False, False, 0)
+        dialog.show_all()
+        answer = dialog.run()
+        app = app_entry.get_text().strip()
+        style = combo.get_active_id() or ""
+        dialog.destroy()
+        if answer != Gtk.ResponseType.OK or not app or not style:
+            return None
+        return app, style
 
     def _on_test(self, _button: Gtk.Button) -> None:
         if self.testing:

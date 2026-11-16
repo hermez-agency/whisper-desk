@@ -23,7 +23,8 @@ styles, [How to setup Flow Styles](https://docs.wisprflow.ai/articles/2368263928
 and [Personalized Style](https://wisprflow.ai/post/personalized-style) (read on 2026-11-13);
 backtrack after a pause, "Let's meet at 2… actually 3" on the features page (read on 2026-11-14);
 "scratch that", the tracker's own left-to-do of 2026-11-14 (Wispr Flow's features page, read on
-2026-11-15, names Backtrack but no erase command).
+2026-11-15, names Backtrack but no erase command); styles per app, "Flow Styles" adapt to the app
+you dictate into — personal messages, work messages, email, other (read again on 2026-11-16).
 
 **Status**: done · partial · missing · out of scope.
 **Effort**: S (a session) · M (a few sessions) · L (to split into several gaps).
@@ -32,7 +33,7 @@ backtrack after a pause, "Let's meet at 2… actually 3" on the features page (r
 
 | Wispr Flow | whisper-desk | Status | Value | Effort |
 |---|---|---|---|---|
-| **Backtrack** — a correction said mid-sentence keeps only the corrected version | `backtrack.py`: "non, plutôt", "ou plutôt", "je veux dire", "no wait", "actually", "I mean", "or rather"… carried out by local rules; measured in `bench/backtrack/`; a correction said after the pause that ended its sentence erases and retypes that sentence, measured in `bench/backtrack/ --pauses` (#44); *efface ça* / *scratch that* said alone erases the last sentence typed, again the one before, measured in `bench/backtrack/ --discard` (in PR). A correction rewrites only the last sentence; no phrase longer than three words replaced without a word to line up with | partial | high | S |
+| **Backtrack** — a correction said mid-sentence keeps only the corrected version | `backtrack.py`: "non, plutôt", "ou plutôt", "je veux dire", "no wait", "actually", "I mean", "or rather"… carried out by local rules; measured in `bench/backtrack/`; a correction said after the pause that ended its sentence erases and retypes that sentence, measured in `bench/backtrack/ --pauses` (#44); *efface ça* / *scratch that* said alone erases the last sentence typed, again the one before, measured in `bench/backtrack/ --discard` (#45). A correction rewrites only the last sentence; no phrase longer than three words replaced without a word to line up with | partial | high | S |
 | **Filler removal** — "um", "uh", pauses | Whisper drops most hesitations by itself; `hesitations.py` removes those it writes ("euh", "hum", "um", "uh", "erm") and words or runs of up to three words said twice in a row, keeping intended doubles; measured in `bench/hesitations/`. A hesitation Whisper mishears as a word ("A", "« E »") stays | done | high | S |
 | **Auto punctuation** — inferred from pauses and tone, spoken marks ("comma") | Whisper's own punctuation and capitals; spoken marks and line breaks ("virgule", "point d'interrogation", "à la ligne", "comma", "new paragraph") written by `punctuation.py`, measured in `bench/punctuation/` (#26); quotes and brackets said aloud ("ouvrez les guillemets", "fermez la parenthèse", "open quote", "close paren") written « », " " and ( ) (#31). No square brackets or braces, no punctuation inferred from tone beyond Whisper's | partial | medium | S |
 | **Numbered lists** — spoken enumerations become a formatted list | `lists.py`: items numbered aloud (*un, deux*, *premièrement*, *firstly*, *number one*, or the figures Whisper writes) written one per line, "1. …", the words before as a title with a colon; goes on across pauses with the as-you-go dictation; measured in `bench/lists/` (#33). No bulleted lists, no nested lists | partial | medium | S |
@@ -49,7 +50,7 @@ backtrack after a pause, "Let's meet at 2… actually 3" on the features page (r
 | **Works in any app** | insertion at the cursor through the clipboard and a paste shortcut (uinput, Mutter, SendKeys, System Events) | done | — | — |
 | **Personal dictionary**, fed by the words you correct | `vocabulary` in the settings window, filled by hand; fed by the corrections made in the history (**Correct…**, `history --correct`), `vocabulary.py`, measured in `bench/dictionary/` (#34); replacement entries ("misheard → meant", Wispr Flow's "Correct a misspelling") in `[replacements]` and the settings window, `replacements.py` (#38), also saved on their own when a name the vocabulary already held is corrected again, measured in `bench/dictionary/ --from-corrections` (#40). Not learned from an edit made in the app dictated into (whisper-desk cannot see it); no replacements per language | partial | high | M |
 | **Snippets** — a spoken cue inserts a longer text | `[snippets]` in `config.toml`, `snippets.py`: alone or inside a sentence, case and punctuation ignored, longest cue wins, multi-line texts; measured in `bench/snippets/`; edited in the settings window too (#25). No rich text (bold, links) | partial | high | S |
-| **Styles** — tone adapted to the app (formal in docs, casual in chat) | `style.py`: one style for every app, `style` in `[model]` or **Style** in the settings window — *formal* (as Whisper punctuates it), *casual* (no final full stop), *very casual* (no sentence-opening capitals either) (#42). No style per app (the focused app is not known), no *Excited* style | partial | medium | L |
+| **Styles** — tone adapted to the app (formal in docs, casual in chat) | `style.py`: one style for every app, `style` in `[model]` or **Style** in the settings window — *formal* (as Whisper punctuates it), *casual* (no final full stop), *very casual* (no sentence-opening capitals either) (#42); a style per app, **Style per app** in the settings window or `[app_styles]`, from the app in front at the shortcut (`focus.py`: X11, Sway, Hyprland, macOS, WSL) (in PR). Apps listed one by one, not by category; GNOME and KDE on Wayland only name XWayland apps; a browser is one app whatever its tab; no *Excited* style | partial | medium | M |
 | **Command Mode** — select text, say how to rewrite it | — (would need a local model, e.g. Ollama) | missing | high | L |
 | **Developer syntax** — camelCase, snake_case, CLI commands, file tagging in Cursor | `casing.py`: a name said after its style ("camel case user name" → `userName`, snake, pascal, kebab, constant case) written in it, Whisper's glued and hyphenated forms understood; measured in `bench/casing/` (#28). Not guessed from context without the style said; no CLI commands, no file tagging | partial | medium | M |
 | **History** of dictations | `whisper-desk history` and its window: search, copy, insert again, purge | done | — | — |
@@ -289,7 +290,7 @@ backtrack after a pause, "Let's meet at 2… actually 3" on the features page (r
   one backspace per character typed (an editor that auto-closes brackets or auto-indents may
   differ); nothing is erased with the clipboard output alone. Left to do: *scratch that* /
   *efface ça* said alone to drop the last sentence, a correction of an earlier sentence.
-- 2026-11-15 — **"Efface ça" / "scratch that"** (in PR, partial): the left-to-do of the session
+- 2026-11-15 — **"Efface ça" / "scratch that"** (merged, #45, partial): the left-to-do of the session
   before — a sentence taken back whole. Said after a pause, as a sentence of its own, *efface
   ça*, *efface la dernière phrase*, *supprime ça*, *scratch that*, *delete that*, *strike
   that*, *erase that* (a *non*, *no*, *oups*, *oops* in front allowed) erase the last
@@ -308,7 +309,7 @@ backtrack after a pause, "Let's meet at 2… actually 3" on the features page (r
   voice. Known limits: the backspaces go wherever the cursor is, as for #44; with the
   clipboard output alone nothing is erased. Left to do: a correction of an earlier
   sentence, *efface tout* for the whole dictation.
-- 2026-11-15 — **Complete settings window** (in PR, done): the settings window caught up with
+- 2026-11-15 — **Complete settings window** (merged, #46, done): the settings window caught up with
   `config.toml` — it set about a third of its keys, the rest only in the file. Inventory of
   what was missing: `[hotkey]` name, action; `[model]` device, compute_type, beam_size,
   initial_prompt, context, corrections, hesitations, spoken_punctuation, developer_syntax,
@@ -318,3 +319,20 @@ backtrack after a pause, "Let's meet at 2… actually 3" on the features page (r
   All of them are now in eight tabs, each with its help and default, **Restore defaults** per
   section and values refused before saving. A feature, no quality measure:
   `tests/test_settings_schema.py` fails when a key of `config.example.toml` has no setting.
+- 2026-11-16 — **Style per app** (in PR, partial): the left-to-do of #42 — Wispr Flow writes casually
+  in a chat and formally in a mail. `[app_styles]` in `config.toml`, or the **Style per app**
+  list of the settings window (Dictation tab), gives an app a style over `style`; the app is
+  the one in front when the shortcut is pressed (`focus.py`), asked in the background while the
+  dictation starts and only when the list holds one: X11 class (`xprop`), Sway and Hyprland app
+  id, macOS process name (System Events), Windows process under WSL (PowerShell
+  `GetForegroundWindow`). Names compared without case, spaces, dashes, `.exe`; a reverse-DNS
+  class also answers to its last part (`org.gnome.TextEditor` → `TextEditor`). A feature, no
+  quality measure: 24 new tests (detection per desktop on recorded answers, the style chosen,
+  the daemon typing in the app's style, the settings controller). On this machine (GNOME,
+  Wayland) the window in front is a native one: `xprop` answers in 6 ms with mutter's
+  window without a class, and `org.gnome.Shell.Introspect.GetWindows` is refused to programs —
+  so the general style applies, as documented. Differences with Wispr Flow: apps listed one
+  by one, not four categories filled for you; a browser is one app, whatever site its tab
+  shows (Wispr Flow tells Gmail from Slack in Chrome). Left to do: categories with known apps
+  filled in, the app recorded in the history (and Wispr Flow's top apps in `stats`), a GNOME
+  Shell extension that names the window in front under Wayland.

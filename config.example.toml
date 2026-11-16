@@ -127,3 +127,15 @@ auto_update = "install"
 # "mac os" = "macOS"
 # "animal link" = "Animalink"
 # "dock ploy" = "Dokploy"
+
+[app_styles]
+# An application -> the style written in it, over `style` in [model]: formal
+# in your documents, casual in chat. Also edited in the settings window:
+# whisper-desk settings, Style per app. The application is the one in front
+# when the shortcut is pressed, by the name your system gives it — "slack",
+# "firefox", "code" on Linux, "Slack" on macOS, "WINWORD" on Windows; case,
+# spaces and dashes do not matter. GNOME and KDE on Wayland only name X11
+# applications: in a native Wayland window the style above applies.
+# "slack" = "casual"
+# "discord" = "very_casual"
+# "thunderbird" = "formal"

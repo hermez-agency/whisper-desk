@@ -474,5 +474,40 @@ class ReplacementsTest(ControllerCase):
                          {"mac os": "", "lori": "Laurie"})
 
 
+class AppStylesTest(ControllerCase):
+    def test_the_window_gets_each_app_with_its_style(self):
+        self.controller.config["app_styles"] = {"slack": "Very casual", "thunderbird": "formal"}
+        self.assertEqual(self.controller.snapshot()["values"]["app_styles"],
+                         [["slack", "very_casual"], ["thunderbird", "formal"]])
+
+    def test_app_styles_are_written_and_the_daemon_reloads(self):
+        reply = self.save(app_styles=[[" slack ", "casual"], ["Thunderbird", "formal"]])
+        self.assertTrue(reply["saved"])
+        self.assertEqual(self.sent, ["reload"])
+        self.assertEqual(config_module.load(self.path)["app_styles"],
+                         {"slack": "casual", "Thunderbird": "formal"})
+        self.assertIn("# my own comment", self.path.read_text(encoding="utf-8"))
+
+    def test_a_removed_app_leaves_the_file(self):
+        self.save(app_styles=[["slack", "casual"], ["discord", "very_casual"]])
+        self.save(app_styles=[["discord", "very_casual"]])
+        self.assertEqual(config_module.load(self.path)["app_styles"], {"discord": "very_casual"})
+
+    def test_the_same_app_twice_is_refused(self):
+        reply = self.save(app_styles=[["google-chrome", "casual"], ["Google Chrome", "formal"]])
+        self.assertFalse(reply["saved"])
+        self.assertEqual(reply["status"], "“google-chrome” and “Google Chrome” are the same app")
+        self.assertEqual(config_module.load(self.path)["app_styles"], {})
+
+    def test_an_incomplete_row_is_refused(self):
+        self.assertEqual(self.save(app_styles=[["", "casual"]])["status"],
+                         "A style per app has no app")
+        self.assertEqual(self.save(app_styles=[["--", "casual"]])["status"],
+                         "The app “--” has no letter in its name")
+        self.assertEqual(self.save(app_styles=[["slack", "excited"]])["status"],
+                         "“slack”: pick its style")
+        self.assertEqual(self.save(app_styles=[["", ""]])["status"], "Nothing to change")
+
+
 if __name__ == "__main__":
     unittest.main()

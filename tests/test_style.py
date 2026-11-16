@@ -19,6 +19,30 @@ class ResolveTest(unittest.TestCase):
         self.assertEqual(style.resolve({"model": {"style": "excited"}}), "formal")
 
 
+class AppStyleTest(unittest.TestCase):
+    CONFIG = {"model": {"style": "formal"},
+              "app_styles": {"Slack": "casual", "google-chrome": "Very casual",
+                             "thunderbird": "excited", "WINWORD": "formal"}}
+
+    def test_the_app_in_front_takes_its_style(self):
+        self.assertEqual(style.resolve(self.CONFIG, ["slack", "Slack"]), "casual")
+        self.assertEqual(style.resolve(self.CONFIG, ["Google Chrome"]), "very_casual")
+        self.assertEqual(style.resolve(self.CONFIG, ["winword"]), "formal")
+
+    def test_any_other_app_takes_the_general_style(self):
+        config = {**self.CONFIG, "model": {"style": "casual"}}
+        self.assertEqual(style.resolve(config, ["firefox"]), "casual")
+        self.assertEqual(style.resolve(config, []), "casual")
+        self.assertEqual(style.resolve(config), "casual")
+
+    def test_an_unknown_style_for_an_app_is_not_taken(self):
+        self.assertEqual(style.for_app(self.CONFIG, ["thunderbird"]), "")
+        self.assertEqual(style.resolve(self.CONFIG, ["thunderbird"]), "formal")
+
+    def test_no_style_per_app_section(self):
+        self.assertEqual(style.resolve({"model": {"style": "casual"}}, ["slack"]), "casual")
+
+
 class HoldFullStopTest(unittest.TestCase):
     def check(self, text: str, kept: str, held: str) -> None:
         self.assertEqual(style.hold_full_stop(text), (kept, held))
