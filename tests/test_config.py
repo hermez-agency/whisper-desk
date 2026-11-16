@@ -52,7 +52,7 @@ class LoadTest(unittest.TestCase):
         config = config_module.load(Path("/nonexistent"))
         self.assertEqual(
             set(config), {"hotkey", "model", "recording", "output", "overlay", "update", "snippets",
-                          "replacements"}
+                          "replacements", "app_styles"}
         )
 
     def test_the_keys_read_by_the_code_exist(self):

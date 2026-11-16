@@ -422,8 +422,28 @@ question or exclamation mark, an ellipsis and the full stop of an abbreviation (
 *M.*, an initial) stay. The very casual style only lowers the capital a sentence opens
 on: names in the middle of a sentence, the names of your `vocabulary` and replacements,
 acronyms (*OK*, *API*), mixed-case names (*GitHub*) and English *I* keep theirs, and so
-does a snippet's text. Rules run on your machine. One style for every app for now; Wispr
-Flow's *Excited* style (more exclamation marks) is not there.
+does a snippet's text. Rules run on your machine. Wispr Flow's *Excited* style (more
+exclamation marks) is not there.
+
+**A style per app.** Casual in Slack, formal in your mail: the **Style per app** list of
+the settings window (Dictation tab), or `[app_styles]` in `config.toml`, gives an app a
+style of its own, over `style`:
+
+```toml
+[app_styles]
+"slack" = "casual"
+"discord" = "very_casual"
+"thunderbird" = "formal"
+```
+
+The app is the one in front when you press the shortcut, by the name your system gives it —
+its X11 class (`slack`, `firefox`, `code`; `xprop WM_CLASS` and a click on the window shows
+it), its Sway or Hyprland app id, its name on macOS (`Slack`), its process on Windows under
+WSL (`WINWORD`, `chrome`); case, spaces and dashes do not matter, and the journal of the
+service says *Application in front: …* at each dictation. It is asked only when the list
+holds an app. GNOME and KDE on Wayland tell no program which window is in front: there, only
+the apps that run through X11 (XWayland) are recognised, and the others take `style`. A
+browser is one app: Gmail and Slack in two tabs of Firefox take Firefox's style.
 
 ### Dictating under your breath
 
@@ -636,7 +656,7 @@ move between them, `Ctrl+S` saves, the whole window works from the keyboard:
 
 | Tab | What it sets |
 |---|---|
-| **Dictation** | language, model (with its download size and speed), style; spoken punctuation, hesitations, spoken corrections, numbered lists, developer syntax |
+| **Dictation** | language, model (with its download size and speed), style; style per app; spoken punctuation, hesitations, spoken corrections, numbered lists, developer syntax |
 | **Microphone** | device, with a **Test** gauge; capture tool; sentence-by-sentence insertion, pause between sentences, silence that ends the dictation, time to give up, longest dictation, voice threshold |
 | **Shortcut and output** | shortcut, captured by pressing the new combination, its name and action; output mode, paste shortcut, way of pasting, clipboard given back, notifications |
 | **Words** | vocabulary; replacements, each misspelling with the spelling meant; snippets, each cue with its text |
@@ -675,6 +695,9 @@ spoken_punctuation = true     # "virgule", "point", "à la ligne", "comma", "new
 developer_syntax = true       # "camel case user name" is written userName
 lists = true                  # "un, des œufs, deux, du lait" is written as a numbered list
 style = "formal"              # "casual": no final full stop; "very_casual": no capitals either
+
+[app_styles]                  # an app's own style, over `style`
+"slack" = "casual"
 
 [recording]
 backend = "auto"              # auto | arecord | parec | rec | sox | ffmpeg
@@ -912,6 +935,7 @@ to test all three from any of them.
 | `src/whisper_desk/casing.py` | names said in a style ("camel case user name") written in it |
 | `src/whisper_desk/snippets.py` | spoken cues replaced by the text saved for them |
 | `src/whisper_desk/replacements.py` | spellings Whisper keeps writing replaced by the ones meant |
+| `src/whisper_desk/focus.py` | the application in front at the shortcut, for its own style |
 | `src/whisper_desk/inject.py` | simulated keystroke: `uinput`, Mutter, SendKeys, System Events |
 | `src/whisper_desk/mutter_keyboard.py` | GNOME remote desktop session (system Python) |
 | `src/whisper_desk/output.py` | insertion at the cursor, clipboard, notifications |

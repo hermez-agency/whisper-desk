@@ -20,7 +20,7 @@ from typing import Any
 
 from . import config as config_module
 from . import backtrack, history, host, hotkey, inject, lists, punctuation, replacements
-from . import snippets, style
+from . import focus, snippets, style
 from . import output
 from .capture import CaptureUnavailable
 from .overlay_proc import OverlayProcess
@@ -107,6 +107,16 @@ class Session:
             on_draft=lambda pcm: self.queue.put(Draft(pcm)),
         )
         self.writer: output.CursorWriter | None = None
+        # The names of the app in front at the shortcut, for its own style.
+        self.app: list[str] = []
+        self.app_known = threading.Event()
+
+    def _find_app(self) -> None:
+        try:
+            self.app = focus.focused_app()
+            logger.info("Application in front: %s.", ", ".join(self.app) or "unknown")
+        finally:
+            self.app_known.set()
 
     def _on_level(self, level: float, bands: list[float]) -> None:
         self.overlay.set_level(level, bands)
@@ -123,6 +133,12 @@ class Session:
 
     def run(self) -> None:
         try:
+            if self.service.config.get("app_styles"):
+                # Before anything else: the app in front is the one the
+                # shortcut was pressed in — it takes a moment under WSL.
+                threading.Thread(target=self._find_app, daemon=True).start()
+            else:
+                self.app_known.set()
             ready = self.service.transcriber.is_loaded
             self.overlay.start("listening" if ready else "loading", hint=self._hint())
             if not self.capture and "cursor" in output.modes(self.service.config):
@@ -402,7 +418,8 @@ class Session:
     def _render(self, text: str, full_stop: str, before: str) -> tuple[str, str, str]:
         """A sentence as it is typed after `before`: its spacing, its text, the full stop held back."""
         config = self.service.config
-        writing = style.resolve(config)
+        self.app_known.wait(focus.TIMEOUT_SECONDS)
+        writing = style.resolve(config, self.app)
         # Before the snippets: their text is written as it was saved.
         if writing == "very_casual":
             text = style.lower_starts(text, style.names(config))

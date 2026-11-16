@@ -16,8 +16,8 @@ COLOUR = re.compile(r"^#[0-9a-fA-F]{6}$")
 MAX_THRESHOLD = 32767
 
 # Kinds with a widget of their own in the window.
-SPECIAL = ("device", "shortcut", "replacements", "snippets")
-TABLE_KINDS = ("replacements", "snippets")
+SPECIAL = ("device", "shortcut", "replacements", "snippets", "app_styles")
+TABLE_KINDS = ("replacements", "snippets", "app_styles")
 
 
 @dataclass(frozen=True)
@@ -72,6 +72,12 @@ TABS: tuple[Tab, ...] = (
                "Casual leaves the full stop out at the end, as in a chat message; "
                "very casual the capitals too.",
                choices="style"),
+        )),
+        Group("Style per app", (
+            _s("app_styles", "app_styles", "app_styles", "Style per app",
+               "An app with a style of its own, over the one above: casual in Slack, formal in "
+               "your mail — the app in front when you press the shortcut. On GNOME or KDE under "
+               "Wayland, only the apps that run through X11 are recognised."),
         )),
         Group("What is written", (
             _s("spoken_punctuation", "model.spoken_punctuation", "bool", "Spoken punctuation",

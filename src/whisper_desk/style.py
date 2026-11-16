@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from . import focus
 from .punctuation import separator
 
 STYLES = ("formal", "casual", "very_casual")
@@ -33,10 +34,24 @@ _SENTENCE_START = re.compile(
 _LAST_WORD = re.compile(r"([\w'’.-]*)\.\Z")
 
 
-def resolve(config: dict[str, Any]) -> str:
-    """The configured style; an unknown one is the formal style, as before styles."""
-    value = str(config["model"].get("style", DEFAULT)).strip().lower().replace(" ", "_")
-    return value if value in STYLES else DEFAULT
+def normalise(value: Any) -> str:
+    """A style as written by hand — "Very casual" — in its configuration name, or ""."""
+    value = str(value).strip().lower().replace(" ", "_").replace("-", "_")
+    return value if value in STYLES else ""
+
+
+def for_app(config: dict[str, Any], apps: list[str]) -> str:
+    """The style set for the application in front (any of its names), or ""."""
+    names = {focus.key(name) for name in apps} - {""}
+    for app, value in config.get("app_styles", {}).items():
+        if isinstance(value, str) and focus.key(app) in names and normalise(value):
+            return normalise(value)
+    return ""
+
+
+def resolve(config: dict[str, Any], apps: list[str] | None = None) -> str:
+    """The style of the app in front, else the configured one; formal when unknown, as before styles."""
+    return for_app(config, apps or []) or normalise(config["model"].get("style", DEFAULT)) or DEFAULT
 
 
 def names(config: dict[str, Any]) -> set[str]:

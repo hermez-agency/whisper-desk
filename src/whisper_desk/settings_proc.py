@@ -17,7 +17,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from . import capture, hotkey, inject, replacements, settings_schema, snippets, update, window_proc
+from . import capture, focus, hotkey, inject, replacements, settings_schema, snippets, style
+from . import update, window_proc
 from . import config as config_module
 from .recorder import CHANNELS, CHUNK_BYTES, MIN_THRESHOLD, RATE, _rms
 from .spectrum import visual_level
@@ -223,6 +224,11 @@ class SettingsController:
             for misspelling, spelling in self.config["replacements"].items()
             if isinstance(spelling, str)
         ]
+        values["app_styles"] = [
+            [app, style.normalise(value) or str(value)]
+            for app, value in self.config["app_styles"].items()
+            if isinstance(value, str)
+        ]
         return values
 
     def defaults(self) -> dict[str, Any]:
@@ -365,6 +371,28 @@ class SettingsController:
             table[misspelling] = spelling
         return table
 
+    def app_style_table(self, rows: list[Any]) -> dict[str, Any]:
+        """The [app_styles] section the window's rows make; ValueError says what is wrong."""
+        current = self.config["app_styles"]
+        table = {app: value for app, value in current.items() if not isinstance(value, str)}
+        seen: dict[str, str] = {}
+        for row in rows:
+            app, value = (str(part).strip() for part in (list(row) + ["", ""])[:2])
+            if not app and not value:
+                continue
+            if not app:
+                raise ValueError("A style per app has no app")
+            key = focus.key(app)
+            if not key:
+                raise ValueError(f"The app “{app}” has no letter in its name")
+            if key in seen:
+                raise ValueError(f"“{seen[key]}” and “{app}” are the same app")
+            if not style.normalise(value):
+                raise ValueError(f"“{app}”: pick its style")
+            seen[key] = app
+            table[app] = style.normalise(value)
+        return table
+
     def save(self, values: dict[str, Any]) -> dict[str, Any]:
         checked, error = self.validated(values)
         if error:
@@ -385,6 +413,13 @@ class SettingsController:
                 return {"status": str(error), "saved": False}
             if table != self.config["replacements"]:
                 tables["replacements"] = table
+        if "app_styles" in values:
+            try:
+                table = self.app_style_table(values["app_styles"] or [])
+            except ValueError as error:
+                return {"status": str(error), "saved": False}
+            if table != self.config["app_styles"]:
+                tables["app_styles"] = table
         if not changes and not tables:
             return {"status": "Nothing to change", "saved": True}
         self.meter.stop()
