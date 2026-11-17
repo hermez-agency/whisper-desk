@@ -1,4 +1,4 @@
-"""Numbered lists said aloud written as lists."""
+"""Numbered and bulleted lists said aloud written as lists."""
 
 from __future__ import annotations
 
@@ -127,6 +127,66 @@ class ContinuationTest(unittest.TestCase):
         self.assertEqual(lists.apply("Trois, du pain.", "Bonjour."), "Trois, du pain.")
 
 
+class BulletTest(unittest.TestCase):
+    """Two bullets said aloud make a bulleted list."""
+
+    def check(self, said: str, written: str, before: str = "") -> None:
+        self.assertEqual(lists.apply(said, before), written)
+
+    def test_bullets_said_with_a_pause(self):
+        self.check(
+            "Pour la réunion, tiret, le budget, tiret, le planning et tiret, les congés.",
+            "Pour la réunion :\n- Le budget\n- Le planning\n- Les congés",
+        )
+        self.check("Les courses, puce, du pain, puce, du fromage.",
+                   "Les courses :\n- Du pain\n- Du fromage")
+        self.check("Shopping list, bullet, apples, bullet, bread.",
+                   "Shopping list:\n- Apples\n- Bread")
+        self.check("Dash, fix the bug. Dash, ship it.", "- Fix the bug\n- Ship it")
+
+    def test_bullet_point_needs_no_pause(self):
+        self.check("for the meeting bullet point the budget bullet point the roadmap",
+                   "for the meeting:\n- The budget\n- The roadmap")
+
+    def test_tiret_as_whisper_writes_it(self):
+        self.check("À emporter, tirez une lampe, tirez un duvet.",
+                   "À emporter :\n- Une lampe\n- Un duvet")
+        self.check("Tirer, relire le contrat. Tirer, l'envoyer.",
+                   "- Relire le contrat\n- L'envoyer")
+
+    def test_the_dash_whisper_writes_at_a_sentence_start(self):
+        self.check("Questions. – Quel budget ? – Quel délai ?",
+                   "Questions.\n- Quel budget ?\n- Quel délai ?")
+
+    def test_a_sentence_after_the_last_item_starts_a_line(self):
+        self.check("Puce, appeler la banque. Puce, payer le loyer. Ensuite je pars.",
+                   "- Appeler la banque\n- Payer le loyer\nEnsuite je pars.")
+
+    def test_bullet_words_in_a_sentence_stay(self):
+        for said in (
+            "Ajoute un tiret entre les deux mots.",
+            "Le tiret du six, puis la puce du téléphone.",
+            "Add a dash of salt, then bite the bullet.",
+            "Dash, the delivery app, is down again.",
+            "Il faut tirer la porte puis tirer le verrou.",
+            "Tirez la porte, puis tirez le verrou.",
+            "Le projet – en retard – sera livré – enfin – demain.",
+        ):
+            self.check(said, said)
+
+    def test_a_bullet_alone_makes_no_list(self):
+        self.check("Tiret, c'est le nom du signe.", "Tiret, c'est le nom du signe.")
+
+    def test_the_next_bullet_goes_on_the_list(self):
+        before = "Courses :\n- Du pain"
+        self.check("Tiret, du fromage.", "\n- Du fromage", before)
+        self.check("Merci.", "\nMerci.", before)
+        self.check("Tiret, du fromage.", "Tiret, du fromage.", "Bonjour.")
+
+    def test_numbers_win_over_bullets(self):
+        self.check("Un, tiret du pain. Deux, le lait.", "1. Tiret du pain\n2. Le lait")
+
+
 class PendingTest(unittest.TestCase):
     """A sentence that may open a list waits for the next one."""
 
@@ -151,6 +211,23 @@ class PendingTest(unittest.TestCase):
         pending = lists.Pending()
         self.assertIsNone(pending.feed("First, let me check.", ""))
         self.assertEqual(pending.feed("Then we go.", ""), "First, let me check. Then we go.")
+
+    def test_the_first_bullet_waits_for_the_second(self):
+        pending = lists.Pending()
+        self.assertIsNone(pending.feed("Tiret, du pain.", "Courses :"))
+        self.assertEqual(pending.feed("Tiret, du lait.", "Courses :"), "\n- Du pain\n- Du lait")
+
+    def test_a_bullet_said_alone_does_not_use_the_wait_up(self):
+        pending, parts = lists.Pending(), []
+        for said in ("Bullet.", "Call the bank.", "Bullet.", "Pay the rent.", "Then I leave."):
+            text = pending.feed(said, "\n".join(parts))
+            if text is not None:
+                parts.append(text)
+        self.assertEqual("".join(parts), "- Call the bank\n- Pay the rent\nThen I leave.")
+
+    def test_a_bullet_word_in_a_sentence_does_not_wait(self):
+        self.assertEqual(lists.Pending().feed("Il faut tirer la porte.", ""),
+                         "Il faut tirer la porte.")
 
     def test_what_is_held_comes_out_as_said(self):
         pending = lists.Pending()

@@ -43,7 +43,9 @@ developer_syntax = true
 # Writes the numbered lists you say: "j'ai trois choses à faire, un, appeler Marie,
 # deux, envoyer le devis" -> "J'ai trois choses à faire :", "1. Appeler Marie" and
 # "2. Envoyer le devis" on lines of their own ("premièrement", "firstly", "one", "two"
-# too). A sentence that may open a list waits for the next one before it is inserted.
+# too). Bullets too: "tiret, du pain, tiret, du lait" (or "puce", "bullet", "bullet
+# point", "dash") -> "- Du pain" and "- Du lait". A sentence that may open a list
+# waits for the next one before it is inserted.
 lists = true
 # How formally the text is written, as in a document or a chat message:
 # "formal" as Whisper punctuates it; "casual" without the full stop that ends the

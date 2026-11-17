@@ -4,6 +4,24 @@
 
 ### Added
 
+- **Bulleted lists said aloud** (Wispr Flow's lists): *tiret* or *puce* said before each
+  item — *bullet*, *bullet point* or *dash* in English — writes them as a bulleted list,
+  one per line: *"Pour la réunion, tiret, le budget, tiret, le planning"* → "Pour la
+  réunion :", "- Le budget", "- Le planning". The same title, line after the last item and
+  as-you-go dictation as the numbered lists; *tirez*, *tirer*, *tiré* (how Whisper often
+  writes *tiret*) count right after a pause, and so does the dash Whisper writes itself at a
+  sentence's start. A bullet said alone, or after *un*, *le*, *a*, *the* (*ajoute un tiret*,
+  *a dash of salt*), stays as said. Under `model.lists`, now **Lists** in the settings
+  window; *very casual* lowers the capital of a bulleted item as of a numbered one. The settings window's
+  screenshot (`docs/settings-window.png`) shows the **Lists** setting.
+- `bench/lists/`: 18 bulleted lists said in French and English and 8 control sentences
+  added to the corpus, with their recordings; lists laid out exactly, before → after:
+  - written sentences: 0/18 → 18/18, controls 8/8 kept;
+  - `small` (CPU): FR 0/10 → 7/10, EN 0/8 → 5/8, error rate FR 42.1 % → 18.6 %, EN 38.7 %
+    → 16.0 %, no control changed;
+  - `large-v3-turbo` (GPU): FR 0/10 → 8/10, EN 0/8 → 7/8, error rate FR 39.3 % → 13.1 %,
+    EN 39.6 % → 11.3 %, no control changed; the same figures whole and cut after each
+    sentence, and the numbered lists' figures unchanged.
 - **"Efface ça" / "scratch that"**: said after a sentence, as a sentence of its own, it
   erases the last sentence typed with backspaces; said again, the one before, and so on.
   What follows it in the same breath takes the erased sentence's place — *"Hi Mark."*,

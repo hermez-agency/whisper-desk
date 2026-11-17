@@ -86,8 +86,9 @@ TABS: tuple[Tab, ...] = (
                "“Um”, “euh” and a word said twice are dropped from the text."),
             _s("corrections", "model.corrections", "bool", "Spoken corrections",
                "“On Tuesday, no wait, on Wednesday” is written “on Wednesday”."),
-            _s("lists", "model.lists", "bool", "Numbered lists",
-               "“One, eggs, two, milk” becomes a list on lines of its own."),
+            _s("lists", "model.lists", "bool", "Lists",
+               "“One, eggs, two, milk” becomes a numbered list on lines of its own; "
+               "“bullet, eggs, bullet, milk” (“tiret” in French) a bulleted one."),
             _s("developer_syntax", "model.developer_syntax", "bool", "Developer syntax",
                "“Camel case user name” is written userName; snake, kebab, pascal and constant case too."),
         )),

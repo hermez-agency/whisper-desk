@@ -29,3 +29,29 @@ ctl07	en	First, let me check the logs before we decide anything.	First, let me c
 ctl08	en	One, two, buckle my shoe, three, four, knock at the door.	One, two, buckle my shoe, three, four, knock at the door.
 ctl09	en	No one, two people at most, should have access to it.	No one, two people at most, should have access to it.
 ctl10	en	Wait a second, first we need to agree on the price.	Wait a second, first we need to agree on the price.
+bfr01	fr	Pour la réunion, tiret, le budget, tiret, le planning, tiret, les recrutements.	Pour la réunion :\n- Le budget\n- Le planning\n- Les recrutements
+bfr02	fr	À emporter. Tiret, une lampe. Tiret, un duvet. Tiret, de l'eau.	À emporter.\n- Une lampe\n- Un duvet\n- De l'eau
+bfr03	fr	Les courses, puce, du pain, puce, du fromage.	Les courses :\n- Du pain\n- Du fromage
+bfr04	fr	Tiret, relire le contrat. Tiret, l'envoyer au client.	- Relire le contrat\n- L'envoyer au client
+bfr05	fr	Les points ouverts, tiret, la date de livraison, tiret, le prix et tiret, la garantie.	Les points ouverts :\n- La date de livraison\n- Le prix\n- La garantie
+bfr06	fr	Puce, appeler la banque. Puce, payer le loyer. Ensuite je pars.	- Appeler la banque\n- Payer le loyer\nEnsuite je pars.
+bfr07	fr	Mes idées pour le site, tiret, une page de tarifs, tiret, un blog.	Mes idées pour le site :\n- Une page de tarifs\n- Un blog
+bfr08	fr	Dans la valise, tiret, les chargeurs, tiret, les passeports, tiret, les billets.	Dans la valise :\n- Les chargeurs\n- Les passeports\n- Les billets
+bfr09	fr	Voici les risques. Tiret, le retard du fournisseur. Tiret, la hausse des prix.	Voici les risques.\n- Le retard du fournisseur\n- La hausse des prix
+bfr10	fr	Questions pour le client. Tiret, quel est le budget ? Tiret, quand faut-il livrer ?	Questions pour le client.\n- Quel est le budget ?\n- Quand faut-il livrer ?
+ben01	en	Shopping list, bullet, apples, bullet, bread, bullet, cheese.	Shopping list:\n- Apples\n- Bread\n- Cheese
+ben02	en	For the meeting. Bullet point, the budget. Bullet point, the roadmap.	For the meeting.\n- The budget\n- The roadmap
+ben03	en	Dash, fix the login bug. Dash, update the docs. Dash, ship the release.	- Fix the login bug\n- Update the docs\n- Ship the release
+ben04	en	Pros of the plan, bullet, it is cheap, bullet, it is fast and bullet, it is simple.	Pros of the plan:\n- It is cheap\n- It is fast\n- It is simple
+ben05	en	Bullet, call the bank. Bullet, pay the rent. Then I leave.	- Call the bank\n- Pay the rent\nThen I leave.
+ben06	en	Open questions. Dash, who owns the budget? Dash, when do we ship?	Open questions.\n- Who owns the budget?\n- When do we ship?
+ben07	en	To pack, bullet point, chargers, bullet point, passports.	To pack:\n- Chargers\n- Passports
+ben08	en	Risks. Dash, a late supplier. Dash, higher prices.	Risks.\n- A late supplier\n- Higher prices
+bctl01	fr	Ajoute un tiret entre les deux mots du nom.	Ajoute un tiret entre les deux mots du nom.
+bctl02	fr	Le tiret du six est à côté de la touche cinq.	Le tiret du six est à côté de la touche cinq.
+bctl03	fr	J'ai changé la puce du téléphone, puis j'ai redémarré.	J'ai changé la puce du téléphone, puis j'ai redémarré.
+bctl04	fr	Tiret, c'est le nom du signe que tu cherches.	Tiret, c'est le nom du signe que tu cherches.
+bctl05	en	Add a dash of salt to the sauce.	Add a dash of salt to the sauce.
+bctl06	en	The bullet missed the target, thank goodness.	The bullet missed the target, thank goodness.
+bctl07	en	Dash, the delivery app, is down again.	Dash, the delivery app, is down again.
+bctl08	en	Use a dash, not a hyphen, between the dates.	Use a dash, not a hyphen, between the dates.
