@@ -12,7 +12,8 @@
   writes *tiret*) count right after a pause, and so does the dash Whisper writes itself at a
   sentence's start. A bullet said alone, or after *un*, *le*, *a*, *the* (*ajoute un tiret*,
   *a dash of salt*), stays as said. Under `model.lists`, now **Lists** in the settings
-  window; *very casual* lowers the capital of a bulleted item as of a numbered one.
+  window; *very casual* lowers the capital of a bulleted item as of a numbered one. The settings window's
+  screenshot (`docs/settings-window.png`) shows the **Lists** setting.
 - `bench/lists/`: 18 bulleted lists said in French and English and 8 control sentences
   added to the corpus, with their recordings; lists laid out exactly, before → after:
   - written sentences: 0/18 → 18/18, controls 8/8 kept;
