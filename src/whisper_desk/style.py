@@ -26,10 +26,10 @@ _ABBREVIATIONS = {
 _ALWAYS_CAPITAL = re.compile(r"^I(?:['’](?:m|ll|ve|d|s))?$")
 # The word a sentence opens on: at the start, after a sentence's end, after a
 # line break — past the quote or bracket closed after it, an opening one, and
-# a list item's number.
+# a list item's number or bullet.
 _SENTENCE_START = re.compile(
     r"(?:\A|(?:(?<=[.!?…])|(?<=[.!?…][»\"”)])|(?<=[.!?…] »))[ \t]+|\n)"
-    r"[ \t«\"“(]*(?:\d+\.[ \t]+)?(?P<word>[^\W\d_][\w'’.-]*)"
+    r"[ \t«\"“(]*(?:(?:\d+\.|-)[ \t]+)?(?P<word>[^\W\d_][\w'’.-]*)"
 )
 _LAST_WORD = re.compile(r"([\w'’.-]*)\.\Z")
 

@@ -67,8 +67,9 @@ DEFAULTS: dict[str, Any] = {
         # Writes the names said in a style: "camel case user name" -> userName,
         # "snake case created at" -> created_at.
         "developer_syntax": True,
-        # Writes the numbered lists said aloud: "un, des œufs, deux, du lait" or
-        # "firstly… secondly…" become "1. Des œufs" and "2. Du lait".
+        # Writes the lists said aloud: "un, des œufs, deux, du lait" or "firstly…
+        # secondly…" become "1. Des œufs" and "2. Du lait"; "tiret, du pain, tiret,
+        # du lait" or "bullet… bullet…" become "- Du pain" and "- Du lait".
         "lists": True,
         # How formally the text is written (Wispr Flow's Styles): "formal" as
         # Whisper punctuates it, "casual" without the dictation's final full

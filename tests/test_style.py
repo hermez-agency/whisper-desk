@@ -93,6 +93,7 @@ class LowerStartsTest(unittest.TestCase):
     def test_after_a_line_break_and_a_list_number(self):
         self.check("Les courses :\n1. Des œufs\n2. Du lait\nMerci.",
                    "les courses :\n1. des œufs\n2. du lait\nmerci.")
+        self.check("Les courses :\n- Des œufs\n- Du lait", "les courses :\n- des œufs\n- du lait")
 
     def test_after_an_opening_quote_or_bracket(self):
         self.check("Il a dit. « Bonjour. » (Puis rien.)", "il a dit. « bonjour. » (puis rien.)")

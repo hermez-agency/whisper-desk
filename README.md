@@ -377,7 +377,7 @@ often hears the words in English best: if it mangles them, put *camel case, snak
 in `vocabulary`. Rules run on your machine; `developer_syntax = false` in `[model]` keeps
 the words. `bench/casing/` measures them on recordings (see Development).
 
-### Numbered lists said aloud
+### Numbered and bulleted lists said aloud
 
 Number the items as you say them, and they are written as a list, one item per line:
 *"J'ai trois choses à acheter, un, des œufs, deux, du lait et trois, du pain"* is written
@@ -402,8 +402,23 @@ With the as-you-go dictation, you can pause after each item: the next number goe
 list already at the cursor. A sentence that may open a list (*Premièrement, …*, *One, …*)
 waits for the next one before it is inserted, so that both land as a list — when the
 pause comes before the second item, the first one is a sentence later at the cursor.
-Rules run on your machine; `lists = false` in `[model]` keeps the words. `bench/lists/`
-measures them on recordings (see Development).
+For a bulleted list, say *tiret* or *puce* before each item — *bullet*, *bullet point* or
+*dash* in English: *"Pour la réunion, tiret, le budget, tiret, le planning"* is written
+
+```
+Pour la réunion :
+- Le budget
+- Le planning
+```
+
+with the same title, line after the last item and as-you-go dictation as a numbered list.
+Whisper often writes *tiret* as *tirez*, *tirer* or *tiré*, or writes a dash itself at the
+start of a sentence (*– Relire le contrat*): those count too — the verbs only right after a
+pause, so that *il faut tirer la porte* stays a sentence. A list needs two bullets; one said
+alone (*Tiret, c'est le nom du signe*), or after a word like *un*, *le*, *a*, *the* (*ajoute
+un tiret*, *a dash of salt*, *bite the bullet*), stays as said. Rules run on your machine;
+`lists = false` in `[model]` keeps the words. `bench/lists/` measures them on recordings
+(see Development).
 
 ### Writing style: formal or casual
 
@@ -656,7 +671,7 @@ move between them, `Ctrl+S` saves, the whole window works from the keyboard:
 
 | Tab | What it sets |
 |---|---|
-| **Dictation** | language, model (with its download size and speed), style; style per app; spoken punctuation, hesitations, spoken corrections, numbered lists, developer syntax |
+| **Dictation** | language, model (with its download size and speed), style; style per app; spoken punctuation, hesitations, spoken corrections, lists, developer syntax |
 | **Microphone** | device, with a **Test** gauge; capture tool; sentence-by-sentence insertion, pause between sentences, silence that ends the dictation, time to give up, longest dictation, voice threshold |
 | **Shortcut and output** | shortcut, captured by pressing the new combination, its name and action; output mode, paste shortcut, way of pasting, clipboard given back, notifications |
 | **Words** | vocabulary; replacements, each misspelling with the spelling meant; snippets, each cue with its text |
@@ -693,7 +708,7 @@ corrections = true            # "mardi, non, plutôt mercredi" is written "mercr
 hesitations = true            # "euh", "um" and stuttered words left out
 spoken_punctuation = true     # "virgule", "point", "à la ligne", "comma", "new line"
 developer_syntax = true       # "camel case user name" is written userName
-lists = true                  # "un, des œufs, deux, du lait" is written as a numbered list
+lists = true                  # "un, des œufs, deux, du lait" or "tiret… tiret…" is written as a list
 style = "formal"              # "casual": no final full stop; "very_casual": no capitals either
 
 [app_styles]                  # an app's own style, over `style`
@@ -1033,10 +1048,12 @@ python3 bench/casing/measure.py -v
 `bench/lists/` measures the numbered lists: 20 lists said in French and English, numbered
 with numbers, ordinals or *numéro* / *number*, and 10 control sentences where numbers and
 ordinals are words (*un, deux, trois, soleil*, *j'en veux deux, trois si possible*, *first,
-let me check*). Each recording is run whole and cut after each sentence, as the
-as-you-go dictation does when you pause after every item. It counts the lists laid out
-exactly as expected — same lines, same numbers — and an error rate where line breaks and
-item numbers count as words:
+let me check*); and the bulleted lists: 18 lists said with *tiret*, *puce*, *bullet*,
+*bullet point* or *dash*, and 8 control sentences where those are words (*ajoute un tiret*,
+*a dash of salt*, *Dash, the delivery app, is down*). Each recording is run whole and cut
+after each sentence, as the as-you-go dictation does when you pause after every item. It
+counts the lists laid out exactly as expected — same lines, same numbers or bullets — and
+an error rate where line breaks, item numbers and bullets count as words:
 
 ```sh
 python3 bench/lists/measure.py -v

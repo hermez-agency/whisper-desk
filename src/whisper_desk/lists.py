@@ -1,4 +1,4 @@
-"""Numbered lists said aloud: "un, des œufs, deux, du lait" is written as a list."""
+"""Lists said aloud: "un, des œufs, deux, du lait" or "tiret, du pain" is written as a list."""
 
 from __future__ import annotations
 
@@ -45,7 +45,31 @@ _FRENCH_WORDS = {
     "le", "la", "les", "des", "du", "de", "et", "à", "je", "il", "on", "nous", "vous",
     "pour", "est", "sont", "faut", "choses", "voici", "points", "étapes",
 }
-_ITEM_LINE = re.compile(r"(?:^|\n)(?P<number>[0-9]+)\. [^\n]*$")
+# Words said to open a bulleted item. "Tiret" and "puce" are the French names of
+# the sign; "bullet point" and "dash" the English ones.
+_BULLETS = ("bullet points", "bullet point", "bullets", "bullet", "dash", "tirets", "tiret",
+            "puces", "puce")
+# How Whisper writes "tiret" as often as not — the same sound, but verbs too:
+# an item only right after a pause ("Pour demain, tirez le budget"), never in a
+# sentence ("il faut tirer la porte").
+_HEARD_BULLETS = ("tirez", "tirer", "tirée", "tiré")
+_BULLET_FRENCH = {"tirets", "tiret", "puces", "puce"} | set(_HEARD_BULLETS)
+_BULLET = re.compile(
+    rf"(?<![\w'’-])(?P<word>(?i:{'|'.join(_BULLETS + _HEARD_BULLETS)}))(?![\w'’-])"
+    r"(?P<pause>\s*[,.:](?![0-9]))?"
+    # The dash Whisper writes itself for "tiret" or "dash", where a sentence opens:
+    # one inside a sentence sets a clause apart ("le projet – en retard – sera…").
+    r"|(?:\A|(?<=[.!?:] )|(?<=\n))(?P<glyph>[-–—])(?= )"
+)
+# Words that make the bullet word a noun: "un tiret", "the bullet", "a dash of salt".
+_DETERMINERS = {
+    "le", "la", "les", "l", "un", "une", "des", "du", "de", "d", "ce", "cette", "ces",
+    "mon", "ma", "mes", "ton", "ta", "tes", "son", "sa", "ses", "notre", "nos", "votre",
+    "vos", "leur", "leurs", "chaque", "quel", "quelle", "the", "a", "an", "this", "that",
+    "these", "those", "my", "your", "his", "her", "its", "our", "their", "each", "every",
+    "no", "any", "some", "one",
+}
+_ITEM_LINE = re.compile(r"(?:^|\n)(?:(?P<number>[0-9]+)\.|(?P<bullet>-)) [^\n]*$")
 _SENTENCE_END = re.compile(r"(?:[.!?]|(?=\n))\s+(?=\S)")
 
 
@@ -131,11 +155,11 @@ def _capital(text: str) -> str:
     return text[:1].upper() + text[1:]
 
 
-def _french(text: str, markers: list[re.Match[str]]) -> bool:
-    for marker in markers:
-        word = (marker["number"] or marker["word"]).lower()
-        if not word.isdigit():
-            return word in _FRENCH
+def _french(text: str, words: list[str]) -> bool:
+    """Whether the list is said in French, from its markers or else its words."""
+    for word in words:
+        if word and not word.isdigit():
+            return word in _FRENCH or word in _BULLET_FRENCH
     words = set(re.findall(r"\w+", text.lower()))
     return bool(words & _FRENCH_WORDS or re.search(r"[àâçéèêëîïôûù]", text, re.I))
 
@@ -143,7 +167,52 @@ def _french(text: str, markers: list[re.Match[str]]) -> bool:
 def _continued(before: str) -> int:
     """The number of the list item `before` ends on, 0 if it ends on none."""
     line = _ITEM_LINE.search(before)
-    return int(line["number"]) if line else 0
+    return int(line["number"]) if line and line["number"] else 0
+
+
+def _bulleted(before: str) -> bool:
+    """Whether `before` ends on a bulleted item."""
+    line = _ITEM_LINE.search(before)
+    return bool(line and line["bullet"])
+
+
+def _bullet_markers(text: str, opening: bool = False) -> list[re.Match[str]]:
+    """The bullets said in the text.
+
+    A bullet word is no bullet after a determiner ("un tiret", "the bullet");
+    a verb Whisper writes for "tiret" is one only after a pause, as is any bullet
+    word when `opening` asks whether the text may open a list.
+    """
+    found = []
+    for match in _BULLET.finditer(text):
+        word = (match["word"] or "").lower()
+        if word:
+            words = re.findall(r"[\w'’]+", text[:match.start()])
+            if words and words[-1].lower().rstrip("'’") in _DETERMINERS:
+                continue
+            if (opening or word in _HEARD_BULLETS) and not _boundary(text, match.start()):
+                continue
+            # "Tirez la porte, puis tirez le verrou": a verb again, not an item.
+            if word in _HEARD_BULLETS and words and words[-1].lower() in _LINKS - {"et", "and"}:
+                continue
+        found.append(match)
+    return found
+
+
+def _bullets(text: str, bulleted: bool = False) -> list[re.Match[str]]:
+    """The bullets that lay the text out as a list, each with its item said.
+
+    Two at least, or one at the text's start when `bulleted` says the text goes
+    on with a bulleted list already inserted.
+    """
+    markers = _bullet_markers(text)
+    goes_on = bulleted and markers and not text[:markers[0].start()].strip(" ,")
+    if len(markers) < 2 and not goes_on:
+        return []
+    ends = [m.start() for m in markers[1:]] + [len(text)]
+    if all(re.search(r"\w", _clean(text[m.end():end])) for m, end in zip(markers, ends)):
+        return markers
+    return []
 
 
 def _continuation(text: str, last: int) -> list[re.Match[str]]:
@@ -155,12 +224,13 @@ def _continuation(text: str, last: int) -> list[re.Match[str]]:
 
 
 def apply(text: str, before: str = "") -> str:
-    """The text with a numbered list said aloud written as one.
+    """The text with a list said aloud, numbered or bulleted, written as one.
 
     `before` is what the dictation already inserted: a list it ends on goes on
-    with the next number, and a sentence that is no item leaves it on a new line.
+    with the next item, and a sentence that is no item leaves it on a new line.
     """
     last = _continued(before)
+    bulleted = _bulleted(before)
     markers = _continuation(text, last)
     if not markers:
         markers = _sequence(text, 1)
@@ -168,14 +238,25 @@ def apply(text: str, before: str = "") -> str:
             markers = []
         elif last:
             last = 0
-    if not markers:
-        if last and text[:1].isupper():
-            return "\n" + text
-        return text
+    if markers:
+        labels = [f"{last + number}." for number in range(1, len(markers) + 1)]
+        words = [(m["number"] or m["word"]).lower() for m in markers]
+        return _write(text, markers, labels, words, before)
+    markers = _bullets(text, bulleted)
+    if markers:
+        words = [(m["word"] or "").lower() for m in markers]
+        return _write(text, markers, ["-"] * len(markers), words, before)
+    if (last or bulleted) and text[:1].isupper():
+        return "\n" + text
+    return text
 
+
+def _write(text: str, markers: list[re.Match[str]], labels: list[str], words: list[str],
+           before: str) -> str:
+    """The text laid out as a list, one item per line after its label."""
     intro = text[:markers[0].start()].strip().rstrip(",;")
     if intro and intro[-1] not in ".:!?":
-        intro += (" :" if _french(intro, markers) else ":")
+        intro += (" :" if _french(intro, words) else ":")
     ends = [m.start() for m in markers[1:]] + [len(text)]
     items = [text[m.end():end] for m, end in zip(markers, ends)]
     rest = ""
@@ -183,10 +264,7 @@ def apply(text: str, before: str = "") -> str:
     if sentence_end:
         rest = items[-1][sentence_end.end():].strip()
         items[-1] = items[-1][:sentence_end.end()]
-    lines = [
-        f"{last + number}. {_capital(_clean(item))}" for number, item in enumerate(items, 1)
-    ]
-    out = "\n".join(lines)
+    out = "\n".join(f"{label} {_capital(_clean(item))}" for label, item in zip(labels, items))
     if intro:
         out = intro + "\n" + out
     elif before and not before.endswith("\n"):
@@ -200,7 +278,15 @@ def opens(text: str, before: str = "") -> bool:
     """Whether the text may be the start of a list whose next item is yet to come."""
     if _continuation(text, _continued(before)) or len(_sequence(text, 1)) >= 2:
         return False
-    return any(value == 1 for value, _, _ in _markers(text, sure=True))
+    if _bullets(text, _bulleted(before)):
+        return False
+    return (any(value == 1 for value, _, _ in _markers(text, sure=True))
+            or bool(_bullet_markers(text, opening=True)))
+
+
+def _bare(text: str) -> bool:
+    """Whether the text is only a list marker, its item yet to be said."""
+    return not re.search(r"\w", _BULLET.sub("", text)) or not re.search(r"\w", _MARKER.sub("", text))
 
 
 class Pending:
@@ -208,7 +294,8 @@ class Pending:
 
     The as-you-go dictation inserts each sentence after a short pause: "un, des
     œufs" would be at the cursor before "deux, du lait" says it was a list. A
-    sentence that may open one waits for the next, and no longer.
+    sentence that may open one waits for the next, and no longer — a bullet or
+    a number said alone before a pause ("Bullet.") is no sentence of its own.
     """
 
     MAX_HELD = 2
@@ -220,7 +307,8 @@ class Pending:
         """What to insert now that `text` was said, None while it is held back."""
         self.held.append(text)
         said = join(self.held)
-        if opens(said, before) and len(self.held) < self.MAX_HELD:
+        sentences = [held for held in self.held if not _bare(held)]
+        if opens(said, before) and len(sentences) < self.MAX_HELD:
             return None
         self.held = []
         return apply(said, before)

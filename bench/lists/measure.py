@@ -1,4 +1,4 @@
-"""Numbered lists said aloud, before and after they are written as lists.
+"""Numbered and bulleted lists said aloud, before and after they are written as lists.
 
     python3 bench/lists/measure.py              # on the written sentences
     python3 bench/lists/measure.py --audio      # through faster-whisper
@@ -6,7 +6,7 @@
 Two ways each recording reaches the rules: whole, as when the as-you-go dictation
 is off, and cut after each sentence, as the as-you-go dictation does when the
 speaker pauses after every item. Two figures: the lists laid out exactly as
-expected (same lines, same numbers), and the error rate on words, marks, line
+expected (same lines, same numbers or bullets), and the error rate on words, marks, line
 breaks and item numbers. --audio needs the whisper-desk venv (whisper-desk's own
 Python) and the recordings next to this file; the models are those already
 downloaded. "Before" is the text whisper-desk wrote until now, corrections,
@@ -37,12 +37,12 @@ def corpus() -> list[dict[str, str]]:
 
 
 def tokens(text: str) -> list[str]:
-    return re.findall(r"\n|[0-9]+\.(?= )|[\w'’-]+|[:?!]", text.lower())
+    return re.findall(r"\n|[0-9]+\.(?= )|(?m:^-(?= ))|[\w'’-]+|[:?!]", text.lower())
 
 
 def layout(text: str) -> list[str]:
-    """Each line reduced to its item number, or to a dot when it is no item."""
-    return [m[1] if (m := re.match(r"([0-9]+)\. ", line)) else "·" for line in text.split("\n")]
+    """Each line reduced to its item number or bullet, or to a dot when it is no item."""
+    return [m[1] if (m := re.match(r"([0-9]+\.|-) ", line)) else "·" for line in text.split("\n")]
 
 
 def distance(reference: list[str], hypothesis: list[str]) -> int:
@@ -105,6 +105,9 @@ def report(label: str, raw: dict[str, str], verbose: bool) -> None:
         ("lists fr", lambda r: r["id"].startswith("fr")),
         ("lists en", lambda r: r["id"].startswith("en")),
         ("controls", lambda r: r["id"].startswith("ctl")),
+        ("bullets fr", lambda r: r["id"].startswith("bfr")),
+        ("bullets en", lambda r: r["id"].startswith("ben")),
+        ("bullet controls", lambda r: r["id"].startswith("bctl")),
     )
     for cut, split in (("whole", lambda t: [t]), ("by sentence", sentences)):
         for group, keep in groups:
@@ -114,10 +117,10 @@ def report(label: str, raw: dict[str, str], verbose: bool) -> None:
             laid_before = sum(layout(e) == layout(h) for e, h in before)
             laid = sum(layout(e) == layout(h) for e, h in after)
             exact = sum(tokens(e) == tokens(h) for e, h in after)
-            line = (f"{label:<26} {cut:<11} {group:<9} errors {error_rate(before):6.1%} -> "
+            line = (f"{label:<26} {cut:<11} {group:<15} errors {error_rate(before):6.1%} -> "
                     f"{error_rate(after):6.1%}   laid out {laid_before} -> {laid}/{len(chosen)}"
                     f"   exact {exact}/{len(chosen)}")
-            if group == "controls":
+            if "controls" in group:
                 changed = sum(b != a for (_, b), (_, a) in zip(before, after))
                 line += f"   changed {changed}/{len(chosen)}"
             print(line)
