@@ -49,6 +49,16 @@ class StorageTest(HistoryCase):
             {"date": "2026-09-29T10:00:00", "text": "hello there", "duration": 3.2, "model": "small"},
         )
 
+    def test_the_app_dictated_into_is_kept(self):
+        history.append("hello there", app="Slack", now=NOW)
+        self.assertEqual(json.loads(history.path().read_text(encoding="utf-8"))["app"], "Slack")
+        self.assertEqual(history.load()[0].app, "Slack")
+
+    def test_an_unknown_app_writes_nothing(self):
+        history.append("hello there", now=NOW)
+        self.assertNotIn("app", json.loads(history.path().read_text(encoding="utf-8")))
+        self.assertIsNone(history.load()[0].app)
+
     def test_nothing_to_record(self):
         self.assertIsNone(history.append("   "))
         self.assertFalse(history.path().exists())
@@ -208,7 +218,8 @@ class CommandTest(HistoryCase):
         super().setUp()
         history.append("We should add pictures", duration=6.4, model="small",
                        now=NOW - timedelta(hours=1))
-        history.append("Résumé de la réunion", duration=2.0, model="small", now=NOW)
+        history.append("Résumé de la réunion", duration=2.0, model="small", now=NOW,
+                       app="Thunderbird")
 
     def run_cli(self, *argv: str) -> tuple[int, str]:
         out = io.StringIO()
@@ -223,6 +234,7 @@ class CommandTest(HistoryCase):
         self.assertTrue(lines[-1].lstrip().startswith("1 "))
         self.assertIn("Résumé de la réunion", lines[-1])
         self.assertIn("6.4 s", lines[0])
+        self.assertIn("Thunderbird", lines[-1])
 
     def test_search(self):
         _code, out = self.run_cli("resume")

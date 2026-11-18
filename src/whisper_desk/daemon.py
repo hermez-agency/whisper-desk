@@ -118,6 +118,13 @@ class Session:
         finally:
             self.app_known.set()
 
+    def _wants_app(self) -> bool:
+        """For its style, or for the history to say where each dictation went."""
+        config = self.service.config
+        return bool(config.get("app_styles")) or (
+            not self.capture and bool(config["output"]["history"])
+        )
+
     def _on_level(self, level: float, bands: list[float]) -> None:
         self.overlay.set_level(level, bands)
 
@@ -133,7 +140,7 @@ class Session:
 
     def run(self) -> None:
         try:
-            if self.service.config.get("app_styles"):
+            if self._wants_app():
                 # Before anything else: the app in front is the one the
                 # shortcut was pressed in — it takes a moment under WSL.
                 threading.Thread(target=self._find_app, daemon=True).start()
@@ -199,11 +206,14 @@ class Session:
         settings = self.service.config["output"]
         if self.capture or not self.parts or not settings["history"]:
             return
+        # Asked at the shortcut: a dictation over by now has long had its answer.
+        self.app_known.wait(focus.TIMEOUT_SECONDS)
         history.append(
             punctuation.join(self.parts),
             duration=self.listened,
             model=self.service.transcriber.model_name,
             keep_days=int(settings["history_days"]),
+            app=focus.label(self.app),
         )
 
     def _wait_for_model(self) -> bool:
@@ -418,7 +428,9 @@ class Session:
     def _render(self, text: str, full_stop: str, before: str) -> tuple[str, str, str]:
         """A sentence as it is typed after `before`: its spacing, its text, the full stop held back."""
         config = self.service.config
-        self.app_known.wait(focus.TIMEOUT_SECONDS)
+        if config.get("app_styles"):
+            # Only a style per app is worth holding a sentence back for.
+            self.app_known.wait(focus.TIMEOUT_SECONDS)
         writing = style.resolve(config, self.app)
         # Before the snippets: their text is written as it was saved.
         if writing == "very_casual":

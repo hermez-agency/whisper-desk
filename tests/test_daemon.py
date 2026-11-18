@@ -684,6 +684,38 @@ class StyleTest(DictationCase):
             self.dictate("formal", [b"See you tomorrow.", b"Bye."])
         self.assertEqual(self.delivered, ["See you tomorrow.", " Bye."])
 
+    def test_the_history_says_which_app_the_dictation_went_to(self):
+        recorded: list[dict] = []
+        with mock.patch.object(daemon.history, "append",
+                               lambda text, **kwargs: recorded.append(kwargs)), \
+                mock.patch.object(daemon.focus, "focused_app", lambda: ["slack", "Slack"]), \
+                mock.patch.dict(CONFIG, {"output": {**CONFIG["output"], "history": True,
+                                                    "history_days": 0}}):
+            self.dictate("formal", [b"See you tomorrow."])
+        self.assertEqual([entry["app"] for entry in recorded], ["Slack"])
+
+    def test_a_slow_desktop_holds_no_sentence_back_without_a_style_per_app(self):
+        answer = threading.Event()
+
+        def focused_app():
+            answer.wait(TIMEOUT)
+            return ["code"]
+
+        recorded: list[dict] = []
+        with mock.patch.object(daemon.history, "append",
+                               lambda text, **kwargs: recorded.append(kwargs)), \
+                mock.patch.object(daemon.focus, "focused_app", focused_app), \
+                mock.patch.dict(CONFIG, {"output": {**CONFIG["output"], "history": True,
+                                                    "history_days": 0}}):
+            self.recorder.segments[:] = [b"See you tomorrow."]
+            with self.service() as service:
+                self.listening(service)
+                self.assertTrue(wait_until(lambda: self.delivered == ["See you tomorrow."]))
+                service.toggle()
+                answer.set()
+                self.assertTrue(wait_until(lambda: service.session is None))
+        self.assertEqual([entry["app"] for entry in recorded], ["code"])
+
     def test_no_app_is_asked_for_without_a_style_per_app(self):
         with mock.patch.object(daemon.focus, "focused_app", lambda: self.fail("asked")):
             self.dictate("casual", [b"See you tomorrow."])

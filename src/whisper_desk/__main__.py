@@ -130,10 +130,11 @@ def cmd_config(args: argparse.Namespace) -> int:
 
 
 def _history_line(number: int, entry, width: int | None) -> str:
-    """One dictation on one line: number, date, duration, model, then the text."""
+    """One dictation on one line: number, date, duration, model, app, then the text."""
     stamp = entry.date.replace("T", " ")[:16]
     duration = f"{entry.duration:5.1f} s" if entry.duration is not None else " " * 7
-    head = f"{number:>4}  {stamp}  {duration}  {(entry.model or '-'):<14}  "
+    app = (entry.app or "-")[:12]
+    head = f"{number:>4}  {stamp}  {duration}  {(entry.model or '-'):<14}  {app:<12}  "
     text = " ".join(entry.text.split())
     if width and len(head) + len(text) > width:
         text = text[: max(width - len(head) - 1, 10)] + "…"

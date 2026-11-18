@@ -456,7 +456,7 @@ its X11 class (`slack`, `firefox`, `code`; `xprop WM_CLASS` and a click on the w
 it), its Sway or Hyprland app id, its name on macOS (`Slack`), its process on Windows under
 WSL (`WINWORD`, `chrome`); case, spaces and dashes do not matter, and the journal of the
 service says *Application in front: …* at each dictation. It is asked only when the list
-holds an app. GNOME and KDE on Wayland tell no program which window is in front: there, only
+holds an app or the history is on (the history notes it, see below). GNOME and KDE on Wayland tell no program which window is in front: there, only
 the apps that run through X11 (XWayland) are recognised, and the others take `style`. A
 browser is one app: Gmail and Slack in two tabs of Firefox take Firefox's style.
 
@@ -555,7 +555,7 @@ whisper-desk status     # daemon state, loaded model, GPU or CPU
 whisper-desk doctor     # full diagnostic
 whisper-desk update     # update the installation (--check to compare only)
 whisper-desk history    # past dictations — see below
-whisper-desk stats      # words dictated, speed, days in a row — see below
+whisper-desk stats      # words dictated, speed, days in a row, top apps — see below
 whisper-desk settings   # the settings window — see Configuration
 whisper-desk welcome    # the first-launch window, again
 whisper-desk tray       # the tray icon — see below
@@ -582,11 +582,13 @@ everything about a dictation, and `whisper-desk status` tells the service's stat
 
 ### History
 
-Every dictation is kept — date, listening time, model and text — in
+Every dictation is kept — date, listening time, model, the app it went to and text — in
 `~/.local/state/whisper-desk/history.jsonl`, one JSON line per dictation. A text lost on
 the way (a window that lost the focus, an insertion that failed) can be found again,
 copied or typed again. The `history.log` of earlier versions is still read, and folded
-into the new file the first time the history is rewritten.
+into the new file the first time the history is rewritten. The app is the one in front
+when the shortcut was pressed, named as for a style per app (see *Styles*); where the
+desktop does not say — a native window under GNOME or KDE on Wayland — none is noted.
 
 ```sh
 whisper-desk history                  # the 20 latest, numbered from 1 (the latest)
@@ -644,13 +646,16 @@ Dictations  340 over 25 days, since 2026-08-19
 Words       4,948 — 112 today, 1,038 these 7 days
 Speed       148 words per minute, over 33 min of dictation
 Streak      3 days in a row (best: 9 days)
+Top apps    Slack 46 %, Thunderbird 31 %, Code 12 %
 ```
 
 The speed counts only the dictations whose listening time was recorded (not those of
 the old `history.log`), pauses included; a day without dictation breaks the streak once
 it is over. `--json` gives the same figures as one JSON object, for a script or a status
 bar. A dictation deleted, purged by `--keep-days` or never kept (`history = false`) is
-not counted.
+not counted. **Top apps** gives the three apps you dictate into most, by their share of the
+words of the dictations whose app is known (`--json` lists them all); it appears once the
+history holds one, and dictations recorded before this version have none.
 
 ---
 
