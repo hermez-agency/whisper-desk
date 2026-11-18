@@ -6,7 +6,7 @@ PyGObject) and nothing else: it knows neither the history file nor the
 daemon. It reads what to show on stdin and says what the user asked for on
 stdout, one JSON object per line:
 
-    stdin   {"entries": [{"id", "date", "duration", "model", "text"}, ...],
+    stdin   {"entries": [{"id", "date", "duration", "model", "app", "text"}, ...],
              "keep_days": 30, "hint": "Super+J", "status": "Copied"}
     stdout  {"action": "copy" | "insert" | "delete", "id": 3, "date": "..."}
             {"action": "correct", "id": 3, "date": "...", "text": "...", "learn": true}
@@ -92,6 +92,8 @@ class Row(Gtk.ListBoxRow):
         meta.pack_start(Gtk.Label(label=when(entry["date"])), False, False, 0)
         if entry.get("duration") is not None:
             meta.pack_start(Gtk.Label(label=f"{entry['duration']:.1f} s"), False, False, 0)
+        if entry.get("app"):
+            meta.pack_start(Gtk.Label(label=entry["app"]), False, False, 0)
         if entry.get("model"):
             model = Gtk.Label(label=entry["model"])
             model.get_style_context().add_class("model")

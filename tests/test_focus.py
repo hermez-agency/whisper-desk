@@ -35,6 +35,18 @@ class KeyTest(unittest.TestCase):
         self.assertEqual(focus.key("--"), "")
 
 
+class LabelTest(unittest.TestCase):
+    def test_the_capitalised_name_is_the_one_shown(self):
+        self.assertEqual(focus.label(["google-chrome", "Google-chrome"]), "Google-chrome")
+        self.assertEqual(focus.label(["code"]), "code")
+
+    def test_a_reverse_dns_id_is_shown_by_its_last_part(self):
+        self.assertEqual(focus.label(["org.gnome.TextEditor", "TextEditor"]), "TextEditor")
+
+    def test_an_unknown_app_has_no_name(self):
+        self.assertIsNone(focus.label([]))
+
+
 class ParseTest(unittest.TestCase):
     def test_x11_class(self):
         self.assertEqual(focus.parse_xprop_class('WM_CLASS(STRING) = "slack", "Slack"\n'), ["slack"])

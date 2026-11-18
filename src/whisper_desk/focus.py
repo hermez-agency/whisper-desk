@@ -42,6 +42,16 @@ def key(name: str) -> str:
     return re.sub(r"[\W_]+", "", name)
 
 
+def label(names: list[str]) -> str | None:
+    """The name an app is shown under: "Slack" rather than "slack", "TextEditor" rather than its id."""
+    names = [name for name in names if not (name.count(".") >= 2 and " " not in name)] or names
+    if not names:
+        return None
+    # X11 and Sway give the instance ("google-chrome") before the class
+    # ("Google-chrome"): the capitalised one is the one written for people.
+    return next((name for name in names if name[:1].isupper()), names[0])
+
+
 def _run(command: list[str]) -> str | None:
     try:
         result = subprocess.run(command, capture_output=True, timeout=TIMEOUT_SECONDS)

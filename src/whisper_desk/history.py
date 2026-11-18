@@ -1,7 +1,7 @@
 """Dictation history: one JSON line per dictation, searchable, reinsertable.
 
 ~/.local/state/whisper-desk/history.jsonl holds the date, the duration, the
-model and the text of each dictation. The old history.log — one sentence per
+model, the application dictated into and the text of each dictation. The old history.log — one sentence per
 line, "date<TAB>text" — is still read; it is folded into the new file the
 first time the history is rewritten (a deletion, a purge), then removed: a
 copy left aside would keep what the user asked to delete.
@@ -34,6 +34,7 @@ class Entry:
     text: str
     duration: float | None = None   # seconds of listening
     model: str | None = None
+    app: str | None = None          # the application in front, when the desktop said
 
     @property
     def when(self) -> datetime | None:
@@ -91,11 +92,20 @@ def _read_lines() -> list[Entry]:
                 text=str(raw["text"]),
                 duration=float(raw["duration"]) if raw.get("duration") is not None else None,
                 model=str(raw["model"]) if raw.get("model") else None,
+                app=str(raw["app"]) if raw.get("app") else None,
             ))
         except (ValueError, KeyError, TypeError):
             # A line cut short by a crash costs that line, not the history.
             continue
     return entries
+
+
+def _line(entry: Entry) -> str:
+    fields = asdict(entry)
+    # Most desktops under Wayland name no app: no "app": null on every line.
+    if fields["app"] is None:
+        del fields["app"]
+    return json.dumps(fields, ensure_ascii=False) + "\n"
 
 
 def load() -> list[Entry]:
@@ -106,7 +116,8 @@ def load() -> list[Entry]:
 
 
 def append(text: str, duration: float | None = None, model: str | None = None,
-           keep_days: int = 0, now: datetime | None = None) -> Entry | None:
+           keep_days: int = 0, now: datetime | None = None,
+           app: str | None = None) -> Entry | None:
     """Records a dictation; older ones go if the history keeps only `keep_days`."""
     text = text.strip()
     if not text:
@@ -117,10 +128,11 @@ def append(text: str, duration: float | None = None, model: str | None = None,
         text=text,
         duration=round(duration, 1) if duration is not None else None,
         model=model,
+        app=app or None,
     )
     try:
         with _locked(), path().open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(asdict(entry), ensure_ascii=False) + "\n")
+            handle.write(_line(entry))
     except OSError as error:
         logger.warning("History not written: %s", error)
         return None
@@ -138,7 +150,7 @@ def save(entries: list[Entry]) -> None:
     temporary = path().with_suffix(".jsonl.tmp")
     with temporary.open("w", encoding="utf-8") as handle:
         for entry in entries:
-            handle.write(json.dumps(asdict(entry), ensure_ascii=False) + "\n")
+            handle.write(_line(entry))
     # Written aside then swapped in: a crash leaves the old file, not half of it.
     os.replace(temporary, path())
     # Its entries now live in the new file, which was just written in full.

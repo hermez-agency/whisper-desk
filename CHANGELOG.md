@@ -4,6 +4,16 @@
 
 ### Added
 
+- **The app each dictation went to, and your top apps** (Wispr Flow's "top apps" in its
+  insights): the history now notes the app in front when the shortcut was pressed — shown
+  in the history window next to the listening time, and in `whisper-desk history` after the
+  model — and `whisper-desk stats` ends on a **Top apps** line, *"Slack 46 %, Thunderbird
+  31 %, Code 12 %"*, the three apps with the most words dictated; `stats --json` lists them
+  all under `apps`. The app is asked as for a style per app (X11, Sway, Hyprland, macOS,
+  WSL), now also when the history is on, in the background: no sentence waits for it unless
+  a style per app needs it. Where the desktop does not say (a native window under GNOME or
+  KDE on Wayland), none is noted. "Slack" and "slack" count as one app. Nothing leaves the
+  machine; no new setting.
 - **Bulleted lists said aloud** (Wispr Flow's lists): *tiret* or *puce* said before each
   item — *bullet*, *bullet point* or *dash* in English — writes them as a bulleted list,
   one per line: *"Pour la réunion, tiret, le budget, tiret, le planning"* → "Pour la

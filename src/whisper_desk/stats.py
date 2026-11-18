@@ -1,4 +1,4 @@
-"""Usage statistics drawn from the history: words, speed, days in a row.
+"""Usage statistics drawn from the history: words, speed, days in a row, top apps.
 
 Wispr Flow counts on its servers; here the history already holds every
 dictation, so the figures are worked out from it on the spot, and nothing is
@@ -9,14 +9,23 @@ written with `history = false` — is not counted.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 
+from . import focus
 from .history import Entry
 
 # A mark said aloud ("?", "«", "—") stands alone between spaces, and is no word.
 WORD = re.compile(r"\w")
 WEEK = 7
+TOP_APPS = 3
+
+
+@dataclass
+class AppUsage:
+    name: str                       # as the latest dictation into it wrote it
+    dictations: int = 0
+    words: int = 0
 
 
 @dataclass
@@ -31,6 +40,9 @@ class Usage:
     timed_words: int = 0            # the words of those dictations
     streak: int = 0                 # days in a row, up to today or yesterday
     best_streak: int = 0
+    # Most words first; only the dictations whose app the desktop named.
+    apps: list[AppUsage] = field(default_factory=list)
+    app_words: int = 0              # the words of those dictations
 
     @property
     def words_per_minute(self) -> int | None:
@@ -64,10 +76,18 @@ def compute(entries: list[Entry], now: datetime | None = None) -> Usage:
     week_start = today - timedelta(days=WEEK - 1)
     usage = Usage()
     days: set[date] = set()
+    apps: dict[str, AppUsage] = {}
     for entry in entries:
         words = count_words(entry.text)
         usage.dictations += 1
         usage.words += words
+        if entry.app and focus.key(entry.app):
+            # "Slack" and "slack" are one app, under the name it was last seen by.
+            app = apps.setdefault(focus.key(entry.app), AppUsage(entry.app))
+            app.name = entry.app
+            app.dictations += 1
+            app.words += words
+            usage.app_words += words
         if entry.duration is not None and entry.duration > 0:
             usage.listened += entry.duration
             usage.timed_words += words
@@ -83,6 +103,8 @@ def compute(entries: list[Entry], now: datetime | None = None) -> Usage:
     usage.days = len(days)
     usage.first = min(days) if days else None
     usage.streak, usage.best_streak = _streaks(days, today)
+    # sorted() is stable: a tie goes to the app first dictated into.
+    usage.apps = sorted(apps.values(), key=lambda app: (-app.words, -app.dictations))
     return usage
 
 
@@ -114,7 +136,16 @@ def report(usage: Usage) -> list[str]:
         lines.append(f"Speed       {speed:,} words per minute, "
                      f"over {_duration(usage.listened)} of dictation")
     lines.append(f"Streak      {_days(usage.streak)} in a row (best: {_days(usage.best_streak)})")
+    if usage.apps:
+        shares = ", ".join(
+            f"{app.name} {_share(app.words, usage.app_words)}" for app in usage.apps[:TOP_APPS]
+        )
+        lines.append(f"Top apps    {shares}")
     return lines
+
+
+def _share(part: int, whole: int) -> str:
+    return f"{round(100 * part / whole)} %" if whole else "—"
 
 
 def as_dict(usage: Usage) -> dict:
@@ -130,4 +161,8 @@ def as_dict(usage: Usage) -> dict:
         "words_per_minute": usage.words_per_minute,
         "streak": usage.streak,
         "best_streak": usage.best_streak,
+        "apps": [
+            {"app": app.name, "dictations": app.dictations, "words": app.words}
+            for app in usage.apps
+        ],
     }

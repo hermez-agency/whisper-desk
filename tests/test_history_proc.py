@@ -21,7 +21,8 @@ class ControllerTest(HistoryCase):
     def setUp(self):
         super().setUp()
         history.append("an old dictation", duration=1.0, model="small", now=NOW - timedelta(days=60))
-        history.append("the one that got lost", duration=4.2, model="small", now=NOW)
+        history.append("the one that got lost", duration=4.2, model="small", now=NOW,
+                       app="Slack")
         self.copied: list[str] = []
         self.sent: list[tuple[str, dict]] = []
         self.reply: dict = {"inserting": True}
@@ -41,6 +42,7 @@ class ControllerTest(HistoryCase):
         self.assertEqual([entry["text"] for entry in snapshot["entries"]],
                          ["an old dictation", "the one that got lost"])
         self.assertEqual(snapshot["entries"][1]["duration"], 4.2)
+        self.assertEqual([entry["app"] for entry in snapshot["entries"]], [None, "Slack"])
         self.assertEqual(snapshot["keep_days"], 0)
         self.assertIn("+", snapshot["hint"])
 

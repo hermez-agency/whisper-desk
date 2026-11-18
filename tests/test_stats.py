@@ -21,9 +21,10 @@ from whisper_desk.history import Entry
 NOW = datetime(2026, 10, 24, 18, 0, 0)
 
 
-def entry(text: str, days_ago: int = 0, duration: float | None = None) -> Entry:
+def entry(text: str, days_ago: int = 0, duration: float | None = None,
+          app: str | None = None) -> Entry:
     when = NOW - timedelta(days=days_ago, hours=1)
-    return Entry(date=when.isoformat(timespec="seconds"), text=text, duration=duration)
+    return Entry(date=when.isoformat(timespec="seconds"), text=text, duration=duration, app=app)
 
 
 class CountWordsTest(unittest.TestCase):
@@ -82,6 +83,37 @@ class ComputeTest(unittest.TestCase):
     def test_an_unreadable_date_still_counts_its_words(self):
         usage = stats.compute([Entry(date="?", text="lost date"), entry("kept")], now=NOW)
         self.assertEqual((usage.dictations, usage.words, usage.days), (2, 3, 1))
+
+
+class TopAppsTest(unittest.TestCase):
+    def setUp(self):
+        self.usage = stats.compute([
+            entry("one two three", days_ago=2, app="slack"),
+            entry("four five six seven", app="Slack"),
+            entry("eight nine", app="firefox"),
+            entry("ten", app="Code"),
+            entry("eleven twelve", app="Thunderbird"),
+            entry("never counted for an app"),
+        ], now=NOW)
+
+    def test_most_words_first_one_app_whatever_its_spelling(self):
+        self.assertEqual(
+            [(app.name, app.dictations, app.words) for app in self.usage.apps],
+            [("Slack", 2, 7), ("firefox", 1, 2), ("Thunderbird", 1, 2), ("Code", 1, 1)],
+        )
+        self.assertEqual(self.usage.app_words, 12)
+
+    def test_the_line_shows_the_three_first_by_their_share(self):
+        self.assertEqual(stats.report(self.usage)[-1],
+                         "Top apps    Slack 58 %, firefox 17 %, Thunderbird 17 %")
+
+    def test_no_line_without_an_app_known(self):
+        lines = stats.report(stats.compute([entry("a b")], now=NOW))
+        self.assertFalse(any(line.startswith("Top apps") for line in lines))
+
+    def test_json(self):
+        self.assertEqual(stats.as_dict(self.usage)["apps"][0],
+                         {"app": "Slack", "dictations": 2, "words": 7})
 
 
 class ReportTest(unittest.TestCase):
