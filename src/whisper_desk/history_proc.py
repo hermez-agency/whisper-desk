@@ -1,6 +1,7 @@
 """Driving the history window (GTK3, system Python) from the command line.
 
-The window is a view: this side reads and rewrites the history, copies,
+The window is a view: this side reads and rewrites the history, works out
+the usage figures shown above it, copies,
 asks the daemon to type a text again, writes the purge setting, and adds
 the words a correction teaches to the vocabulary or the replacements.
 """
@@ -12,7 +13,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from . import config as config_module
-from . import history, hotkey, output, vocabulary, window_proc
+from . import history, hotkey, output, stats, vocabulary, window_proc
 
 WINDOW_SCRIPT = Path(__file__).with_name("history_window.py")
 
@@ -31,11 +32,12 @@ class HistoryController:
         self.send = send
 
     def snapshot(self, status: str = "") -> dict[str, Any]:
-        entries = [
-            {"id": index, **asdict(entry)} for index, entry in enumerate(history.load())
-        ]
+        loaded = history.load()
+        entries = [{"id": index, **asdict(entry)} for index, entry in enumerate(loaded)]
         message: dict[str, Any] = {
             "entries": entries,
+            # Worked out again on every answer: a deletion or a purge changes them.
+            "stats": stats.tiles(stats.compute(loaded)),
             "keep_days": int(self.config["output"]["history_days"]),
             "hint": hotkey.label(hotkey.resolve_binding(self.config)),
         }

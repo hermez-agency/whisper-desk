@@ -603,10 +603,14 @@ whisper-desk history --window         # the window below
 ```
 
 <p align="center">
-  <img src="docs/history-window.png" alt="The history window: search, copy, insert again, delete" width="560">
+  <img src="docs/history-window.png" alt="The history window: words, speed, streak and top app above the dictations to search, copy, insert again, delete" width="560">
 </p>
 
-The window lists the dictations newest first, with a search field (`Ctrl+F`), and for
+At the top, four figures sum up your use, as `whisper-desk stats` does (see *Statistics*):
+the words dictated (today and over 7 days), your words per minute, the days in a row, and
+the app you dictate into most with the next two; hover one for what it counts. They are
+worked out again after each correction or deletion, and stay hidden while the history is
+empty. Below them, the window lists the dictations newest first, with a search field (`Ctrl+F`), and for
 each one **Copy**, **Insert** — the window closes and the daemon types the text where
 your cursor was —, **Correct…** and a bin that asks for a second click. At the bottom,
 *Keep dictations* sets the automatic purge. It needs GTK3 for the system Python, like the
@@ -638,7 +642,8 @@ the command say which replacements were saved; remove one in **Settings** like a
 ### Statistics
 
 `whisper-desk stats` counts what you dictated, from the history and on this machine only
-— nothing is sent, nothing is stored besides:
+— nothing is sent, nothing is stored besides. The history window shows the same figures
+above the dictations:
 
 ```sh
 $ whisper-desk stats

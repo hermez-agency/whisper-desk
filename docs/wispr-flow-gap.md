@@ -27,7 +27,8 @@ backtrack after a pause, "Let's meet at 2… actually 3" on the features page (r
 you dictate into — personal messages, work messages, email, other (read again on 2026-11-16);
 bulleted lists, "Lists" on the features page and reviews showing Flow writing bullets (read on
 2026-11-17); top apps, "Insights" in the app as shown by its users' reviews, and the tracker's own
-left-to-do of 2026-11-16 (read on 2026-11-18).
+left-to-do of 2026-11-16 (read on 2026-11-18); insights shown in the app, above the history, as its
+users' reviews show its home screen (read on 2026-11-19).
 
 **Status**: done · partial · missing · out of scope.
 **Effort**: S (a session) · M (a few sessions) · L (to split into several gaps).
@@ -59,7 +60,7 @@ left-to-do of 2026-11-16 (read on 2026-11-18).
 | **History** of dictations | `whisper-desk history` and its window: search, copy, insert again, purge; each dictation names the app it went to (in PR) | done | — | — |
 | **Settings** | `whisper-desk settings`: every key of `config.toml`, in eight tabs (Dictation, Microphone, Shortcut and output, Words, Overlay, History, Advanced, Updates), each with its help and default, **Restore defaults** per section, invalid values refused before saving, keyboard only; `tests/test_settings_schema.py` fails when a key has no setting | done | — | — |
 | **Overlay** | X11 overlay: live level, sentence transcribed, states, cancel | done | — | — |
-| **Usage dashboard** — words dictated, speed, streak, top apps | `whisper-desk stats` (`stats.py`): dictations, words in all, today and over 7 days, words per minute, days in a row, worked out from the history (#32); top apps by share of the words, from the app the history now notes (in PR). Apps only where the desktop names the one in front; no rank among users | partial | low | S |
+| **Usage dashboard** — words dictated, speed, streak, top apps | `whisper-desk stats` (`stats.py`): dictations, words in all, today and over 7 days, words per minute, days in a row, worked out from the history (#32); top apps by share of the words, from the app the history now notes (#49); the same figures in four tiles above the history window (in PR). Apps only where the desktop names the one in front; no chart over time, no rank among users | partial | low | S |
 | **Mobile apps, cross-device sync** | — | out of scope (account, cloud) | — | — |
 | **Shared team dictionary and snippets** | — | out of scope (account, cloud) | — | — |
 | **Notetaker** — meeting notes | — | out of scope for now (another product) | — | — |
@@ -357,7 +358,7 @@ left-to-do of 2026-11-16 (read on 2026-11-18).
   "Pusse", *tiret* as "tirent" or "Thierry", and dashes Whisper writes inside a sentence
   ("site – une page de tarif – un blog"). Left to do: lists guessed without a word said (Wispr
   Flow does it from the content — a local model), nested lists.
-- 2026-11-18 — **Top apps** (in PR, partial): the left-to-do of #47 — "the app recorded in the
+- 2026-11-18 — **Top apps** (merged, #49, partial): the left-to-do of #47 — "the app recorded in the
   history, and Wispr Flow's top apps in `stats`". The app in front at the shortcut
   (`focus.py`, as for a style per app) is now asked whenever the history is on and saved
   with the dictation, under the name meant for people (`focus.label`: the X11 class
@@ -374,3 +375,16 @@ left-to-do of 2026-11-16 (read on 2026-11-18).
   before have none, a browser is one app whatever its tab. Left to do: a statistics view in
   a window (Wispr Flow shows its insights in the app, `stats` is a command only), the
   history searchable by app, a GNOME Shell extension naming the window in front.
+- 2026-11-19 — **Statistics in the history window** (in PR, partial, an interface day): the
+  left-to-do of #49 — "a statistics view in a window (Wispr Flow shows its insights in the
+  app, `stats` is a command only)". Four tiles now sit between the search field and the
+  dictations of `whisper-desk history --window`: words dictated (today, over 7 days), words
+  per minute (over how much dictation), days in a row (best run), the top app with its share
+  and the next two. Worded on the venv side (`stats.tiles`), the window only lays them out
+  (`history_window.py`, the Hermez look: orange figures in Bricolage Grotesque, stone greys);
+  sent with every answer, so a correction or a deletion changes them at once; hidden while
+  the history is empty; a tooltip per tile says what it counts. No new key in `config.toml`.
+  A feature, no quality measure: 6 new tests; before/after screenshots of the window (the
+  new one in `docs/history-window.png`). Differences with Wispr Flow: no chart of the words
+  over the weeks, no milestones. Left to do: a chart over time, the history searchable by
+  app, a GNOME Shell extension naming the window in front.

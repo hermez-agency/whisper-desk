@@ -4,6 +4,14 @@
 
 ### Added
 
+- **Your usage at a glance in the history window** (Wispr Flow opens on its insights): four
+  figures now sit above the dictations — the words dictated (*"112 today · 397 in 7
+  days"*), your words per minute, the days in a row with your best run, and the app you
+  dictate into most with the next two (*"Thunderbird, top app · 48 %"*, *"Slack 40 % · Code
+  8 %"*). The same figures as `whisper-desk stats`, worked out from the history on this
+  machine, again after each correction or deletion; a tooltip says what each one counts,
+  and they stay hidden while the history is empty. The screenshot
+  (`docs/history-window.png`) shows them. No new setting.
 - **The app each dictation went to, and your top apps** (Wispr Flow's "top apps" in its
   insights): the history now notes the app in front when the shortcut was pressed — shown
   in the history window next to the listening time, and in `whisper-desk history` after the
