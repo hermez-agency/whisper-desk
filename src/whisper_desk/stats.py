@@ -148,6 +148,49 @@ def _share(part: int, whole: int) -> str:
     return f"{round(100 * part / whole)} %" if whole else "—"
 
 
+def tiles(usage: Usage) -> list[dict[str, str]]:
+    """The figures as the history window shows them, one tile each, worded already.
+
+    Each tile has a `value` set large, a `label` under it, a `detail` in grey
+    and a `tooltip` that says it all in a sentence. No dictation, no tile.
+    """
+    if not usage.dictations:
+        return []
+    result = [{
+        "value": f"{usage.words:,}",
+        "label": "word dictated" if usage.words == 1 else "words dictated",
+        "detail": f"{usage.words_today:,} today · {usage.words_week:,} in {WEEK} days",
+        "tooltip": f"{usage.words:,} words over {usage.dictations:,} dictations"
+                   + (f", since {usage.first.isoformat()}" if usage.first else ""),
+    }]
+    speed = usage.words_per_minute
+    result.append({
+        "value": "—" if speed is None else f"{speed:,}",
+        "label": "words per minute",
+        "detail": "no listening time yet" if speed is None
+                  else f"over {_duration(usage.listened)} of dictation",
+        "tooltip": "How fast you dictate: the words, over the time spent speaking",
+    })
+    result.append({
+        "value": _days(usage.streak),
+        "label": "in a row",
+        "detail": f"best: {_days(usage.best_streak)}",
+        "tooltip": "Days with at least one dictation, up to today or yesterday",
+    })
+    if usage.apps:
+        top, others = usage.apps[0], usage.apps[1:TOP_APPS]
+        result.append({
+            "value": top.name,
+            "label": f"top app · {_share(top.words, usage.app_words)}",
+            "detail": (" · ".join(
+                f"{app.name} {_share(app.words, usage.app_words)}" for app in others
+            )) if others else "the only app so far",
+            "tooltip": "The apps you dictate into most, by share of the words — "
+                       "counted only where the desktop names the app in front",
+        })
+    return result
+
+
 def as_dict(usage: Usage) -> dict:
     """The same figures for a script or a status bar."""
     return {

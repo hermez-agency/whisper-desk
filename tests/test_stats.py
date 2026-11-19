@@ -138,6 +138,48 @@ class ReportTest(unittest.TestCase):
         self.assertEqual(stats._duration(125), "2 min")
 
 
+class TilesTest(unittest.TestCase):
+    """The figures above the history window, worded on this side of the pipe."""
+
+    def test_no_dictation_no_tile(self):
+        self.assertEqual(stats.tiles(stats.compute([], now=NOW)), [])
+
+    def test_words_speed_streak_and_top_app(self):
+        usage = stats.compute([
+            entry("one two three four five six", days_ago=1, duration=3.0, app="Slack"),
+            entry("seven eight", duration=1.0, app="Code"),
+            entry("nine", app="slack"),
+        ], now=NOW)
+        words, speed, streak, apps = stats.tiles(usage)
+        self.assertEqual((words["value"], words["label"], words["detail"]),
+                         ("9", "words dictated", "3 today · 9 in 7 days"))
+        self.assertIn("3 dictations, since 2026-10-23", words["tooltip"])
+        self.assertEqual((speed["value"], speed["detail"]),
+                         ("120", "over 4 s of dictation"))
+        self.assertEqual((streak["value"], streak["label"], streak["detail"]),
+                         ("2 days", "in a row", "best: 2 days"))
+        self.assertEqual((apps["value"], apps["label"], apps["detail"]),
+                         ("slack", "top app · 78 %", "Code 22 %"))
+        for tile in (words, speed, streak, apps):
+            self.assertTrue(tile["tooltip"])
+
+    def test_no_speed_one_word_and_no_app(self):
+        tiles = stats.tiles(stats.compute([entry("hello")], now=NOW))
+        self.assertEqual(len(tiles), 3)
+        self.assertEqual(tiles[0]["label"], "word dictated")
+        self.assertEqual((tiles[1]["value"], tiles[1]["detail"]),
+                         ("—", "no listening time yet"))
+        self.assertEqual(tiles[2]["value"], "1 day")
+
+    def test_a_single_app_and_at_most_three(self):
+        alone = stats.tiles(stats.compute([entry("a b", app="Slack")], now=NOW))[-1]
+        self.assertEqual((alone["label"], alone["detail"]),
+                         ("top app · 100 %", "the only app so far"))
+        many = stats.compute([entry("w " * count, app=name) for count, name in
+                              ((4, "A"), (3, "B"), (2, "C"), (1, "D"))], now=NOW)
+        self.assertEqual(stats.tiles(many)[-1]["detail"], "B 30 % · C 20 %")
+
+
 class CommandTest(unittest.TestCase):
     """whisper-desk stats, on a history of its own."""
 

@@ -46,6 +46,17 @@ class ControllerTest(HistoryCase):
         self.assertEqual(snapshot["keep_days"], 0)
         self.assertIn("+", snapshot["hint"])
 
+    def test_the_window_sees_the_usage_figures(self):
+        tiles = self.controller.snapshot()["stats"]
+        self.assertEqual([tile["label"] for tile in tiles],
+                         ["words dictated", "words per minute", "in a row", "top app · 100 %"])
+        self.assertEqual(tiles[0]["value"], "8")
+
+    def test_a_deletion_changes_the_figures(self):
+        reply = self.controller.handle(self.request("delete", 1))
+        self.assertEqual(reply["stats"][0]["value"], "3")
+        self.assertEqual(len(reply["stats"]), 3)  # no app noted any more
+
     def test_copy(self):
         reply = self.controller.handle(self.request("copy", 1))
         self.assertEqual(self.copied, ["the one that got lost"])

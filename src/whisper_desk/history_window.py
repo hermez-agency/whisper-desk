@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""History window: find a past dictation, copy it, insert it again, correct it, delete it.
+"""History window: your usage at a glance, and every past dictation to copy, insert, correct.
 
 Like the overlay, a view launched with the system Python (the one with
 PyGObject) and nothing else: it knows neither the history file nor the
@@ -7,6 +7,7 @@ daemon. It reads what to show on stdin and says what the user asked for on
 stdout, one JSON object per line:
 
     stdin   {"entries": [{"id", "date", "duration", "model", "app", "text"}, ...],
+             "stats": [{"value", "label", "detail", "tooltip"}, ...],
              "keep_days": 30, "hint": "Super+J", "status": "Copied"}
     stdout  {"action": "copy" | "insert" | "delete", "id": 3, "date": "..."}
             {"action": "correct", "id": 3, "date": "...", "text": "...", "learn": true}
@@ -35,7 +36,23 @@ KEEP_CHOICES = ((0, "Forever"), (1, "1 day"), (7, "7 days"), (30, "30 days"),
 # A second click confirms a deletion: no dialog, and no deletion by accident.
 CONFIRM_SECONDS = 3
 
+# The Hermez look, as in the settings window: orange, stone greys, figures in
+# Bricolage Grotesque when the font is installed (the system sans without it).
 CSS = f"""
+.usage {{ padding: 2px 12px 12px; }}
+.tile {{
+    padding: 10px 12px;
+    border: 1px solid alpha(#a8a29e, 0.45);
+    border-radius: 8px;
+}}
+.figure {{
+    font-family: "Bricolage Grotesque", sans-serif;
+    font-weight: 700;
+    font-size: 150%;
+    color: {ACCENT};
+}}
+.figure-label {{ font-weight: 600; font-size: small; }}
+.figure-detail {{ color: #78716c; font-size: small; }}
 .dictation {{ padding: 12px 14px; }}
 .meta {{ color: alpha(currentColor, 0.55); font-size: small; }}
 .meta .model {{ color: {ACCENT}; }}
@@ -151,10 +168,27 @@ class Row(Gtk.ListBoxRow):
         return GLib.SOURCE_REMOVE
 
 
+class Tile(Gtk.Box):
+    """One figure of the usage band: the value large, what it counts under it."""
+
+    def __init__(self, tile: dict):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=1)
+        self.get_style_context().add_class("tile")
+        for key, style in (("value", "figure"), ("label", "figure-label"),
+                           ("detail", "figure-detail")):
+            label = Gtk.Label(label=str(tile.get(key, "")))
+            label.set_xalign(0.0)
+            label.set_ellipsize(Pango.EllipsizeMode.END)
+            label.get_style_context().add_class(style)
+            self.pack_start(label, False, False, 0)
+        if tile.get("tooltip"):
+            self.set_tooltip_text(tile["tooltip"])
+
+
 class HistoryWindow(Gtk.Window):
     def __init__(self):
         super().__init__(title="Dictation history")
-        self.set_default_size(680, 600)
+        self.set_default_size(720, 640)
         self.set_icon_name("audio-input-microphone")
         self.entries: list[dict] = []
         self.hint = "the shortcut"
@@ -183,6 +217,12 @@ class HistoryWindow(Gtk.Window):
         self.search.set_margin_bottom(10)
         self.search.connect("search-changed", lambda _entry: self._refilter())
         layout.pack_start(self.search, False, False, 0)
+
+        # Wispr Flow opens on its insights above the history; so does this window.
+        self.usage = Gtk.Box(spacing=8, homogeneous=True)
+        self.usage.get_style_context().add_class("usage")
+        self.usage.set_no_show_all(True)
+        layout.pack_start(self.usage, False, False, 0)
 
         scroller = Gtk.ScrolledWindow()
         scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -272,6 +312,8 @@ class HistoryWindow(Gtk.Window):
             count = len(self.entries)
             self.header.set_subtitle(f"{count} dictation{'s' if count != 1 else ''}")
             self._refresh_empty()
+        if "stats" in message:
+            self._show_usage(message["stats"])
         if "keep_days" in message:
             self._updating_keep = True
             if not self.keep.set_active_id(str(message["keep_days"])):
@@ -281,6 +323,15 @@ class HistoryWindow(Gtk.Window):
         if message.get("status"):
             self.status.set_text(message["status"])
         return GLib.SOURCE_REMOVE
+
+    def _show_usage(self, tiles: list) -> None:
+        for child in self.usage.get_children():
+            self.usage.remove(child)
+        for tile in tiles:
+            widget = Tile(tile)
+            widget.show_all()
+            self.usage.pack_start(widget, True, True, 0)
+        self.usage.set_visible(bool(tiles))
 
     # -- what the user asks ------------------------------------------------
     def act(self, action: str, entry: dict) -> None:
