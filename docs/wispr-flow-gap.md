@@ -28,7 +28,8 @@ you dictate into — personal messages, work messages, email, other (read again 
 bulleted lists, "Lists" on the features page and reviews showing Flow writing bullets (read on
 2026-11-17); top apps, "Insights" in the app as shown by its users' reviews, and the tracker's own
 left-to-do of 2026-11-16 (read on 2026-11-18); insights shown in the app, above the history, as its
-users' reviews show its home screen (read on 2026-11-19).
+users' reviews show its home screen (read on 2026-11-19); "efface tout" for the whole dictation,
+the tracker's own left-to-do of 2026-11-15 (2026-11-20).
 
 **Status**: done · partial · missing · out of scope.
 **Effort**: S (a session) · M (a few sessions) · L (to split into several gaps).
@@ -37,7 +38,7 @@ users' reviews show its home screen (read on 2026-11-19).
 
 | Wispr Flow | whisper-desk | Status | Value | Effort |
 |---|---|---|---|---|
-| **Backtrack** — a correction said mid-sentence keeps only the corrected version | `backtrack.py`: "non, plutôt", "ou plutôt", "je veux dire", "no wait", "actually", "I mean", "or rather"… carried out by local rules; measured in `bench/backtrack/`; a correction said after the pause that ended its sentence erases and retypes that sentence, measured in `bench/backtrack/ --pauses` (#44); *efface ça* / *scratch that* said alone erases the last sentence typed, again the one before, measured in `bench/backtrack/ --discard` (#45). A correction rewrites only the last sentence; no phrase longer than three words replaced without a word to line up with | partial | high | S |
+| **Backtrack** — a correction said mid-sentence keeps only the corrected version | `backtrack.py`: "non, plutôt", "ou plutôt", "je veux dire", "no wait", "actually", "I mean", "or rather"… carried out by local rules; measured in `bench/backtrack/`; a correction said after the pause that ended its sentence erases and retypes that sentence, measured in `bench/backtrack/ --pauses` (#44); *efface ça* / *scratch that* said alone erases the last sentence typed, again the one before, measured in `bench/backtrack/ --discard` (#45); *efface tout* / *scratch all that* erases the whole dictation, measured in `bench/backtrack/ --clear` (in PR). A correction rewrites only the last sentence; no phrase longer than three words replaced without a word to line up with | partial | high | S |
 | **Filler removal** — "um", "uh", pauses | Whisper drops most hesitations by itself; `hesitations.py` removes those it writes ("euh", "hum", "um", "uh", "erm") and words or runs of up to three words said twice in a row, keeping intended doubles; measured in `bench/hesitations/`. A hesitation Whisper mishears as a word ("A", "« E »") stays | done | high | S |
 | **Auto punctuation** — inferred from pauses and tone, spoken marks ("comma") | Whisper's own punctuation and capitals; spoken marks and line breaks ("virgule", "point d'interrogation", "à la ligne", "comma", "new paragraph") written by `punctuation.py`, measured in `bench/punctuation/` (#26); quotes and brackets said aloud ("ouvrez les guillemets", "fermez la parenthèse", "open quote", "close paren") written « », " " and ( ) (#31). No square brackets or braces, no punctuation inferred from tone beyond Whisper's | partial | medium | S |
 | **Lists** — spoken enumerations become a formatted list | `lists.py`: items numbered aloud (*un, deux*, *premièrement*, *firstly*, *number one*, or the figures Whisper writes) written one per line, "1. …", the words before as a title with a colon; goes on across pauses with the as-you-go dictation; measured in `bench/lists/` (#33); bulleted items said after *tiret*, *puce*, *bullet*, *bullet point*, *dash* written "- …", measured in `bench/lists/` (#48). Bullets must be said (Wispr Flow guesses a list from the content); no nested lists | partial | medium | S |
@@ -388,3 +389,30 @@ users' reviews show its home screen (read on 2026-11-19).
   new one in `docs/history-window.png`). Differences with Wispr Flow: no chart of the words
   over the weeks, no milestones. Left to do: a chart over time, the history searchable by
   app, a GNOME Shell extension naming the window in front.
+- 2026-11-20 — **"Efface tout" / "scratch all that"** (in PR, partial, a quality day): the left-to-do
+  of #45 — "*efface tout* for the whole dictation". Said after a pause, as a sentence of its own,
+  *efface tout*, *efface tout ça*, *supprime tout*, *efface toute la dictée*, *efface tout et
+  recommence*, *on efface tout et on recommence*, *scratch all that*, *delete everything*,
+  *erase it all*, *delete all of that*, *clear everything*, *… and start over* (a *non*, *no*,
+  *oups*, *oops* in front allowed) erase every sentence typed since the shortcut, with
+  backspaces in one go; what follows in the same breath is typed in their place; the
+  dictation goes on, the model's context starting over. Sentences held back for a list are
+  dropped too; the history keeps what is left; under `model.corrections`, no new key. Said
+  without the pause, everything before it in the transcription goes and the command is left
+  at its head for the daemon. Kept as said: the command with an object (*efface tout le
+  tableau*, *delete everything in the folder*), a question (*delete everything?*, *tu as tout
+  effacé ?*), *il faut tout effacer*. Whisper's *Fasse tout.* and *Et face tout.* for *efface
+  tout* are taken as the command only as a whole sentence (*qu'il fasse tout*, *face tout le
+  monde* stay). Measure (`bench/backtrack/ --clear`, 20 runs of two sentences then the command
+  + 10 controls, each sentence recorded apart and transcribed with those before as context),
+  text at the cursor exact: written sentences 0/20 → 20/20; `small` (CPU) carried out 20/20,
+  exact 0/20 → 19/20; `large-v3-turbo` (GPU) carried out 19/20, exact 0/20 → 19/20; one
+  control erased with both models (*Delete everything?* heard without its question mark, as
+  *Delete that?* in #45). First pass, before the sound-alikes were taken: `small` carried out
+  13/20 (FR 3/10) — *efface* heard as "Fasse", "Et fasse", "Et face" by the synthetic French
+  voice; `large-v3-turbo` unchanged. `--discard`, `--pauses` and the corpus unchanged. A
+  feature over no setting: no screenshot. Known limits: the backspaces go wherever the
+  cursor is (as #44); a long dictation is as many backspaces as characters; with the
+  clipboard output alone nothing is erased; only the current dictation, never what was
+  dictated with an earlier shortcut. Left to do: a correction of an earlier sentence than the
+  last, a voice command to undo the last erasing.

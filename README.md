@@ -292,6 +292,18 @@ it drops the sentence before it all the same. *Efface ça du tableau*, *delete t
 or *delete that?* are typed as said. A sentence held back for a list that may be
 starting is dropped before it is typed.
 
+To start the dictation over, say **efface tout** or **scratch all that**, as a sentence of
+its own: every sentence typed since the shortcut is erased with backspaces in one go, and
+the dictation goes on. What you say after it in the same breath is typed in their place —
+*"Salut Paul."*, *"Tu viens demain ?"*, pause, *"Efface tout. Bonjour Marie."* leaves
+**Bonjour Marie.** Also understood: *efface tout ça*, *supprime tout*, *efface toute la
+dictée*, *efface tout et recommence*, *on efface tout et on recommence*, *delete
+everything*, *erase it all*, *delete all of that*, *clear everything*, *scratch all that
+and start over*, with a *non*, *no*, *oups* or *oops* in front. Said without the pause, it
+takes all that came before it along too. *Efface tout le tableau*, *delete everything in
+the folder*, *il faut tout effacer* or *delete everything?* are typed as said. Only the
+current dictation is erased, never text that was there before the shortcut.
+
 Rules run on your machine, no language model involved; `corrections = false` in `[model]`
 turns them off. `bench/backtrack/` measures them on recordings (see Development).
 
@@ -990,7 +1002,9 @@ to test all three from any of them.
 English, 16 control sentences where *plutôt*, *non* or *actually* are no correction) —
 and, in `pauses.tsv`, 36 pairs of sentences said apart, a pause between them (24 where
 the second corrects the first, 12 where it does not) — and, in `discard.tsv`, 30 more pairs
-(20 where the second is *efface ça* / *scratch that*, 10 where it only looks like it) —,
+(20 where the second is *efface ça* / *scratch that*, 10 where it only looks like it) —
+and, in `clear.tsv`, 30 runs of three sentences (20 where the third is *efface tout* /
+*scratch all that*, 10 where it only looks like it) —,
 with their expected text and synthetic recordings made by `bench/backtrack/synthesize.py`
 with two [Piper](https://github.com/rhasspy/piper) voices: `fr_FR-siwis-medium`, trained on
 the [SIWIS corpus](https://datashare.is.ed.ac.uk/handle/10283/2353) (CC BY 4.0), and
@@ -1002,6 +1016,7 @@ python3 bench/backtrack/measure.py -v                 # on the written sentences
 ~/.local/share/whisper-desk/venv/bin/python bench/backtrack/measure.py --audio -v
 ~/.local/share/whisper-desk/venv/bin/python bench/backtrack/measure.py --pauses --audio -v
 ~/.local/share/whisper-desk/venv/bin/python bench/backtrack/measure.py --discard --audio -v
+~/.local/share/whisper-desk/venv/bin/python bench/backtrack/measure.py --clear --audio -v
 ```
 
 It prints the word error rate against the expected text, before and after the

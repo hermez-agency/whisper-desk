@@ -8,10 +8,11 @@ from pathlib import Path
 
 from . import context  # noqa: F401  (adds src/ to the import path)
 
-from whisper_desk.backtrack import across, apply, discarded
+from whisper_desk.backtrack import across, apply, cleared, discarded
 
 CORPUS = Path(__file__).resolve().parents[1] / "bench" / "backtrack" / "corpus.tsv"
 DISCARD = CORPUS.with_name("discard.tsv")
+CLEAR = CORPUS.with_name("clear.tsv")
 # Sentences of the corpus the rules still get wrong: the measure counts them,
 # the test makes sure the list only ever shrinks.
 KNOWN_MISSES = {"fr15", "fr19"}
@@ -205,6 +206,88 @@ class DiscardInsideTest(unittest.TestCase):
         self.assertEqual(apply("Efface ça."), "Efface ça.")
 
 
+class ClearedTest(unittest.TestCase):
+    """"Efface tout" said after a pause: the daemon erases the whole dictation."""
+
+    def test_the_command_alone(self):
+        for sentence in ("Efface tout.", "Efface tout ça.", "Supprime tout.", "Effacez tout !",
+                         "Efface toute la dictée.", "Efface tout le texte.",
+                         "Scratch all that.", "Delete everything.", "Erase it all.",
+                         "Delete all of this.", "Clear everything."):
+            with self.subTest(sentence):
+                self.assertEqual(cleared(sentence), "")
+
+    def test_starting_over_said_with_it(self):
+        for sentence in ("Efface tout et recommence.", "On efface tout et on recommence.",
+                         "Scratch all that and start over.", "Delete everything, and start again."):
+            with self.subTest(sentence):
+                self.assertEqual(cleared(sentence), "")
+
+    def test_a_word_before_it(self):
+        self.assertEqual(cleared("Non, efface tout."), "")
+        self.assertEqual(cleared("Oops, scratch all that."), "")
+
+    def test_what_follows_is_the_text_meant(self):
+        self.assertEqual(cleared("Efface tout. Bonjour Marie."), "Bonjour Marie.")
+        self.assertEqual(cleared("Scratch all that, hi Mary."), "Hi Mary.")
+
+    def test_spellings_whisper_writes(self):
+        for sentence in ("Éface tout.", "Suprime-tout.", "Fasse tout.", "Et fasse tout ça !",
+                         "Oop et face tout !", "On efface toutes et on recommence."):
+            with self.subTest(sentence):
+                self.assertEqual(cleared(sentence), "")
+
+    def test_a_sound_alike_only_as_a_whole_sentence(self):
+        for sentence in ("Qu'il fasse tout.", "Fasse tout ce qu'il peut.", "Face tout le monde.",
+                         "Et face à tout."):
+            with self.subTest(sentence):
+                self.assertIsNone(cleared(sentence))
+        self.assertEqual(apply("Bonjour. Fasse tout."), "Bonjour. Fasse tout.")
+
+    def test_a_command_about_something_else(self):
+        for sentence in ("Efface tout le tableau.", "Delete everything in the folder.",
+                         "Delete everything?", "Il faut tout effacer.", "Tu as tout effacé ?",
+                         "On efface tout et on recommence le projet demain.",
+                         "Clear all that snow from the path.", "Efface ça."):
+            with self.subTest(sentence):
+                self.assertIsNone(cleared(sentence))
+
+    def test_scratch_that_is_no_clearing(self):
+        self.assertIsNone(cleared("Scratch that."))
+        self.assertIsNone(discarded("Scratch all that."))
+        self.assertIsNone(discarded("Efface tout."))
+
+
+class ClearInsideTest(unittest.TestCase):
+    """"Efface tout" and what it takes back, in one transcription."""
+
+    def test_what_was_said_before_goes(self):
+        self.assertEqual(
+            apply("Bonjour Marc. On se voit mardi. Efface tout. Bonjour Marie."),
+            "Efface tout. Bonjour Marie.",
+        )
+
+    def test_the_command_stays_for_the_daemon(self):
+        """The sentences typed before this transcription go too: the daemon's job."""
+        self.assertEqual(apply("Efface tout."), "Efface tout.")
+        self.assertEqual(apply("Hello. Scratch all that."), "Scratch all that.")
+
+    def test_after_a_comma(self):
+        self.assertEqual(apply("Hi Mark, scratch all that, hi Mary."),
+                         "scratch all that, hi Mary.")
+
+    def test_the_last_one_said_counts(self):
+        self.assertEqual(apply("A. Efface tout. B. Scratch all that. C."), "Scratch all that. C.")
+
+    def test_a_sentence_about_something_else_stays(self):
+        text = "Le tableau est plein. Efface tout le tableau."
+        self.assertEqual(apply(text), text)
+
+    def test_not_when_discarding_is_off(self):
+        text = "Bonjour. Efface tout."
+        self.assertEqual(apply(text, discard=False), text)
+
+
 class CorpusTest(unittest.TestCase):
     """The sentences of the measure, written out, give the expected text."""
 
@@ -225,6 +308,15 @@ class CorpusTest(unittest.TestCase):
                 rest = discarded(row["second"])
                 at_cursor = row["first"] + " " + row["second"] if rest is None else rest
                 self.assertEqual(at_cursor, row["expected"])
+
+    def test_the_clear_corpus(self):
+        with CLEAR.open(encoding="utf-8") as handle:
+            rows = list(csv.DictReader(handle, delimiter="\t"))
+        for row in rows:
+            with self.subTest(row["id"]):
+                rest = cleared(row["third"])
+                said = " ".join((row["first"], row["second"], row["third"]))
+                self.assertEqual(said if rest is None else rest, row["expected"])
 
     def test_the_known_misses_are_still_missed(self):
         """A rule that fixes one of them: take it off the list."""

@@ -2,9 +2,9 @@
 
     python3 bench/backtrack/synthesize.py --piper path/to/piper --voices path/to/voices
 
-The two sentences of each row of pauses.tsv and discard.tsv are recorded apart,
-<id>-1 and <id>-2: the daemon hears them as two sentences, the pause between them
-having ended the first.
+The sentences of each row of pauses.tsv, discard.tsv and clear.tsv are recorded
+apart, <id>-1, <id>-2 (and <id>-3 for clear.tsv): the daemon hears them as
+sentences of their own, the pause after each having ended it.
 
 The voices are those of the recordings in audio/, chosen for their licence:
 fr_FR-siwis-medium (SIWIS corpus, CC BY 4.0) and en_US-ljspeech-medium (LJ Speech,
@@ -40,7 +40,7 @@ def main() -> None:
     with (HERE / "corpus.tsv").open(encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle, delimiter="\t"))
     pauses = []
-    for name in ("pauses.tsv", "discard.tsv"):
+    for name in ("pauses.tsv", "discard.tsv", "clear.tsv"):
         with (HERE / name).open(encoding="utf-8") as handle:
             pauses += list(csv.DictReader(handle, delimiter="\t"))
     with tempfile.TemporaryDirectory() as scratch:
@@ -54,9 +54,10 @@ def main() -> None:
             if only and row["id"] not in only:
                 continue
             voice = args.voices / f"{VOICES[row['lang']]}.onnx"
-            for half in ("1", "2"):
-                text = row["first" if half == "1" else "second"]
-                record(args.piper, voice, text, wav, HERE / "audio" / f"{row['id']}-{half}.opus")
+            for half, column in enumerate(("first", "second", "third"), 1):
+                if column in row:
+                    record(args.piper, voice, row[column], wav,
+                           HERE / "audio" / f"{row['id']}-{half}.opus")
 
 
 if __name__ == "__main__":

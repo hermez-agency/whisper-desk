@@ -1,0 +1,31 @@
+id	lang	first	second	third	expected
+c-fr01	fr	Bonjour Marc.	On se voit mardi à midi.	Efface tout.	
+c-fr02	fr	Je t'envoie le rapport.	Il sera prêt ce soir.	Efface tout ça.	
+c-fr03	fr	Le devis est de 500 euros.	La livraison est offerte.	Non, efface tout.	
+c-fr04	fr	Salut Paul.	Tu viens demain ?	Efface tout. Bonjour Marie.	Bonjour Marie.
+c-fr05	fr	Le chat dort.	Il fait beau dehors.	Efface tout, le chien dort sur le canapé.	Le chien dort sur le canapé.
+c-fr06	fr	Rappelle-moi demain.	C'est urgent.	Supprime tout.	
+c-fr07	fr	Il faut acheter du pain.	Et aussi du lait.	Efface tout et recommence.	
+c-fr08	fr	Merci pour ton aide.	À bientôt.	Efface toute la dictée.	
+c-fr09	fr	La réunion est annulée.	Préviens l'équipe.	Oups, efface tout.	
+c-fr10	fr	On part à huit heures.	On rentre à midi.	On efface tout et on recommence.	
+c-en01	en	Hi Mark.	Let's meet at noon.	Scratch all that.	
+c-en02	en	I'll send the report.	It will be ready tonight.	Delete everything.	
+c-en03	en	The quote is five hundred dollars.	Shipping is free.	No, scratch all that.	
+c-en04	en	Hi Paul.	Are you coming tomorrow?	Scratch all that. Hi Mary.	Hi Mary.
+c-en05	en	The cat is asleep.	It's sunny outside.	Scratch all that, the dog is asleep on the couch.	The dog is asleep on the couch.
+c-en06	en	Remind me tomorrow.	It's urgent.	Erase it all.	
+c-en07	en	We need more coffee.	And some milk.	Scratch all that and start over.	
+c-en08	en	Thanks for your help.	See you soon.	Delete all of that.	
+c-en09	en	The meeting is cancelled.	Tell the team.	Oops, delete everything.	
+c-en10	en	We leave at eight.	We come back at noon.	Clear everything.	
+c-ctl01	fr	Le tableau est plein.	La réunion commence.	Efface tout le tableau, s'il te plaît.	Le tableau est plein. La réunion commence. Efface tout le tableau, s'il te plaît.
+c-ctl02	fr	Tu as vu la note ?	Elle est fausse.	Il faut tout effacer demain.	Tu as vu la note ? Elle est fausse. Il faut tout effacer demain.
+c-ctl03	fr	J'ai fait une erreur.	Le fichier est corrompu.	Supprime tout le dossier.	J'ai fait une erreur. Le fichier est corrompu. Supprime tout le dossier.
+c-ctl04	fr	Le projet a pris du retard.	Le client est déçu.	On efface tout et on recommence le projet lundi.	Le projet a pris du retard. Le client est déçu. On efface tout et on recommence le projet lundi.
+c-ctl05	fr	Le disque est plein.	Je vais faire le ménage.	Tu as tout effacé ?	Le disque est plein. Je vais faire le ménage. Tu as tout effacé ?
+c-ctl06	en	The board is full.	The meeting starts soon.	Please erase everything on the board.	The board is full. The meeting starts soon. Please erase everything on the board.
+c-ctl07	en	I made a mistake.	The file is broken.	Delete everything in that folder.	I made a mistake. The file is broken. Delete everything in that folder.
+c-ctl08	en	The old drafts are here.	They are out of date.	Delete everything?	The old drafts are here. They are out of date. Delete everything?
+c-ctl09	en	It snowed all night.	The path is blocked.	Clear all that snow from the path.	It snowed all night. The path is blocked. Clear all that snow from the path.
+c-ctl10	en	The project slipped.	The client is upset.	We should scrap everything and start over.	The project slipped. The client is upset. We should scrap everything and start over.

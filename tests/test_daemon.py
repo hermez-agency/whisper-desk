@@ -874,6 +874,63 @@ class ScratchThatTest(CursorCase):
         self.assertEqual(self.overlay.final, ("done", "Erased", "Every sentence was erased"))
 
 
+class ScratchAllThatTest(CursorCase):
+    """"Efface tout" said after a pause erases every sentence of the dictation."""
+
+    def test_every_sentence_is_erased_at_once(self):
+        self.dictate([b"Bonjour.", b"On se voit mardi.", b"Efface tout."])
+        self.assertEqual(self.delivered, ["Bonjour.", " On se voit mardi.", "<26"])
+        self.assertEqual(self.overlay.final, ("done", "Erased", "Every sentence was erased"))
+
+    def test_the_text_meant_takes_their_place(self):
+        self.dictate([b"Hi Mark.", b"See you Monday.", b"Scratch all that. Hi Mary."])
+        self.assertEqual(self.delivered, ["Hi Mark.", " See you Monday.", "<24", "Hi Mary."])
+
+    def test_the_dictation_goes_on_after_it(self):
+        self.dictate([b"Hello.", b"Delete everything.", b"Thanks.", b"Bye."])
+        self.assertEqual(self.delivered, ["Hello.", "<6", "Thanks.", " Bye."])
+
+    def test_the_history_keeps_only_what_follows(self):
+        with mock.patch.dict(CONFIG, {"output": {**CONFIG["output"], "history": True,
+                                                 "history_days": 30}}):
+            self.dictate([b"Bonjour.", b"Efface tout.", b"Salut."])
+        self.assertEqual(self.recorded, ["Salut."])
+
+    def test_the_model_context_starts_over(self):
+        self.dictate([b"Bonjour Marc.", b"Efface tout.", b"Salut."])
+        self.assertEqual(self.transcriber.contexts, ["", "Bonjour Marc.", ""])
+
+    def test_sentences_held_for_a_list_are_dropped_too(self):
+        self.dictate([b"Shopping list.", b"One, eggs.", b"Scratch all that.", b"Thanks."])
+        self.assertEqual(self.delivered, ["Shopping list.", "<14", "Thanks."])
+
+    def test_a_casual_style_starts_over_without_a_full_stop(self):
+        self.dictate([b"See you tomorrow.", b"Bye.", b"Scratch all that.", b"Thanks."],
+                     {"style": "casual"})
+        self.assertEqual(self.delivered, ["See you tomorrow", ". Bye", "<21", "Thanks"])
+
+    def test_it_follows_the_corrections_setting(self):
+        self.dictate([b"Hi Mark.", b"Scratch all that."], {"corrections": False})
+        self.assertEqual(self.delivered, ["Hi Mark.", " Scratch all that."])
+
+    def test_the_clipboard_alone_has_nothing_to_erase(self):
+        self.dictate([b"Hi Mark.", b"Scratch all that."], mode="clipboard")
+        self.assertEqual(self.delivered, ["Hi Mark."])
+
+    def test_backspaces_that_fail_type_nothing_more(self):
+        self.dictate([b"Hi Mark.", b"Scratch all that."], erases=False)
+        self.assertEqual(self.delivered, ["Hi Mark."])
+
+    def test_a_command_with_nothing_before_is_not_typed(self):
+        self.dictate([b"Efface tout.", b"Bonjour."])
+        self.assertEqual(self.delivered, ["Bonjour."])
+
+    def test_a_sentence_about_something_else_is_typed(self):
+        self.dictate([b"The board is full.", b"Delete everything in the folder."])
+        self.assertEqual(self.delivered,
+                         ["The board is full.", " Delete everything in the folder."])
+
+
 class HistoryTest(DictationCase):
     """One entry per dictation, whatever the number of sentences it took."""
 
