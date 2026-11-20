@@ -70,7 +70,7 @@ _DISCARD = (
     r"(?:[eé]ff?ace[rz]?|supp?rime[rz]?)[\s-]+(?:moi[\s-]+)?(?:ça|ca|cela|(?:la|ma) dernière phrase)"
     r"|(?:scratch|delete|strike|erase)\s+(?:that|the last sentence)"
 )
-_DISCARD_LEADS = r"non|no|oh|ah|oups|oops"
+_DISCARD_LEADS = r"non|no|oh|ah|oups|oops|oop"
 _DISCARD_LEAD = rf"(?:(?:{_DISCARD_LEADS})\s*[,.]?\s+)?"
 # The command ends its sentence, or opens the next one after a comma.
 _DISCARD_END = r"(?P<end>\s*[.!…]+(?=\s|$)|\s*$|\s*,(?=\s))"
@@ -80,6 +80,31 @@ _DISCARD_OPENING = re.compile(
 )
 _DISCARD_INSIDE = re.compile(
     rf"(?P<cut>[.!?…]\s+|,\s+){_DISCARD_LEAD}(?:{_DISCARD})(?!\w){_DISCARD_END}\s*",
+    re.IGNORECASE,
+)
+# "Efface tout" takes the whole dictation back, every sentence already typed
+# with it. The same care as above: "efface tout le tableau", "delete everything
+# in the folder" or "tu as tout effacé ?" say what to do with something else.
+# "On recommence" / "start over" may follow, as one says it.
+_CLEAR_OBJECT = (
+    r"[\s-]+(?:moi[\s-]+)?"
+    r"(?:toute?s?(?:[\s-]+(?:ça|ca|cela))?|toute la dictée|tout le texte)"
+    r"(?:,?\s+et\s+(?:on\s+)?recommence[rz]?)?"
+)
+_CLEAR = (
+    rf"(?:on\s+)?(?:[eé]ff?ace[rz]?|supp?rime[rz]?){_CLEAR_OBJECT}"
+    r"|(?:scratch|delete|erase|strike|clear)\s+(?:all(?:\s+of)?\s+(?:that|this)|everything|it all)"
+    r"(?:,?\s+and\s+start\s+(?:over|again))?"
+)
+# Whisper often hears "efface" as "fasse" or "et face": "Fasse tout." is no
+# sentence, so it is taken as the command — only when it is the whole of one.
+_CLEAR_HEARD = rf"(?:et\s+)?(?:fasse|face){_CLEAR_OBJECT}"
+_CLEAR_OPENING = re.compile(
+    rf"\s*{_DISCARD_LEAD}(?:{_CLEAR}|{_CLEAR_HEARD})(?!\w){_DISCARD_END}\s*(?P<rest>.*)",
+    re.IGNORECASE | re.DOTALL,
+)
+_CLEAR_INSIDE = re.compile(
+    rf"(?:[.!?…]|,)\s+(?P<command>{_DISCARD_LEAD}(?:{_CLEAR})(?!\w){_DISCARD_END})",
     re.IGNORECASE,
 )
 # Beyond this many words, replacing "the same number of words" is a guess.
@@ -206,11 +231,26 @@ def _discard_once(text: str) -> str | None:
     return None
 
 
+def _clear_inside(text: str) -> str:
+    """The text from its last "efface tout" on: what was said before it goes.
+
+    The command is kept at the head of the text: the sentences typed before
+    this transcription go with it, and only the daemon can erase those.
+    """
+    last = None
+    for last in _CLEAR_INSIDE.finditer(text):
+        pass
+    return text if last is None else text[last.start("command"):]
+
+
 def apply(text: str, discard: bool = True) -> str:
     """The text with the corrections said aloud carried out.
 
-    discard: "efface ça" drops the sentence before it, too.
+    discard: "efface ça" drops the sentence before it, too, and "efface tout"
+    all that was said before it.
     """
+    if discard:
+        text = _clear_inside(text)
     for _ in range(_MAX_PASSES):
         corrected = _correct_once(text)
         if corrected is None and discard:
@@ -248,6 +288,20 @@ def discarded(sentence: str) -> str | None:
     when the sentence opens on no such command.
     """
     match = _DISCARD_OPENING.fullmatch(sentence)
+    if match is None:
+        return None
+    rest = match["rest"].strip()
+    return _capitalised(rest) if match["end"].strip() == "," else rest
+
+
+def cleared(sentence: str) -> str | None:
+    """What is left of `sentence` once the "efface tout" it opens on is taken out.
+
+    "Efface tout." said after a pause erases every sentence of the dictation
+    already typed; what follows the command in the same breath is typed in
+    their place. None when the sentence opens on no such command.
+    """
+    match = _CLEAR_OPENING.fullmatch(sentence)
     if match is None:
         return None
     rest = match["rest"].strip()

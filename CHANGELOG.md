@@ -399,6 +399,17 @@
 
 ### Changed
 
+- **"Efface tout" / "scratch all that" starts the dictation over** (Wispr Flow's
+  backtrack, the whole text taken back): said as a sentence of its own, it erases every
+  sentence typed since the shortcut, with backspaces in one go, and the dictation goes on —
+  what you say after it in the same breath is typed in their place (*"Efface tout. Bonjour
+  Marie."*). Also *efface tout ça*, *supprime tout*, *efface toute la dictée*, *efface tout
+  et recommence*, *delete everything*, *erase it all*, *clear everything*, *scratch all that
+  and start over*. Said without a pause, it takes what came before it along too. *Efface
+  tout le tableau*, *delete everything in the folder* or *delete everything?* are typed as
+  said. The history keeps what is left; the model's context starts over; under
+  `model.corrections` (**Spoken corrections** in the settings window), no new setting.
+
 - **A style per app** (Wispr Flow's styles by app): the **Style per app** list of the
   settings window (Dictation tab, Add… / Edit… / Remove) or `[app_styles]` in
   `config.toml` gives an application a style of its own, over `style` — *casual* in Slack,

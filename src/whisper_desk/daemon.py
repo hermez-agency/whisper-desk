@@ -509,10 +509,15 @@ class Session:
 
         What the sentence says after the command, to be inserted in its place;
         None when it opens on no such command, which is then typed as said.
-        Said again, the command erases the sentence before, and so on.
+        Said again, the command erases the sentence before, and so on;
+        "efface tout" / "scratch all that" erases them all at once.
         """
         if not self.service.config["model"].get("corrections", True):
             return None
+        rest = backtrack.cleared(text)
+        if rest is not None:
+            self._clear()
+            return rest
         rest = backtrack.discarded(text)
         if rest is None:
             return None
@@ -541,6 +546,27 @@ class Session:
             self._forget_heard()
         self.overlay.set_text(self.parts[-1] if self.parts else "")
         return rest
+
+    def _clear(self) -> None:
+        """Erases every sentence of the dictation, for "efface tout" / "scratch all that"."""
+        self.last_said = None
+        # Held back for a list that may start: they never reached the cursor.
+        for _ in range(len(self.pending.held)):
+            self._forget_heard()
+        self.pending.held.clear()
+        if not self.parts:
+            logger.info("Nothing typed yet for the spoken command to erase.")
+        elif not self.capture and self.writer is None:
+            logger.info("Spoken command to erase ignored: no text at a cursor.")
+        elif self.capture or self.writer.erase(sum(len(typed) for typed, _ in self.typed)):
+            logger.info("Every sentence of the dictation erased by a spoken command.")
+            self.erased += len(self.parts)
+            self.parts.clear()
+            self.typed.clear()
+            self.full_stop = ""
+            # Not one word of it was meant: the model's context starts over.
+            self.heard.clear()
+        self.overlay.set_text(self.parts[-1] if self.parts else "")
 
     def _forget_heard(self) -> None:
         """Takes a sentence erased out of the model's context: its words were not meant."""
