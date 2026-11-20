@@ -57,6 +57,8 @@ STYLES = (
     ("casual", "Casual — no full stop at the end"),
     ("very_casual", "Very casual — no capitals, no full stop at the end"),
 )
+# The style of a kind of app: its own, or the general one (Wispr Flow's "Other").
+CATEGORY_STYLES = ((style.SAME, "Same as Style"),) + STYLES
 MODES = (
     ("cursor", "Insert at the cursor"),
     ("clipboard", "Copy to the clipboard"),
@@ -253,6 +255,9 @@ class SettingsController:
                     ("language", "language", LANGUAGES),
                     ("model", "model", model_choices()),
                     ("style", "style", STYLES),
+                    ("personal_style", "personal_style", CATEGORY_STYLES),
+                    ("work_style", "work_style", CATEGORY_STYLES),
+                    ("email_style", "email_style", CATEGORY_STYLES),
                     ("device", "device", capture.devices(str(self.config["recording"]["backend"]))),
                     ("mode", "mode", MODES),
                     ("position", "position", POSITIONS),

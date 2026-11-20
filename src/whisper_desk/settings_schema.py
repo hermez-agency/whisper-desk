@@ -74,9 +74,18 @@ TABS: tuple[Tab, ...] = (
                choices="style"),
         )),
         Group("Style per app", (
+            _s("personal_style", "model.personal_style", "choice", "Personal messages",
+               "The style in WhatsApp, Signal, Telegram, Discord, Messenger, Messages and Element.",
+               choices="personal_style"),
+            _s("work_style", "model.work_style", "choice", "Work messages",
+               "The style in Slack, Microsoft Teams, Mattermost, Zulip, Rocket.Chat and Webex.",
+               choices="work_style"),
+            _s("email_style", "model.email_style", "choice", "Email",
+               "The style in Thunderbird, Evolution, Geary, KMail, Mail, Outlook, Mailspring and Spark.",
+               choices="email_style"),
             _s("app_styles", "app_styles", "app_styles", "Style per app",
-               "An app with a style of its own, over the one above: casual in Slack, formal in "
-               "your mail — the app in front when you press the shortcut. On GNOME or KDE under "
+               "An app with a style of its own, over Style and the kinds above: casual in Slack, "
+               "formal in your mail — the app in front when you press the shortcut. On GNOME or KDE under "
                "Wayland, only the apps that run through X11 are recognised."),
         )),
         Group("What is written", (

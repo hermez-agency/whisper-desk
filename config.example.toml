@@ -53,6 +53,13 @@ lists = true
 # "very_casual" without it nor the capital each sentence opens on ("on se voit
 # demain"), names of the vocabulary, acronyms and "I" left as they are.
 style = "formal"
+# The style of a kind of app, over `style` — Wispr Flow's categories: casual in
+# your personal messages, formal in your mail. "same" keeps `style`; else
+# "formal", "casual" or "very_casual". The apps of each kind are known to
+# whisper-desk; an app listed in [app_styles] below keeps its own style.
+personal_style = "same"  # WhatsApp, Signal, Telegram, Discord, Messenger, Messages, Element
+work_style = "same"      # Slack, Microsoft Teams, Mattermost, Zulip, Rocket.Chat, Webex
+email_style = "same"     # Thunderbird, Evolution, Geary, KMail, Mail, Outlook, Mailspring, Spark
 # Loads the model when the service starts: the first dictation is instant.
 preload = true
 

@@ -678,6 +678,15 @@ class StyleTest(DictationCase):
         self.assertEqual(asked, [True])
         self.assertEqual(self.delivered, ["see you tomorrow", ". bye"])
 
+    def test_a_known_kind_of_app_has_its_own_style(self):
+        asked: list[bool] = []
+        with mock.patch.dict(CONFIG["model"], {"work_style": "casual"}), \
+                mock.patch.object(daemon.focus, "focused_app",
+                                  lambda: asked.append(True) or ["slack", "Slack"]):
+            self.dictate("formal", [b"See you tomorrow.", b"Bye."])
+        self.assertEqual(asked, [True])
+        self.assertEqual(self.delivered, ["See you tomorrow", ". Bye"])
+
     def test_another_app_keeps_the_general_style(self):
         with mock.patch.dict(CONFIG, {"app_styles": {"slack": "casual"}}), \
                 mock.patch.object(daemon.focus, "focused_app", lambda: ["firefox"]):

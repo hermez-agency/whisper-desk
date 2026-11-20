@@ -121,7 +121,7 @@ class Session:
     def _wants_app(self) -> bool:
         """For its style, or for the history to say where each dictation went."""
         config = self.service.config
-        return bool(config.get("app_styles")) or (
+        return style.per_app(config) or (
             not self.capture and bool(config["output"]["history"])
         )
 
@@ -428,7 +428,7 @@ class Session:
     def _render(self, text: str, full_stop: str, before: str) -> tuple[str, str, str]:
         """A sentence as it is typed after `before`: its spacing, its text, the full stop held back."""
         config = self.service.config
-        if config.get("app_styles"):
+        if style.per_app(config):
             # Only a style per app is worth holding a sentence back for.
             self.app_known.wait(focus.TIMEOUT_SECONDS)
         writing = style.resolve(config, self.app)
