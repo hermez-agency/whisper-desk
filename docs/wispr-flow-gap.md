@@ -29,7 +29,10 @@ bulleted lists, "Lists" on the features page and reviews showing Flow writing bu
 2026-11-17); top apps, "Insights" in the app as shown by its users' reviews, and the tracker's own
 left-to-do of 2026-11-16 (read on 2026-11-18); insights shown in the app, above the history, as its
 users' reviews show its home screen (read on 2026-11-19); "efface tout" for the whole dictation,
-the tracker's own left-to-do of 2026-11-15 (2026-11-20).
+the tracker's own left-to-do of 2026-11-15 (2026-11-20); style per kind of app,
+[How to setup Flow Styles](https://docs.wisprflow.ai/articles/2368263928-how-to-setup-flow-styles) —
+personal messages, work messages, email, other — and the tracker's own left-to-do of 2026-11-16
+(2026-11-20).
 
 **Status**: done · partial · missing · out of scope.
 **Effort**: S (a session) · M (a few sessions) · L (to split into several gaps).
@@ -38,7 +41,7 @@ the tracker's own left-to-do of 2026-11-15 (2026-11-20).
 
 | Wispr Flow | whisper-desk | Status | Value | Effort |
 |---|---|---|---|---|
-| **Backtrack** — a correction said mid-sentence keeps only the corrected version | `backtrack.py`: "non, plutôt", "ou plutôt", "je veux dire", "no wait", "actually", "I mean", "or rather"… carried out by local rules; measured in `bench/backtrack/`; a correction said after the pause that ended its sentence erases and retypes that sentence, measured in `bench/backtrack/ --pauses` (#44); *efface ça* / *scratch that* said alone erases the last sentence typed, again the one before, measured in `bench/backtrack/ --discard` (#45); *efface tout* / *scratch all that* erases the whole dictation, measured in `bench/backtrack/ --clear` (in PR). A correction rewrites only the last sentence; no phrase longer than three words replaced without a word to line up with | partial | high | S |
+| **Backtrack** — a correction said mid-sentence keeps only the corrected version | `backtrack.py`: "non, plutôt", "ou plutôt", "je veux dire", "no wait", "actually", "I mean", "or rather"… carried out by local rules; measured in `bench/backtrack/`; a correction said after the pause that ended its sentence erases and retypes that sentence, measured in `bench/backtrack/ --pauses` (#44); *efface ça* / *scratch that* said alone erases the last sentence typed, again the one before, measured in `bench/backtrack/ --discard` (#45); *efface tout* / *scratch all that* erases the whole dictation, measured in `bench/backtrack/ --clear` (#52). A correction rewrites only the last sentence; no phrase longer than three words replaced without a word to line up with | partial | high | S |
 | **Filler removal** — "um", "uh", pauses | Whisper drops most hesitations by itself; `hesitations.py` removes those it writes ("euh", "hum", "um", "uh", "erm") and words or runs of up to three words said twice in a row, keeping intended doubles; measured in `bench/hesitations/`. A hesitation Whisper mishears as a word ("A", "« E »") stays | done | high | S |
 | **Auto punctuation** — inferred from pauses and tone, spoken marks ("comma") | Whisper's own punctuation and capitals; spoken marks and line breaks ("virgule", "point d'interrogation", "à la ligne", "comma", "new paragraph") written by `punctuation.py`, measured in `bench/punctuation/` (#26); quotes and brackets said aloud ("ouvrez les guillemets", "fermez la parenthèse", "open quote", "close paren") written « », " " and ( ) (#31). No square brackets or braces, no punctuation inferred from tone beyond Whisper's | partial | medium | S |
 | **Lists** — spoken enumerations become a formatted list | `lists.py`: items numbered aloud (*un, deux*, *premièrement*, *firstly*, *number one*, or the figures Whisper writes) written one per line, "1. …", the words before as a title with a colon; goes on across pauses with the as-you-go dictation; measured in `bench/lists/` (#33); bulleted items said after *tiret*, *puce*, *bullet*, *bullet point*, *dash* written "- …", measured in `bench/lists/` (#48). Bullets must be said (Wispr Flow guesses a list from the content); no nested lists | partial | medium | S |
@@ -55,13 +58,13 @@ the tracker's own left-to-do of 2026-11-15 (2026-11-20).
 | **Works in any app** | insertion at the cursor through the clipboard and a paste shortcut (uinput, Mutter, SendKeys, System Events) | done | — | — |
 | **Personal dictionary**, fed by the words you correct | `vocabulary` in the settings window, filled by hand; fed by the corrections made in the history (**Correct…**, `history --correct`), `vocabulary.py`, measured in `bench/dictionary/` (#34); replacement entries ("misheard → meant", Wispr Flow's "Correct a misspelling") in `[replacements]` and the settings window, `replacements.py` (#38), also saved on their own when a name the vocabulary already held is corrected again, measured in `bench/dictionary/ --from-corrections` (#40). Not learned from an edit made in the app dictated into (whisper-desk cannot see it); no replacements per language | partial | high | M |
 | **Snippets** — a spoken cue inserts a longer text | `[snippets]` in `config.toml`, `snippets.py`: alone or inside a sentence, case and punctuation ignored, longest cue wins, multi-line texts; measured in `bench/snippets/`; edited in the settings window too (#25). No rich text (bold, links) | partial | high | S |
-| **Styles** — tone adapted to the app (formal in docs, casual in chat) | `style.py`: one style for every app, `style` in `[model]` or **Style** in the settings window — *formal* (as Whisper punctuates it), *casual* (no final full stop), *very casual* (no sentence-opening capitals either) (#42); a style per app, **Style per app** in the settings window or `[app_styles]`, from the app in front at the shortcut (`focus.py`: X11, Sway, Hyprland, macOS, WSL) (#47). Apps listed one by one, not by category; GNOME and KDE on Wayland only name XWayland apps; a browser is one app whatever its tab; no *Excited* style | partial | medium | M |
+| **Styles** — tone adapted to the app (formal in docs, casual in chat) | `style.py`: one style for every app, `style` in `[model]` or **Style** in the settings window — *formal* (as Whisper punctuates it), *casual* (no final full stop), *very casual* (no sentence-opening capitals either) (#42); a style per app, **Style per app** in the settings window or `[app_styles]`, from the app in front at the shortcut (`focus.py`: X11, Sway, Hyprland, macOS, WSL) (#47); Wispr Flow's categories — **Personal messages**, **Work messages**, **Email** in the settings window, `personal_style`, `work_style`, `email_style` — with their usual apps known (in PR). Known apps only, not guessed from the window's content; GNOME and KDE on Wayland only name XWayland apps; a browser is one app whatever its tab; no *Excited* style | partial | medium | M |
 | **Command Mode** — select text, say how to rewrite it | — (would need a local model, e.g. Ollama) | missing | high | L |
 | **Developer syntax** — camelCase, snake_case, CLI commands, file tagging in Cursor | `casing.py`: a name said after its style ("camel case user name" → `userName`, snake, pascal, kebab, constant case) written in it, Whisper's glued and hyphenated forms understood; measured in `bench/casing/` (#28). Not guessed from context without the style said; no CLI commands, no file tagging | partial | medium | M |
-| **History** of dictations | `whisper-desk history` and its window: search, copy, insert again, purge; each dictation names the app it went to (in PR) | done | — | — |
+| **History** of dictations | `whisper-desk history` and its window: search, copy, insert again, purge; each dictation names the app it went to (#49) | done | — | — |
 | **Settings** | `whisper-desk settings`: every key of `config.toml`, in eight tabs (Dictation, Microphone, Shortcut and output, Words, Overlay, History, Advanced, Updates), each with its help and default, **Restore defaults** per section, invalid values refused before saving, keyboard only; `tests/test_settings_schema.py` fails when a key has no setting | done | — | — |
 | **Overlay** | X11 overlay: live level, sentence transcribed, states, cancel | done | — | — |
-| **Usage dashboard** — words dictated, speed, streak, top apps | `whisper-desk stats` (`stats.py`): dictations, words in all, today and over 7 days, words per minute, days in a row, worked out from the history (#32); top apps by share of the words, from the app the history now notes (#49); the same figures in four tiles above the history window (in PR). Apps only where the desktop names the one in front; no chart over time, no rank among users | partial | low | S |
+| **Usage dashboard** — words dictated, speed, streak, top apps | `whisper-desk stats` (`stats.py`): dictations, words in all, today and over 7 days, words per minute, days in a row, worked out from the history (#32); top apps by share of the words, from the app the history now notes (#49); the same figures in four tiles above the history window (#50). Apps only where the desktop names the one in front; no chart over time, no rank among users | partial | low | S |
 | **Mobile apps, cross-device sync** | — | out of scope (account, cloud) | — | — |
 | **Shared team dictionary and snippets** | — | out of scope (account, cloud) | — | — |
 | **Notetaker** — meeting notes | — | out of scope for now (another product) | — | — |
@@ -376,7 +379,7 @@ the tracker's own left-to-do of 2026-11-15 (2026-11-20).
   before have none, a browser is one app whatever its tab. Left to do: a statistics view in
   a window (Wispr Flow shows its insights in the app, `stats` is a command only), the
   history searchable by app, a GNOME Shell extension naming the window in front.
-- 2026-11-19 — **Statistics in the history window** (in PR, partial, an interface day): the
+- 2026-11-19 — **Statistics in the history window** (merged, #50, partial, an interface day): the
   left-to-do of #49 — "a statistics view in a window (Wispr Flow shows its insights in the
   app, `stats` is a command only)". Four tiles now sit between the search field and the
   dictations of `whisper-desk history --window`: words dictated (today, over 7 days), words
@@ -389,7 +392,7 @@ the tracker's own left-to-do of 2026-11-15 (2026-11-20).
   new one in `docs/history-window.png`). Differences with Wispr Flow: no chart of the words
   over the weeks, no milestones. Left to do: a chart over time, the history searchable by
   app, a GNOME Shell extension naming the window in front.
-- 2026-11-20 — **"Efface tout" / "scratch all that"** (in PR, partial, a quality day): the left-to-do
+- 2026-11-20 — **"Efface tout" / "scratch all that"** (merged, #52, partial, a quality day): the left-to-do
   of #45 — "*efface tout* for the whole dictation". Said after a pause, as a sentence of its own,
   *efface tout*, *efface tout ça*, *supprime tout*, *efface toute la dictée*, *efface tout et
   recommence*, *on efface tout et on recommence*, *scratch all that*, *delete everything*,
@@ -416,3 +419,24 @@ the tracker's own left-to-do of 2026-11-15 (2026-11-20).
   clipboard output alone nothing is erased; only the current dictation, never what was
   dictated with an earlier shortcut. Left to do: a correction of an earlier sentence than the
   last, a voice command to undo the last erasing.
+- 2026-11-20 — **Style per kind of app** (in PR, partial, a feature day): the left-to-do of #47 —
+  "categories with known apps filled in". Wispr Flow gives a style to four kinds of app
+  (personal messages, work messages, email, other) and knows which app is which; the style per
+  app of #47 had each app typed by hand. Three settings now sit at the top of **Style per app**
+  in the settings window (Dictation tab), `personal_style`, `work_style` and `email_style` in
+  `[model]`: **Same as Style** (`"same"`, the default — the behaviour before) or a style of
+  their own. The apps of each kind are known in `style.CATEGORIES`, under the names the
+  desktops give them (X11 class, Flatpak id, macOS process, Windows process): WhatsApp,
+  Signal, Telegram, Discord, Messenger, Messages, Element, Beeper…; Slack, Microsoft Teams
+  (`ms-teams`, `teams-for-linux`), Mattermost, Zulip, Rocket.Chat, Webex…; Thunderbird,
+  Betterbird, Evolution, Geary, KMail, Mail, Outlook (`OUTLOOK`, `olk`), Mailspring, Spark….
+  Any other app is Wispr Flow's *Other* and takes `style`. An app of `[app_styles]` wins over
+  its kind (Slack formal while the other work chats are casual). The app in front is asked
+  of the desktop only when a kind or an app has a style of its own, or the history is on, as
+  before. A feature, no quality measure: 10 new tests (kinds recognised under each desktop's
+  names, the order app → kind → `style`, the daemon typing a work chat casually, the settings
+  controller); before/after screenshots of the Dictation tab (the new one in
+  `docs/settings-window.png`). Differences with Wispr Flow: a browser is one app, so Gmail or
+  Slack in a tab take the browser's style (Wispr Flow reads the site); GNOME and KDE on
+  Wayland only name XWayland apps (as #47). Left to do: the kind of a browser tab, a GNOME
+  Shell extension naming the window in front, a kind for documents and code editors.

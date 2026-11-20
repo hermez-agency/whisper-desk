@@ -16,6 +16,28 @@ from .punctuation import separator
 
 STYLES = ("formal", "casual", "very_casual")
 DEFAULT = "formal"
+# A kind of app whose style is the general one: Wispr Flow's "Other".
+SAME = "same"
+
+# Wispr Flow's app categories, filled in as it does: the names a messaging or
+# mail app goes by on Linux (X11 class, Flatpak id's last part), macOS
+# (process name) and Windows (process name), compared as focus.key does.
+CATEGORIES: dict[str, frozenset[str]] = {
+    "personal": frozenset({
+        "whatsapp", "whatsappforlinux", "whatsdesk", "zapzap", "signal", "signaldesktop",
+        "telegram", "telegramdesktop", "orgtelegramdesktop", "discord", "vesktop",
+        "messenger", "caprine", "messages", "element", "riot", "beeper", "threema",
+    }),
+    "work": frozenset({
+        "slack", "teams", "msteams", "microsoftteams", "teamsforlinux", "mattermost",
+        "mattermostdesktop", "zulip", "rocketchat", "webex", "lark", "feishu",
+    }),
+    "email": frozenset({
+        "thunderbird", "betterbird", "evolution", "geary", "mail", "outlook",
+        "microsoftoutlook", "olk", "mailspring", "spark", "sparkdesktop", "airmail",
+        "kmail", "kmail2", "clawsmail", "mimestream", "canarymail", "mailclient", "postbox",
+    }),
+}
 
 # Words a full stop follows without ending the sentence: it is part of them.
 _ABBREVIATIONS = {
@@ -40,13 +62,38 @@ def normalise(value: Any) -> str:
     return value if value in STYLES else ""
 
 
+def category(apps: list[str]) -> str:
+    """The kind of app in front — "personal", "work", "email" — or "" for any other."""
+    names = {focus.key(name) for name in apps} - {""}
+    return next((kind for kind, known in CATEGORIES.items() if names & known), "")
+
+
+def category_styles(config: dict[str, Any]) -> dict[str, str]:
+    """The categories given a style of their own, other than the general one."""
+    model = config["model"]
+    return {
+        kind: normalise(model.get(f"{kind}_style", SAME))
+        for kind in CATEGORIES
+        if normalise(model.get(f"{kind}_style", SAME))
+    }
+
+
+def per_app(config: dict[str, Any]) -> bool:
+    """Whether the app in front can change the style: worth asking the desktop."""
+    return bool(config.get("app_styles")) or bool(category_styles(config))
+
+
 def for_app(config: dict[str, Any], apps: list[str]) -> str:
-    """The style set for the application in front (any of its names), or ""."""
+    """The style set for the application in front (any of its names), or "".
+
+    An app listed by name wins over its category: Slack can stay formal
+    while the other work chats are casual.
+    """
     names = {focus.key(name) for name in apps} - {""}
     for app, value in config.get("app_styles", {}).items():
         if isinstance(value, str) and focus.key(app) in names and normalise(value):
             return normalise(value)
-    return ""
+    return category_styles(config).get(category(apps), "")
 
 
 def resolve(config: dict[str, Any], apps: list[str] | None = None) -> str:

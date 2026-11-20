@@ -499,6 +499,23 @@ class AppStylesTest(ControllerCase):
         self.assertEqual(reply["status"], "“google-chrome” and “Google Chrome” are the same app")
         self.assertEqual(config_module.load(self.path)["app_styles"], {})
 
+    def test_each_kind_of_app_offers_the_general_style_and_the_three_styles(self):
+        snapshot = self.controller.snapshot()
+        for field in ("personal_style", "work_style", "email_style"):
+            self.assertEqual(snapshot["values"][field], "same")
+            self.assertEqual(snapshot["defaults"][field], "same")
+            self.assertEqual([value for value, _ in snapshot["choices"][field]],
+                             ["same", "formal", "casual", "very_casual"])
+
+    def test_a_kind_of_app_s_style_is_written_in_model(self):
+        reply = self.save(work_style="casual", personal_style="very_casual")
+        self.assertTrue(reply["saved"])
+        self.assertEqual(self.sent, ["reload"])
+        model = config_module.load(self.path)["model"]
+        self.assertEqual((model["work_style"], model["personal_style"], model["email_style"]),
+                         ("casual", "very_casual", "same"))
+        self.assertIn("# my own comment", self.path.read_text(encoding="utf-8"))
+
     def test_an_incomplete_row_is_refused(self):
         self.assertEqual(self.save(app_styles=[["", "casual"]])["status"],
                          "A style per app has no app")

@@ -452,9 +452,25 @@ acronyms (*OK*, *API*), mixed-case names (*GitHub*) and English *I* keep theirs,
 does a snippet's text. Rules run on your machine. Wispr Flow's *Excited* style (more
 exclamation marks) is not there.
 
-**A style per app.** Casual in Slack, formal in your mail: the **Style per app** list of
-the settings window (Dictation tab), or `[app_styles]` in `config.toml`, gives an app a
-style of its own, over `style`:
+**A style per kind of app.** As Wispr Flow does, whisper-desk knows the usual apps of three
+kinds and gives each kind its style, over `style`: **Personal messages**, **Work
+messages** and **Email** under *Style per app* in the settings window (Dictation tab), or
+in `[model]`:
+
+| Key | Apps known | Default |
+|---|---|---|
+| `personal_style` | WhatsApp, Signal, Telegram, Discord, Messenger, Messages, Element, Beeper | `"same"` |
+| `work_style` | Slack, Microsoft Teams, Mattermost, Zulip, Rocket.Chat, Webex | `"same"` |
+| `email_style` | Thunderbird, Betterbird, Evolution, Geary, KMail, Mail, Outlook, Mailspring, Spark | `"same"` |
+
+`"same"` (**Same as Style**) keeps `style`; `"formal"`, `"casual"` or `"very_casual"`
+gives the kind its own — `personal_style = "very_casual"` writes *"ok on se voit demain"*
+in WhatsApp and a formal mail in Thunderbird. Every other app (Wispr Flow's *Other*)
+takes `style`.
+
+**A style per app.** An app of your own, or one that should not follow its kind: the
+**Style per app** list of the settings window, or `[app_styles]` in `config.toml`, gives
+an app a style of its own, over `style` and over its kind:
 
 ```toml
 [app_styles]
@@ -468,7 +484,7 @@ its X11 class (`slack`, `firefox`, `code`; `xprop WM_CLASS` and a click on the w
 it), its Sway or Hyprland app id, its name on macOS (`Slack`), its process on Windows under
 WSL (`WINWORD`, `chrome`); case, spaces and dashes do not matter, and the journal of the
 service says *Application in front: …* at each dictation. It is asked only when the list
-holds an app or the history is on (the history notes it, see below). GNOME and KDE on Wayland tell no program which window is in front: there, only
+holds an app, a kind of app has its own style, or the history is on (the history notes it, see below). GNOME and KDE on Wayland tell no program which window is in front: there, only
 the apps that run through X11 (XWayland) are recognised, and the others take `style`. A
 browser is one app: Gmail and Slack in two tabs of Firefox take Firefox's style.
 
@@ -693,7 +709,7 @@ move between them, `Ctrl+S` saves, the whole window works from the keyboard:
 
 | Tab | What it sets |
 |---|---|
-| **Dictation** | language, model (with its download size and speed), style; style per app; spoken punctuation, hesitations, spoken corrections, lists, developer syntax |
+| **Dictation** | language, model (with its download size and speed), style; style for personal messages, work messages and email, style per app; spoken punctuation, hesitations, spoken corrections, lists, developer syntax |
 | **Microphone** | device, with a **Test** gauge; capture tool; sentence-by-sentence insertion, pause between sentences, silence that ends the dictation, time to give up, longest dictation, voice threshold |
 | **Shortcut and output** | shortcut, captured by pressing the new combination, its name and action; output mode, paste shortcut, way of pasting, clipboard given back, notifications |
 | **Words** | vocabulary; replacements, each misspelling with the spelling meant; snippets, each cue with its text |
@@ -732,6 +748,7 @@ spoken_punctuation = true     # "virgule", "point", "à la ligne", "comma", "new
 developer_syntax = true       # "camel case user name" is written userName
 lists = true                  # "un, des œufs, deux, du lait" or "tiret… tiret…" is written as a list
 style = "formal"              # "casual": no final full stop; "very_casual": no capitals either
+work_style = "same"           # Slack, Teams…: "same" as `style`, or a style of their own
 
 [app_styles]                  # an app's own style, over `style`
 "slack" = "casual"

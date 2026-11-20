@@ -4,6 +4,14 @@
 
 ### Added
 
+- **A style per kind of app** (Wispr Flow's Styles categories): **Personal messages**,
+  **Work messages** and **Email** now sit at the top of *Style per app* in the settings window
+  (Dictation tab) — `personal_style`, `work_style` and `email_style` in `[model]`. Set
+  *Personal messages* to *very casual* and WhatsApp, Signal, Telegram or Discord get *"ok on se
+  voit demain"* while Thunderbird keeps a formal mail — no app to type in by hand: the usual
+  messaging and mail apps are known under the names Linux, macOS and Windows give them.
+  **Same as Style** (the default) changes nothing; an app listed in *Style per app* keeps its
+  own style over its kind. The screenshot (`docs/settings-window.png`) shows the new settings.
 - **Your usage at a glance in the history window** (Wispr Flow opens on its insights): four
   figures now sit above the dictations — the words dictated (*"112 today · 397 in 7
   days"*), your words per minute, the days in a row with your best run, and the app you

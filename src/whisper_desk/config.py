@@ -75,6 +75,12 @@ DEFAULTS: dict[str, Any] = {
         # Whisper punctuates it, "casual" without the dictation's final full
         # stop, "very_casual" without it nor the sentences' opening capitals.
         "style": "formal",
+        # The style of a kind of app (Wispr Flow's categories), over `style`:
+        # "same" keeps `style`, else formal | casual | very_casual. The apps
+        # of each kind are known (style.CATEGORIES); [app_styles] wins over them.
+        "personal_style": "same",  # WhatsApp, Signal, Telegram, Discord, Messages…
+        "work_style": "same",      # Slack, Teams, Mattermost, Zulip, Rocket.Chat…
+        "email_style": "same",     # Thunderbird, Evolution, Geary, Mail, Outlook…
         # Loaded when the daemon starts: the first dictation is instant.
         "preload": True,
     },

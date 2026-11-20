@@ -43,6 +43,49 @@ class AppStyleTest(unittest.TestCase):
         self.assertEqual(style.resolve({"model": {"style": "casual"}}, ["slack"]), "casual")
 
 
+class CategoryStyleTest(unittest.TestCase):
+    CONFIG = {"model": {"style": "formal", "personal_style": "very_casual",
+                        "work_style": "Casual", "email_style": "same"},
+              "app_styles": {"Mattermost": "formal"}}
+
+    def test_known_apps_have_their_kind_whatever_the_desktop_calls_them(self):
+        self.assertEqual(style.category(["slack", "Slack"]), "work")
+        self.assertEqual(style.category(["ms-teams.exe"]), "work")
+        self.assertEqual(style.category(["Microsoft Teams"]), "work")
+        self.assertEqual(style.category(["org.telegram.desktop", "desktop"]), "personal")
+        self.assertEqual(style.category(["WhatsApp"]), "personal")
+        self.assertEqual(style.category(["org.mozilla.Thunderbird", "Thunderbird"]), "email")
+        self.assertEqual(style.category(["OUTLOOK"]), "email")
+        self.assertEqual(style.category(["Mail"]), "email")
+
+    def test_any_other_app_has_no_kind(self):
+        self.assertEqual(style.category(["firefox"]), "")
+        self.assertEqual(style.category(["code", "Code"]), "")
+        self.assertEqual(style.category([]), "")
+
+    def test_an_app_of_a_kind_takes_the_kind_s_style(self):
+        self.assertEqual(style.resolve(self.CONFIG, ["signal", "Signal"]), "very_casual")
+        self.assertEqual(style.resolve(self.CONFIG, ["Slack"]), "casual")
+
+    def test_same_keeps_the_general_style(self):
+        self.assertEqual(style.resolve(self.CONFIG, ["thunderbird"]), "formal")
+        config = {**self.CONFIG, "model": {**self.CONFIG["model"], "style": "casual"}}
+        self.assertEqual(style.resolve(config, ["thunderbird"]), "casual")
+
+    def test_an_app_listed_by_name_wins_over_its_kind(self):
+        self.assertEqual(style.resolve(self.CONFIG, ["mattermost"]), "formal")
+
+    def test_an_unknown_style_for_a_kind_is_not_taken(self):
+        config = {"model": {"style": "casual", "work_style": "excited"}}
+        self.assertEqual(style.resolve(config, ["slack"]), "casual")
+
+    def test_the_app_in_front_is_worth_asking_only_when_it_can_change_the_style(self):
+        self.assertFalse(style.per_app({"model": {"style": "casual"}}))
+        self.assertFalse(style.per_app({"model": {"work_style": "same"}, "app_styles": {}}))
+        self.assertTrue(style.per_app({"model": {"email_style": "formal"}}))
+        self.assertTrue(style.per_app({"model": {}, "app_styles": {"slack": "casual"}}))
+
+
 class HoldFullStopTest(unittest.TestCase):
     def check(self, text: str, kept: str, held: str) -> None:
         self.assertEqual(style.hold_full_stop(text), (kept, held))
