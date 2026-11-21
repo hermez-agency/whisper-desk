@@ -6,8 +6,9 @@ PyGObject) and nothing else: it knows neither the history file nor the
 daemon. It reads what to show on stdin and says what the user asked for on
 stdout, one JSON object per line:
 
-    stdin   {"entries": [{"id", "date", "duration", "model", "app", "text"}, ...],
+    stdin   {"entries": [{"id", "date", "duration", "model", "app", "app_key", "text"}, ...],
              "stats": [{"value", "label", "detail", "tooltip"}, ...],
+             "apps": [{"key", "name", "dictations"}, ...],
              "keep_days": 30, "hint": "Super+J", "status": "Copied"}
     stdout  {"action": "copy" | "insert" | "delete", "id": 3, "date": "..."}
             {"action": "correct", "id": 3, "date": "...", "text": "...", "learn": true}
@@ -193,6 +194,7 @@ class HistoryWindow(Gtk.Window):
         self.entries: list[dict] = []
         self.hint = "the shortcut"
         self._updating_keep = False
+        self._updating_apps = False
 
         provider = Gtk.CssProvider()
         provider.load_from_data(CSS.encode())
@@ -209,14 +211,17 @@ class HistoryWindow(Gtk.Window):
         layout = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.add(layout)
 
+        finder = Gtk.Box(spacing=8)
+        finder.set_margin_start(12)
+        finder.set_margin_end(12)
+        finder.set_margin_top(10)
+        finder.set_margin_bottom(10)
+        layout.pack_start(finder, False, False, 0)
         self.search = Gtk.SearchEntry()
         self.search.set_placeholder_text("Search the dictations")
-        self.search.set_margin_start(12)
-        self.search.set_margin_end(12)
-        self.search.set_margin_top(10)
-        self.search.set_margin_bottom(10)
         self.search.connect("search-changed", lambda _entry: self._refilter())
-        layout.pack_start(self.search, False, False, 0)
+        finder.pack_start(self.search, True, True, 0)
+        finder.pack_end(self._app_selector(), False, False, 0)
 
         # Wispr Flow opens on its insights above the history; so does this window.
         self.usage = Gtk.Box(spacing=8, homogeneous=True)
@@ -261,6 +266,35 @@ class HistoryWindow(Gtk.Window):
         self.keep.connect("changed", self._on_keep_changed)
         return self.keep
 
+    def _app_selector(self) -> Gtk.ComboBoxText:
+        # Hidden until a dictation names its app: most Wayland desktops never do.
+        self.app_filter = Gtk.ComboBoxText()
+        self.app_filter.append("", "All apps")
+        self.app_filter.set_active_id("")
+        self.app_filter.set_tooltip_text("Only the dictations that went to this app (Alt+A)")
+        self.app_filter.set_no_show_all(True)
+        self.app_filter.connect("changed", self._on_app_changed)
+        return self.app_filter
+
+    def _on_app_changed(self, _combo: Gtk.ComboBoxText) -> None:
+        if not self._updating_apps:
+            self._refilter()
+
+    def _show_apps(self, apps: list) -> None:
+        """The choices, the one picked kept while its app is still in the history."""
+        picked = self.app_filter.get_active_id() or ""
+        self._updating_apps = True
+        self.app_filter.remove_all()
+        self.app_filter.append("", "All apps")
+        for app in apps:
+            count = app.get("dictations", 0)
+            self.app_filter.append(app["key"], f"{app['name']} · {count}")
+        if not self.app_filter.set_active_id(picked):
+            self.app_filter.set_active_id("")
+        self._updating_apps = False
+        self.app_filter.set_visible(bool(apps))
+        self._refilter()
+
     def _on_keep_changed(self, combo: Gtk.ComboBoxText) -> None:
         if not self._updating_keep and combo.get_active_id() is not None:
             send({"action": "keep_days", "days": int(combo.get_active_id())})
@@ -271,6 +305,9 @@ class HistoryWindow(Gtk.Window):
             row.set_header(Gtk.Separator())
 
     def _visible(self, row: Row) -> bool:
+        app = self.app_filter.get_active_id() or ""
+        if app and row.entry.get("app_key") != app:
+            return False
         words = fold(self.search.get_text()).split()
         return all(word in row.folded for word in words)
 
@@ -279,7 +316,9 @@ class HistoryWindow(Gtk.Window):
         self._refresh_empty()
 
     def _refresh_empty(self) -> None:
-        if self.entries:
+        if self.entries and self.app_filter.get_active_id() and not self.search.get_text():
+            self.empty.set_text("No dictation went to this app.")
+        elif self.entries:
             self.empty.set_text("No dictation matches this search.")
         else:
             self.empty.set_text(f"No dictation yet — press {self.hint} and speak.")
@@ -289,9 +328,17 @@ class HistoryWindow(Gtk.Window):
         if control and event.keyval in (Gdk.KEY_f, Gdk.KEY_F):
             self.search.grab_focus()
             return True
+        alt = event.state & Gdk.ModifierType.MOD1_MASK
+        if alt and event.keyval in (Gdk.KEY_a, Gdk.KEY_A) and self.app_filter.get_visible():
+            self.app_filter.grab_focus()
+            self.app_filter.popup()
+            return True
         if event.keyval == Gdk.KEY_Escape:
+            # One Escape undoes one filter, the search first; the last one closes.
             if self.search.get_text():
                 self.search.set_text("")
+            elif self.app_filter.get_active_id():
+                self.app_filter.set_active_id("")
             else:
                 self.close()
             return True
@@ -314,6 +361,8 @@ class HistoryWindow(Gtk.Window):
             self._refresh_empty()
         if "stats" in message:
             self._show_usage(message["stats"])
+        if "apps" in message:
+            self._show_apps(message["apps"])
         if "keep_days" in message:
             self._updating_keep = True
             if not self.keep.set_active_id(str(message["keep_days"])):

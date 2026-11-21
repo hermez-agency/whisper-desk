@@ -1,7 +1,7 @@
 """Driving the history window (GTK3, system Python) from the command line.
 
 The window is a view: this side reads and rewrites the history, works out
-the usage figures shown above it, copies,
+the usage figures shown above it and the apps it can be filtered by, copies,
 asks the daemon to type a text again, writes the purge setting, and adds
 the words a correction teaches to the vocabulary or the replacements.
 """
@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from . import config as config_module
-from . import history, hotkey, output, stats, vocabulary, window_proc
+from . import focus, history, hotkey, output, stats, vocabulary, window_proc
 
 WINDOW_SCRIPT = Path(__file__).with_name("history_window.py")
 
@@ -33,11 +33,23 @@ class HistoryController:
 
     def snapshot(self, status: str = "") -> dict[str, Any]:
         loaded = history.load()
-        entries = [{"id": index, **asdict(entry)} for index, entry in enumerate(loaded)]
+        # The window has no focus.key: each entry carries the key its app is
+        # filtered by, so that "Slack" and "slack" fall under one choice.
+        entries = [
+            {"id": index, **asdict(entry),
+             "app_key": focus.key(entry.app) if entry.app else ""}
+            for index, entry in enumerate(loaded)
+        ]
+        usage = stats.compute(loaded)
         message: dict[str, Any] = {
             "entries": entries,
             # Worked out again on every answer: a deletion or a purge changes them.
-            "stats": stats.tiles(stats.compute(loaded)),
+            "stats": stats.tiles(usage),
+            # The choices of the app filter, most words first as in the stats.
+            "apps": [
+                {"key": focus.key(app.name), "name": app.name, "dictations": app.dictations}
+                for app in usage.apps
+            ],
             "keep_days": int(self.config["output"]["history_days"]),
             "hint": hotkey.label(hotkey.resolve_binding(self.config)),
         }

@@ -202,6 +202,14 @@ class SearchTest(unittest.TestCase):
         self.assertTrue(history.matches(entry, "thursday invoice"))
         self.assertFalse(history.matches(entry, "invoice friday"))
 
+    def test_an_app_is_found_however_the_desktop_spelt_it(self):
+        entry = history.Entry(date="2026-09-29T10:00:00", text="hi", app="Google-chrome")
+        for name in ("google chrome", "Google-Chrome", "googlechrome"):
+            self.assertTrue(history.from_app(entry, name), name)
+        self.assertFalse(history.from_app(entry, "chromium"))
+        self.assertFalse(history.from_app(entry, " - "))
+        self.assertFalse(history.from_app(self.entry("no app noted"), "slack"))
+
     def test_the_latest_is_number_one(self):
         entries = [self.entry("old"), self.entry("new")]
         self.assertEqual([(number, entry.text) for number, entry in history.numbered(entries)],
@@ -240,6 +248,20 @@ class CommandTest(HistoryCase):
         _code, out = self.run_cli("resume")
         self.assertIn("Résumé", out)
         self.assertNotIn("pictures", out)
+
+    def test_only_the_dictations_of_an_app(self):
+        _code, out = self.run_cli("--app", "thunderbird")
+        self.assertIn("Résumé", out)
+        self.assertNotIn("pictures", out)
+
+    def test_an_app_and_words_together(self):
+        _code, out = self.run_cli("--app", "Thunderbird", "pictures")
+        self.assertEqual(out.strip(), "No dictation matches.")
+
+    def test_an_app_never_dictated_into(self):
+        code, out = self.run_cli("--app", "Slack")
+        self.assertEqual(code, 0)
+        self.assertEqual(out.strip(), "No dictation matches.")
 
     def test_copy_takes_the_listed_number(self):
         copied: list[str] = []

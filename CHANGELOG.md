@@ -407,6 +407,15 @@
 
 ### Changed
 
+- **The history filtered by app** (Wispr Flow's history, searched by where you dictated): a
+  menu next to the search field of the history window — **All apps**, then each app with
+  its number of dictations, *"Slack · 27"* — keeps only the dictations that went to that
+  app, and works with the search (*"devis"* in *Thunderbird*). `Alt+A` opens it, `Escape`
+  undoes the search first, then the app. `whisper-desk history --app slack` does the same
+  on the command line; *"Slack"*, *"slack"* and *"slack.exe"* are one app, as in the stats.
+  The menu stays hidden until a dictation names its app (a native window under GNOME or KDE
+  on Wayland names none). The screenshot (`docs/history-window.png`) shows it. No new
+  setting.
 - **"Efface tout" / "scratch all that" starts the dictation over** (Wispr Flow's
   backtrack, the whole text taken back): said as a sentence of its own, it erases every
   sentence typed since the shortcut, with backspaces in one go, and the dictation goes on —

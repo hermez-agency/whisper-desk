@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from . import config as config_module
+from . import focus
 
 logger = logging.getLogger("whisper-desk.history")
 
@@ -219,6 +220,12 @@ def matches(entry: Entry, query: str) -> bool:
     """Every word of the query appears in the text, in any order."""
     text = _fold(entry.text)
     return all(word in text for word in _fold(query).split())
+
+
+def from_app(entry: Entry, app: str) -> bool:
+    """The dictation went to `app`: "slack", "Slack" and "slack.exe" alike, as in the stats."""
+    wanted = focus.key(app)
+    return bool(wanted) and bool(entry.app) and focus.key(entry.app) == wanted
 
 
 def numbered(entries: list[Entry]) -> list[tuple[int, Entry]]:

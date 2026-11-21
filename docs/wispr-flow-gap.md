@@ -32,7 +32,8 @@ users' reviews show its home screen (read on 2026-11-19); "efface tout" for the 
 the tracker's own left-to-do of 2026-11-15 (2026-11-20); style per kind of app,
 [How to setup Flow Styles](https://docs.wisprflow.ai/articles/2368263928-how-to-setup-flow-styles) —
 personal messages, work messages, email, other — and the tracker's own left-to-do of 2026-11-16
-(2026-11-20).
+(2026-11-20); the history filtered by app, the tracker's own left-to-do of 2026-11-18 and
+2026-11-19 (2026-11-21).
 
 **Status**: done · partial · missing · out of scope.
 **Effort**: S (a session) · M (a few sessions) · L (to split into several gaps).
@@ -61,7 +62,7 @@ personal messages, work messages, email, other — and the tracker's own left-to
 | **Styles** — tone adapted to the app (formal in docs, casual in chat) | `style.py`: one style for every app, `style` in `[model]` or **Style** in the settings window — *formal* (as Whisper punctuates it), *casual* (no final full stop), *very casual* (no sentence-opening capitals either) (#42); a style per app, **Style per app** in the settings window or `[app_styles]`, from the app in front at the shortcut (`focus.py`: X11, Sway, Hyprland, macOS, WSL) (#47); Wispr Flow's categories — **Personal messages**, **Work messages**, **Email** in the settings window, `personal_style`, `work_style`, `email_style` — with their usual apps known (in PR). Known apps only, not guessed from the window's content; GNOME and KDE on Wayland only name XWayland apps; a browser is one app whatever its tab; no *Excited* style | partial | medium | M |
 | **Command Mode** — select text, say how to rewrite it | — (would need a local model, e.g. Ollama) | missing | high | L |
 | **Developer syntax** — camelCase, snake_case, CLI commands, file tagging in Cursor | `casing.py`: a name said after its style ("camel case user name" → `userName`, snake, pascal, kebab, constant case) written in it, Whisper's glued and hyphenated forms understood; measured in `bench/casing/` (#28). Not guessed from context without the style said; no CLI commands, no file tagging | partial | medium | M |
-| **History** of dictations | `whisper-desk history` and its window: search, copy, insert again, purge; each dictation names the app it went to (#49) | done | — | — |
+| **History** of dictations | `whisper-desk history` and its window: search, copy, insert again, purge; each dictation names the app it went to (#49); filtered by app, a menu next to the search or `history --app` (in PR) | done | — | — |
 | **Settings** | `whisper-desk settings`: every key of `config.toml`, in eight tabs (Dictation, Microphone, Shortcut and output, Words, Overlay, History, Advanced, Updates), each with its help and default, **Restore defaults** per section, invalid values refused before saving, keyboard only; `tests/test_settings_schema.py` fails when a key has no setting | done | — | — |
 | **Overlay** | X11 overlay: live level, sentence transcribed, states, cancel | done | — | — |
 | **Usage dashboard** — words dictated, speed, streak, top apps | `whisper-desk stats` (`stats.py`): dictations, words in all, today and over 7 days, words per minute, days in a row, worked out from the history (#32); top apps by share of the words, from the app the history now notes (#49); the same figures in four tiles above the history window (#50). Apps only where the desktop names the one in front; no chart over time, no rank among users | partial | low | S |
@@ -440,3 +441,19 @@ personal messages, work messages, email, other — and the tracker's own left-to
   Slack in a tab take the browser's style (Wispr Flow reads the site); GNOME and KDE on
   Wayland only name XWayland apps (as #47). Left to do: the kind of a browser tab, a GNOME
   Shell extension naming the window in front, a kind for documents and code editors.
+- 2026-11-21 — **History filtered by app** (in PR, an interface day): the left-to-do of #49 and #50 —
+  "the history searchable by app". A menu now sits next to the search field of the history
+  window: **All apps**, then each app the history names, most words first as in the stats, with
+  its number of dictations (*Slack · 27*). Picking one keeps only that app's dictations; the
+  search works within it; `Alt+A` opens the menu, `Escape` clears the search, then the app,
+  then closes the window. The venv side sends the choices and, on each dictation, the key its
+  app is compared by (`focus.key`: *Slack*, *slack*, *slack.exe* one app), so the window, on the
+  system Python, compares nothing itself; the choice picked holds across a correction or a
+  deletion while its app is still in the history. Hidden while no dictation names an app.
+  `whisper-desk history --app NAME` does the same on the command line, with or without words.
+  No new key in `config.toml`. A feature, no quality measure: 6 new tests (the app compared as
+  the stats do, the window's choices and keys, the command line); before/after screenshots of
+  the window (the new one, filtered on Slack, in `docs/history-window.png`). Differences with
+  Wispr Flow: none named in its help center for the history; the figures above the list stay
+  those of every app. Left to do: a chart over time, the tiles of one app when it is picked, a
+  GNOME Shell extension naming the window in front.
