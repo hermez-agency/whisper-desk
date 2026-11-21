@@ -621,6 +621,7 @@ desktop does not say — a native window under GNOME or KDE on Wayland — none 
 ```sh
 whisper-desk history                  # the 20 latest, numbered from 1 (the latest)
 whisper-desk history invoice friday   # search: every word, case and accents ignored
+whisper-desk history --app slack      # only the dictations that went to Slack
 whisper-desk history -n 0             # all of them
 whisper-desk history --copy 3         # copies dictation 3 to the clipboard
 whisper-desk history --correct 3 "Le devis d'Animalink est parti."   # fixes its text
@@ -631,15 +632,17 @@ whisper-desk history --window         # the window below
 ```
 
 <p align="center">
-  <img src="docs/history-window.png" alt="The history window: words, speed, streak and top app above the dictations to search, copy, insert again, delete" width="560">
+  <img src="docs/history-window.png" alt="The history window filtered on Slack: words, speed, streak and top app above the dictations to search, filter by app, copy, insert again, delete" width="560">
 </p>
 
 At the top, four figures sum up your use, as `whisper-desk stats` does (see *Statistics*):
 the words dictated (today and over 7 days), your words per minute, the days in a row, and
 the app you dictate into most with the next two; hover one for what it counts. They are
 worked out again after each correction or deletion, and stay hidden while the history is
-empty. Below them, the window lists the dictations newest first, with a search field (`Ctrl+F`), and for
-each one **Copy**, **Insert** — the window closes and the daemon types the text where
+empty. Below them, the window lists the dictations newest first, with a search field (`Ctrl+F`)
+and, once a dictation names its app, a menu that keeps only those of one app (`Alt+A`) —
+*Slack · 27* —, the search working within it; `Escape` clears the search, then the app.
+For each one **Copy**, **Insert** — the window closes and the daemon types the text where
 your cursor was —, **Correct…** and a bin that asks for a second click. At the bottom,
 *Keep dictations* sets the automatic purge. It needs GTK3 for the system Python, like the
 overlay; without it, the command line does the same.

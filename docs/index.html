@@ -947,6 +947,7 @@
     </p>
     <pre data-copy><span class="p">$ </span>whisper-desk history                  <span class="c"># the 20 latest, numbered from 1 (the latest)</span>
 <span class="p">$ </span>whisper-desk history invoice friday   <span class="c"># search: every word, case and accents ignored</span>
+<span class="p">$ </span>whisper-desk history --app slack      <span class="c"># only the dictations that went to Slack</span>
 <span class="p">$ </span>whisper-desk history --copy 3         <span class="c"># copies dictation 3 to the clipboard</span>
 <span class="p">$ </span>whisper-desk history --correct 3 "…"  <span class="c"># fixes its text, the words corrected join the vocabulary</span>
 <span class="p">$ </span>whisper-desk history --delete 3       <span class="c"># deletes it</span>
@@ -957,9 +958,9 @@
       <div class="shot wide">
         <picture>
           <source srcset="history-window.webp" type="image/webp">
-          <img src="history-window.png" alt="The whisper-desk history window: your words, speed, streak and top app above the dictations to search, copy, insert again, delete" width="680" height="651" loading="lazy">
+          <img src="history-window.png" alt="The whisper-desk history window filtered on Slack: your words, speed, streak and top app above the dictations to search, filter by app, copy, insert again, delete" width="680" height="651" loading="lazy">
         </picture>
-        <span>Your words, speed, streak and top app at a glance, then search, <b>Copy</b>, <b>Insert</b> again where the cursor was, <b>Correct…</b>, delete — and the automatic purge</span>
+        <span>Your words, speed, streak and top app at a glance, then search, filter by app, <b>Copy</b>, <b>Insert</b> again where the cursor was, <b>Correct…</b>, delete — and the automatic purge</span>
       </div>
     </div>
   </div>

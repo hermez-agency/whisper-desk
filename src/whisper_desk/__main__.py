@@ -234,12 +234,13 @@ def cmd_history(args: argparse.Namespace) -> int:
     query = " ".join(args.query)
     shown = [
         (number, entry) for number, entry in history.numbered(entries)
-        if not query or history.matches(entry, query)
+        if (not query or history.matches(entry, query))
+        and (args.app is None or history.from_app(entry, args.app))
     ]
     if args.limit > 0:
         shown = shown[: args.limit]
     if not shown:
-        print("No dictation matches." if query else "No dictation yet.")
+        print("No dictation matches." if query or args.app is not None else "No dictation yet.")
         return 0
     width = shutil.get_terminal_size().columns if sys.stdout.isatty() else None
     # The oldest at the top, the latest just above the prompt.
@@ -833,6 +834,10 @@ def build_parser() -> argparse.ArgumentParser:
     history_parser.add_argument("query", nargs="*", help="words to look for (case and accents ignored)")
     history_parser.add_argument(
         "-n", "--limit", type=int, default=20, help="how many to show (0: all; default 20)"
+    )
+    history_parser.add_argument(
+        "--app", metavar="APP",
+        help="only the dictations that went to APP (case, spaces and dashes ignored)",
     )
     history_parser.add_argument("--copy", type=int, metavar="N", help="copies dictation N")
     history_parser.add_argument(

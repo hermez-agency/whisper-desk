@@ -52,6 +52,22 @@ class ControllerTest(HistoryCase):
                          ["words dictated", "words per minute", "in a row", "top app · 100 %"])
         self.assertEqual(tiles[0]["value"], "8")
 
+    def test_the_window_can_filter_by_app(self):
+        history.append("see you tomorrow", duration=1.5, model="small", now=NOW, app="slack")
+        history.append("dear Claire", duration=2.0, model="small", now=NOW, app="Thunderbird")
+        snapshot = self.controller.snapshot()
+        # "Slack" and "slack" one choice, under its latest spelling, most words first.
+        self.assertEqual(snapshot["apps"], [
+            {"key": "slack", "name": "slack", "dictations": 2},
+            {"key": "thunderbird", "name": "Thunderbird", "dictations": 1},
+        ])
+        self.assertEqual([entry["app_key"] for entry in snapshot["entries"]],
+                         ["", "slack", "slack", "thunderbird"])
+
+    def test_no_app_noted_no_filter(self):
+        history.delete(history.load()[1])
+        self.assertEqual(self.controller.snapshot()["apps"], [])
+
     def test_a_deletion_changes_the_figures(self):
         reply = self.controller.handle(self.request("delete", 1))
         self.assertEqual(reply["stats"][0]["value"], "3")
