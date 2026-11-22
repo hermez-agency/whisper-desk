@@ -23,26 +23,73 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import GLib, Gtk  # noqa: E402
+from gi.repository import Gdk, GLib, Gtk  # noqa: E402
 
 ACCENT = "#e46212"
+# The Hermez look, as in the settings and history windows: orange, stone greys,
+# headlines in Bricolage Grotesque when the font is installed (the system sans
+# without it) — and the theme's own green or blue nowhere, not even on Next.
 CSS = f"""
-.headline {{ font-size: x-large; font-weight: 600; }}
+.brand {{
+    font-family: "Bricolage Grotesque", sans-serif;
+    font-weight: 700;
+    color: {ACCENT};
+}}
+.headline {{
+    font-family: "Bricolage Grotesque", sans-serif;
+    font-size: x-large;
+    font-weight: 700;
+}}
 .lead {{ color: alpha(currentColor, 0.75); }}
-.hint {{ color: alpha(currentColor, 0.60); font-size: small; }}
+.hint {{ color: #78716c; font-size: small; }}
+.field {{ color: #78716c; }}
 .keycap {{
     font-size: x-large;
     font-weight: bold;
     padding: 10px 22px;
-    border: 1px solid alpha(currentColor, 0.25);
+    border: 1px solid #a8a29e;
     border-bottom-width: 3px;
     border-radius: 10px;
 }}
-.trial {{ border: 1px solid alpha(currentColor, 0.20); border-radius: 8px; padding: 10px; }}
-levelbar block.filled, progressbar progress {{ background-color: {ACCENT}; border-color: {ACCENT}; }}
+.trial {{ border: 1px solid alpha(#a8a29e, 0.60); border-radius: 8px; padding: 10px; }}
+.pip {{
+    min-width: 18px;
+    min-height: 4px;
+    border-radius: 2px;
+    background-color: alpha(#a8a29e, 0.45);
+}}
+.pip.reached {{ background-color: {ACCENT}; }}
+button.suggested-action {{
+    background-image: none;
+    background-color: {ACCENT};
+    border-color: #c2500c;
+    color: #ffffff;
+    text-shadow: none;
+}}
+button.suggested-action:hover {{ background-color: #f07a2b; }}
+levelbar block.filled, progressbar progress {{
+    background-image: none;
+    background-color: {ACCENT};
+    border-color: {ACCENT};
+}}
+entry:focus, combobox:focus button, button:focus, textview:focus {{
+    border-color: {ACCENT};
+    outline-color: {ACCENT};
+}}
 """
 
 STEPS = ("microphone", "model", "download", "try")
+
+
+def escape_step(step: int) -> int | None:
+    """Where Escape leads: one step back, the window closed (-1) from the first.
+
+    None on the last step: there Escape belongs to the test dictation, which it
+    cancels — Alt+B still goes back.
+    """
+    if STEPS[step] == "try":
+        return None
+    return step - 1
 
 
 def send(message: dict) -> None:
@@ -93,17 +140,34 @@ class WelcomeWindow(Gtk.Window):
         footer = Gtk.Box(spacing=8)
         footer.set_border_width(12)
         layout.pack_start(footer, False, False, 0)
+        brand = Gtk.Label(label="whisper-desk")
+        brand.get_style_context().add_class("brand")
+        footer.pack_start(brand, False, False, 4)
+        pips = Gtk.Box(spacing=4)
+        pips.set_valign(Gtk.Align.CENTER)
+        self.pips = []
+        for _name in STEPS:
+            pip = Gtk.Box()
+            pip.get_style_context().add_class("pip")
+            pips.pack_start(pip, False, False, 0)
+            self.pips.append(pip)
+        footer.pack_start(pips, False, False, 6)
         self.progress_label = Gtk.Label()
         self.progress_label.get_style_context().add_class("hint")
         footer.pack_start(self.progress_label, False, False, 0)
-        self.next_button = Gtk.Button(label="Next")
+        # Alt+N and Alt+B from anywhere, Enter for Next wherever the focus does
+        # not need it: the welcome is done without the mouse.
+        self.next_button = Gtk.Button.new_with_mnemonic("_Next")
         self.next_button.get_style_context().add_class("suggested-action")
+        self.next_button.set_can_default(True)
         self.next_button.connect("clicked", lambda _button: self._go(self.step + 1))
         footer.pack_end(self.next_button, False, False, 0)
-        self.back_button = Gtk.Button(label="Back")
+        self.back_button = Gtk.Button.new_with_mnemonic("_Back")
         self.back_button.connect("clicked", lambda _button: self._go(self.step - 1))
         footer.pack_end(self.back_button, False, False, 0)
+        self.set_default(self.next_button)
 
+        self.connect("key-press-event", self._on_key)
         self.connect("delete-event", lambda _widget, _event: send({"action": "stop_mic"}) or False)
 
     # -- pages -------------------------------------------------------------
@@ -124,7 +188,12 @@ class WelcomeWindow(Gtk.Window):
         )
         self.device = Gtk.ComboBoxText()
         self.device.connect("changed", lambda _combo: self._test_microphone())
-        page.pack_start(self.device, False, False, 6)
+        label = Gtk.Label.new_with_mnemonic("_Microphone")
+        label.set_xalign(0.0)
+        label.get_style_context().add_class("field")
+        label.set_mnemonic_widget(self.device)
+        page.pack_start(label, False, False, 0)
+        page.pack_start(self.device, False, False, 0)
         self.meter = Gtk.LevelBar()
         self.meter.set_min_value(0.0)
         self.meter.set_max_value(1.0)
@@ -143,10 +212,12 @@ class WelcomeWindow(Gtk.Window):
         self.language = Gtk.ComboBoxText()
         self.model = Gtk.ComboBoxText()
         self.language.set_hexpand(True)
-        for row, (title, widget) in enumerate((("Language", self.language), ("Model", self.model))):
-            label = Gtk.Label(label=title)
+        for row, (title, widget) in enumerate((("_Language", self.language),
+                                               ("_Model", self.model))):
+            label = Gtk.Label.new_with_mnemonic(title)
             label.set_xalign(1.0)
-            label.get_style_context().add_class("dim-label")
+            label.get_style_context().add_class("field")
+            label.set_mnemonic_widget(widget)
             grid.attach(label, 0, row, 1, 1)
             grid.attach(widget, 1, row, 1, 1)
         page.pack_start(grid, False, False, 6)
@@ -185,7 +256,7 @@ class WelcomeWindow(Gtk.Window):
         frame.add(self.trial)
         page.pack_start(frame, False, False, 0)
         row = Gtk.Box(spacing=10)
-        self.try_button = Gtk.Button(label="Start a test dictation")
+        self.try_button = Gtk.Button.new_with_mnemonic("_Start a test dictation")
         self.try_button.connect("clicked", self._on_try)
         row.pack_start(self.try_button, False, False, 0)
         self.try_hint = text("The text will appear in the box above.", "hint")
@@ -217,18 +288,38 @@ class WelcomeWindow(Gtk.Window):
             send({"action": "prepare", "values": self.collect()})
         if name == "try":
             self.trial.grab_focus()
+        else:
+            # Next holds the focus: Enter goes on, Tab reaches the choices.
+            self.next_button.grab_focus()
         self._refresh_buttons()
+
+    def _on_key(self, _widget: Gtk.Widget, event: Gdk.EventKey) -> bool:
+        if event.keyval != Gdk.KEY_Escape:
+            return False
+        step = escape_step(self.step)
+        if step is None:
+            return False
+        if step < 0:
+            self.close()
+        else:
+            self._go(step)
+        return True
 
     def _refresh_buttons(self) -> None:
         name = STEPS[self.step]
         self.back_button.set_sensitive(self.step > 0)
         self.progress_label.set_text(f"Step {self.step + 1} of {len(STEPS)}")
+        for index, pip in enumerate(self.pips):
+            if index <= self.step:
+                pip.get_style_context().add_class("reached")
+            else:
+                pip.get_style_context().remove_class("reached")
         if name == "try":
-            self.next_button.set_label("Finish")
+            self.next_button.set_label("Fi_nish")
         elif name == "download" and not self.loaded:
-            self.next_button.set_label("Continue meanwhile")
+            self.next_button.set_label("Co_ntinue meanwhile")
         else:
-            self.next_button.set_label("Next")
+            self.next_button.set_label("_Next")
 
     def collect(self) -> dict:
         return {
@@ -324,6 +415,7 @@ def main() -> int:
     window.connect("destroy", Gtk.main_quit)
     window.show_all()
     window._refresh_buttons()
+    window.next_button.grab_focus()
     threading.Thread(target=read_orders, args=(window,), daemon=True).start()
     Gtk.main()
     return 0

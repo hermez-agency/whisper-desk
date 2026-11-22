@@ -407,6 +407,16 @@
 
 ### Changed
 
+- **The welcome window in the Hermez look, and done from the keyboard** (Wispr Flow's
+  onboarding is one look from end to end): its **Next** button is Hermez orange instead of
+  the desktop theme's green or blue, its headlines are set in Bricolage Grotesque (the
+  system sans without the font), its hints in stone grey, and four orange marks next to
+  *whisper-desk* in the footer show how far along you are. **Enter** goes on, **Alt+N** and
+  **Alt+B** go to the next and previous step from anywhere, **Escape** goes back a step (and
+  closes the window from the first; on the last step it is left to the test dictation it
+  cancels), **Alt+M**, **Alt+L** and **Alt+S** reach the microphone, the language and the
+  test dictation; the focus shows in orange. The screenshots (`docs/welcome-*.png`) show it.
+  No new setting.
 - **The history filtered by app** (Wispr Flow's history, searched by where you dictated): a
   menu next to the search field of the history window — **All apps**, then each app with
   its number of dictations, *"Slack · 27"* — keeps only the dictations that went to that

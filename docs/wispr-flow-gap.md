@@ -457,3 +457,22 @@ personal messages, work messages, email, other — and the tracker's own left-to
   Wispr Flow: none named in its help center for the history; the figures above the list stay
   those of every app. Left to do: a chart over time, the tiles of one app when it is picked, a
   GNOME Shell extension naming the window in front.
+- 2026-11-22 — **The welcome window in the Hermez look, and by keyboard** (in PR, an interface
+  day): the ticket's own rule — "a window that does not follow the Hermez look, keyboard
+  accessibility". The settings and history windows already wore the Hermez look; the welcome
+  window, the first one a new user sees, still had the theme's green **Next** (Yaru) and
+  greys of its own. Now: headlines in Bricolage Grotesque, hints and labels in stone grey
+  (#78716c), keycap and frames in stone (#a8a29e), **Next** orange (#e46212, #f07a2b on
+  hover), orange focus, levels and progress, and a footer with *whisper-desk* and four step
+  marks. By keyboard: Next is the default button and holds the focus on every step but the
+  last (Enter goes on), Alt+N / Alt+B everywhere, Escape one step back — the window closed
+  from the first, nothing on the last where Esc cancels the test dictation —, mnemonics on
+  the microphone, the language, the model and the test dictation. No new key in
+  `config.toml`. An interface day, no quality measure: 7 new tests
+  (`tests/test_welcome_window.py`: the style sheet read from the source, so CI checks it
+  without GTK — orange Next, Bricolage headlines, orange focus, no colour outside the Hermez
+  palette —, and where Escape leads, skipped without PyGObject); before/after screenshots
+  of the four steps (the new ones in `docs/welcome-*.png`). Differences with Wispr Flow: its
+  onboarding also asks for permissions and teaches the shortcut by trying it, as whisper-desk
+  does on its last step. Left to do: the overlay's colours checked against the palette, the
+  tray menu's labels, a high-contrast check of the stone greys on a dark theme.

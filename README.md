@@ -99,7 +99,9 @@ microphone only opens once the model is ready.
 The welcome window walks through four steps: the microphone, with a gauge that must move
 when you speak; the language and the model; the download, with its progress; then your
 shortcut, and a first dictation into a text box. It opens once, after the first
-installation (`WD_NO_WELCOME=1` skips it); `whisper-desk welcome` opens it again.
+installation (`WD_NO_WELCOME=1` skips it); `whisper-desk welcome` opens it again. It goes
+without the mouse: **Enter** or **Alt+N** for the next step, **Alt+B** or **Escape** to go
+back, and the underlined letter of each choice to reach it.
 
 <p align="center">
   <img src="docs/welcome-microphone.png" alt="Welcome, step 1: the microphone gauge" width="400">
