@@ -2,6 +2,7 @@
 
     python3 bench/punctuation/measure.py              # on the written sentences
     python3 bench/punctuation/measure.py --audio      # through faster-whisper
+    python3 bench/punctuation/measure.py --only fr25,en21,ctl23   # some ids (or prefixes)
 
 Words and marks both count: "demain virgule" against "demain," is two errors,
 a missing line break one. --audio needs the whisper-desk venv (whisper-desk's own
@@ -24,16 +25,21 @@ sys.path.insert(0, str(HERE.parents[1] / "src"))
 from whisper_desk import backtrack, hesitations, punctuation  # noqa: E402
 
 
+ONLY: tuple[str, ...] = ()
+
+
 def corpus() -> list[dict[str, str]]:
     with (HERE / "corpus.tsv").open(encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle, delimiter="\t"))
+    if ONLY:
+        rows = [row for row in rows if row["id"].startswith(ONLY)]
     for row in rows:
         row["expected"] = row["expected"].replace("\\n", "\n")
     return rows
 
 
 def tokens(text: str) -> list[str]:
-    return re.findall(r"[\w'’-]+|[,.;:!?«»()\"]|\n", text.lower())
+    return re.findall(r"[\w'’-]+|[,.;:!?«»()\[\]{}\"]|\n", text.lower())
 
 
 def distance(reference: list[str], hypothesis: list[str]) -> int:
@@ -89,8 +95,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--audio", action="store_true")
     parser.add_argument("--models", default="small:cpu,large-v3-turbo:cuda")
+    parser.add_argument("--only", default="", help="comma-separated ids or id prefixes")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
+    global ONLY
+    ONLY = tuple(filter(None, args.only.split(",")))
     report("written sentences", {r["id"]: r["spoken"] for r in corpus()}, args.verbose)
     if args.audio:
         for spec in args.models.split(","):

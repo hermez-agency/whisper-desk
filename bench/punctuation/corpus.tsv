@@ -43,6 +43,22 @@ en17	en	He calls it quote a detail unquote comma but it matters period	He calls 
 en18	en	Open parenthesis to be confirmed close parenthesis	(To be confirmed)
 en19	en	The answer was colon open quote no way close quote period	The answer was: "no way".
 en20	en	The budget open paren before tax close paren is approved period	The budget (before tax) is approved.
+fr25	fr	La fonction prend ouvrez les crochets un tableau fermez les crochets en entrée point	La fonction prend [un tableau] en entrée.
+fr26	fr	Le texte ouvrez les crochets traduit par nous fermez les crochets est en annexe point	Le texte [traduit par nous] est en annexe.
+fr27	fr	Ajoute crochet ouvrant à compléter crochet fermant à la fin point	Ajoute [à compléter] à la fin.
+fr28	fr	L'objet s'écrit ouvrez l'accolade nom deux points texte fermez l'accolade point	L'objet s'écrit {nom : texte}.
+fr29	fr	Ouvrez les accolades réponse fermez les accolades	{Réponse}
+fr30	fr	Le modèle accolade ouvrante prénom accolade fermante remplace le nom point	Le modèle {prénom} remplace le nom.
+fr31	fr	Note ouvrez les crochets à vérifier fermez les crochets virgule le budget est validé point	Note [à vérifier], le budget est validé.
+fr32	fr	On garde ouvre l'accolade titre et date ferme l'accolade comme exemple point	On garde {titre et date} comme exemple.
+en21	en	The function takes open bracket a list close bracket as input period	The function takes [a list] as input.
+en22	en	The report open square bracket draft close square bracket is attached period	The report [draft] is attached.
+en23	en	Add open bracket to be confirmed close bracket at the end period	Add [to be confirmed] at the end.
+en24	en	The object is open brace name colon text close brace period	The object is {name: text}.
+en25	en	Open curly brace answer close curly brace	{Answer}
+en26	en	The template open curly bracket first name close curly bracket replaces the name period	The template {first name} replaces the name.
+en27	en	Note open bracket to check close bracket comma the budget is approved period	Note [to check], the budget is approved.
+en28	en	We keep open brace title and date close brace as an example period	We keep {title and date} as an example.
 ctl01	fr	C'est un bon point de départ pour la discussion.	C'est un bon point de départ pour la discussion.
 ctl02	fr	On fait le point demain matin.	On fait le point demain matin.
 ctl03	fr	Il manque une virgule dans cette phrase.	Il manque une virgule dans cette phrase.
@@ -65,3 +81,12 @@ ctl19	en	We have an open quote request from the client.	We have an open quote re
 ctl20	en	Can I quote you on that?	Can I quote you on that?
 ctl21	en	The store is open, quote me if you want.	The store is open, quote me if you want.
 ctl22	en	He was, quote unquote, busy.	He was, quote unquote, busy.
+ctl23	fr	Il a fait un crochet par Lyon en rentrant.	Il a fait un crochet par Lyon en rentrant.
+ctl24	fr	Il faut ouvrir les crochets du portail.	Il faut ouvrir les crochets du portail.
+ctl25	fr	Ils se sont donné l'accolade sur le quai.	Ils se sont donné l'accolade sur le quai.
+ctl26	fr	Ferme le crochet de la fenêtre.	Ferme le crochet de la fenêtre.
+ctl27	fr	Il manque un crochet fermant dans ce code.	Il manque un crochet fermant dans ce code.
+ctl28	en	We are in the same tax bracket.	We are in the same tax bracket.
+ctl29	en	Brace yourself for the news.	Brace yourself for the news.
+ctl30	en	The bracket on the shelf is loose.	The bracket on the shelf is loose.
+ctl31	en	We need to open brackets for each new tier.	We need to open brackets for each new tier.

@@ -140,6 +140,8 @@ class LowerStartsTest(unittest.TestCase):
 
     def test_after_an_opening_quote_or_bracket(self):
         self.check("Il a dit. « Bonjour. » (Puis rien.)", "il a dit. « bonjour. » (puis rien.)")
+        self.check("Voir la note. [Puis rien.] {Rien.} Ensuite.",
+                   "voir la note. [puis rien.] {rien.} ensuite.")
 
     def test_capitals_inside_a_sentence_stay(self):
         self.check("On part à Paris avec Marie.", "on part à Paris avec Marie.")
