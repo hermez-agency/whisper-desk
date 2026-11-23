@@ -154,10 +154,18 @@ def _cased(chunk: str, case: str) -> str:
 
 
 # Quotes and brackets said aloud -> (mark, opens, language). Whisper hears the
-# imperative "ouvrez" as "ouvré", "ouvrait"…, and may set "open" and "quote"
-# apart with a comma.
-_OPEN_FR = r"ouvr(?:ez|e|ir|é|ée|és|ées|ait)"
+# imperative "ouvrez" as "ouvré", "ouvrait", "ouvrer"…, and may set "open" and
+# "quote" apart with a comma.
+_OPEN_FR = r"ouvr(?:ez|e|er|ir|é|ée|és|ées|ait)"
 _CLOSE_FR = r"ferm(?:ez|e|er|é|ée|és|ées|ait)"
+# "Crochet" is also a hook and a detour: after the verb, only the plural or no
+# article ("ferme le crochet de la fenêtre" stays). Whisper hears "l'accolade"
+# as "la collade", and "accolade ouvrante" as "à collade ouvrant".
+_SQUARE_FR = r"(?:les[\s,]+)?crochets?"
+_BRACE_FR = r"(?:les[\s,]+|l['’]\s*)?accolades?|la[\s,]+collades?"
+_BRACE_NOUN_FR = r"(?:accolades?|à[\s,]+collades?)"
+_SQUARE_EN = r"(?:square[\s,]+)?brackets?"
+_BRACE_EN = r"(?:curly[\s,]+)?braces?|curly[\s,]+brackets?"
 _PAIRS: list[tuple[str, str, bool, str]] = [
     (rf"{_OPEN_FR}[\s,]+(?:les?[\s,]+)?guillemets?", "«", True, "fr"),
     (rf"{_CLOSE_FR}[\s,]+(?:les?[\s,]+)?guillemets?", "»", False, "fr"),
@@ -167,6 +175,14 @@ _PAIRS: list[tuple[str, str, bool, str]] = [
     (r"close[\s,]+quotes?|end[\s,]+quote|unquote", '"', False, "en"),
     (r"open(?:ed)?[\s,]+paren(?:thesis|theses)?", "(", True, "en"),
     (r"close[\s,]+paren(?:thesis|theses)?", ")", False, "en"),
+    (rf"{_OPEN_FR}[\s,]+{_SQUARE_FR}|crochets?[\s,]+ouvrants?", "[", True, "fr"),
+    (rf"{_CLOSE_FR}[\s,]+{_SQUARE_FR}|crochets?[\s,]+fermants?", "]", False, "fr"),
+    (rf"{_OPEN_FR}[\s,]+(?:{_BRACE_FR})|{_BRACE_NOUN_FR}[\s,]+ouvrante?s?", "{", True, "fr"),
+    (rf"{_CLOSE_FR}[\s,]+(?:{_BRACE_FR})|{_BRACE_NOUN_FR}[\s,]+fermante?s?", "}", False, "fr"),
+    (rf"open(?:ed)?[\s,]+{_SQUARE_EN}", "[", True, "en"),
+    (rf"closed?[\s,]+{_SQUARE_EN}", "]", False, "en"),
+    (rf"open(?:ed)?[\s,]+(?:{_BRACE_EN})", "{", True, "en"),
+    (rf"closed?[\s,]+(?:{_BRACE_EN})", "}", False, "en"),
     # "quote … unquote": "quote" alone opens only when "unquote" closes it.
     (r"quote", '"', True, "en"),
 ]
@@ -207,6 +223,12 @@ def _pair_meant(text: str, match: re.Match[str], number: int) -> bool:
     return _word_before(before, len(before)) not in _SAID_BEFORE
 
 
+def _open_quote(text: str) -> int:
+    """Where the French quote left open in the text starts, or -1."""
+    start = text.rfind("«")
+    return start if start >= 0 and "»" not in text[start:] else -1
+
+
 def _pairs(text: str) -> str:
     """The text with each quote and bracket said aloud turned into its mark."""
     # Whisper may quote the command itself: "« Ouvrez les guillemets … »".
@@ -235,11 +257,16 @@ def _pairs(text: str) -> str:
                 out = out[:-1].rstrip(" ")
             out = out.rstrip(" ,")
             upper = out.rstrip(" ")[-1:] in ("", ".", "?", "!", "\n")
-            if out and not out.endswith(("\n", "(", "« ")):
+            if out and not out.endswith(("\n", "(", "[", "{", "« ")):
                 out += " "
             out += mark + (" " if mark == "«" else "")
             position = match.end()
             position += len(text[position:]) - len(text[position:].lstrip(" ,;:."))
+            # Whisper may quote the command itself and open a quote on what
+            # follows: "« Ouvrez la collade », « Nom texte fermez la collade »".
+            own = re.match(r"»[\s,;:.]*(?:«\s*)?", text[position:])
+            if mark in "([{" and own and _open_quote(out) < 0:
+                position += own.end()
         else:
             # A pause before the command is not part of what was quoted; a
             # question or an exclamation is.
@@ -250,6 +277,16 @@ def _pairs(text: str) -> str:
             out += (spaced + kept if kept else "") + (" " if mark == "»" else "") + mark
             position = match.end()
             rest = text[position:].lstrip(" ")
+            if mark in ")]}" and rest.startswith("»"):
+                # Whisper's own quote around the command, not one said.
+                quote = _open_quote(out)
+                if quote < 0 or quote > out.rfind({")": "(", "]": "[", "}": "{"}[mark]):
+                    if quote >= 0:
+                        out = out[:quote] + out[quote + 1:].lstrip(" ")
+                    rest = rest[1:].lstrip(" ")
+                    position = len(text) - len(rest)
+                    if rest and rest[0] not in _MARKS:
+                        out += " "
             if rest.startswith(mark.strip()):
                 position = len(text) - len(rest) + 1
                 rest = rest[1:].lstrip(" ")
@@ -293,7 +330,7 @@ def apply(text: str) -> str:
             out = re.sub(r"(?<=\w)-$", "", out.rstrip(" "))  # "Marie-Virgule"
             out += (spaced if mark in "?!:;" else "") + mark
             # A quote or a bracket closed right after the mark stays glued to it.
-            if match.end() < len(text) and (match["after"] or text[match.end()] not in ')"'):
+            if match.end() < len(text) and (match["after"] or text[match.end()] not in ')]}"'):
                 out += " "
             if mark in ".?!":
                 case = "upper"
@@ -310,9 +347,9 @@ def separator(before: str, after: str) -> str:
     line break or an opening bracket or quote is glued to what came before, as is
     one that closes them.
     """
-    if not before or not after or before.endswith(("\n", "(", "« ")) or after[0].isspace():
+    if not before or not after or before.endswith(("\n", "(", "[", "{", "« ")) or after[0].isspace():
         return ""
-    if after[0] in _MARKS + ")" or re.match(r'"(?!\w)', after) or re.search(r'(?:^|\s)"$', before):
+    if after[0] in _MARKS + ")]}" or re.match(r'"(?!\w)', after) or re.search(r'(?:^|\s)"$', before):
         return ""
     return " "
 

@@ -131,6 +131,76 @@ class QuotesTest(unittest.TestCase):
         self.check("The title is open quote Draft close quote", 'The title is "Draft"')
 
 
+class SquareBracketsAndBracesTest(unittest.TestCase):
+    """Square brackets and braces said aloud, as the quotes and brackets are."""
+
+    def check(self, said: str, written: str) -> None:
+        self.assertEqual(punctuation.apply(said), written)
+
+    def test_french(self):
+        self.check("La fonction prend ouvrez les crochets un tableau fermez les crochets en entrée point",
+                   "La fonction prend [un tableau] en entrée.")
+        self.check("L'objet s'écrit ouvrez l'accolade nom deux points texte fermez l'accolade point",
+                   "L'objet s'écrit {nom : texte}.")
+        self.check("On garde ouvre les accolades titre ferme les accolades", "On garde {titre}")
+        self.check("Ouvre crochet note ferme crochet", "[Note]")
+
+    def test_french_said_after_the_noun(self):
+        self.check("Ajoute crochet ouvrant à compléter crochet fermant à la fin point",
+                   "Ajoute [à compléter] à la fin.")
+        self.check("Le modèle accolade ouvrante prénom accolade fermante remplace le nom",
+                   "Le modèle {prénom} remplace le nom")
+
+    def test_english(self):
+        self.check("The function takes open bracket a list close bracket as input period",
+                   "The function takes [a list] as input.")
+        self.check("The report open square bracket draft close square bracket is attached",
+                   "The report [draft] is attached")
+        self.check("The object is open brace name colon text close brace period",
+                   "The object is {name: text}.")
+        self.check("The template open curly bracket first name close curly bracket is ready",
+                   "The template {first name} is ready")
+        self.check("Open curly brace answer close curly brace", "{Answer}")
+
+    def test_with_the_other_marks_said(self):
+        self.check("Note ouvrez les crochets à vérifier fermez les crochets virgule le budget est validé",
+                   "Note [à vérifier], le budget est validé")
+        self.check("Note open bracket to check close bracket comma the budget is approved",
+                   "Note [to check], the budget is approved")
+
+    def test_what_whisper_hears_for_the_words(self):
+        self.check("L'objet s'écrit ouvrer la collade nom fermé la collade.", "L'objet s'écrit {nom}.")
+        self.check("Le modèle à collade ouvrant prénom à collade fermante.", "Le modèle {prénom}.")
+        self.check("Add open bracket to be confirmed closed bracket at the end.",
+                   "Add [to be confirmed] at the end.")
+
+    def test_whisper_own_pauses_around_the_commands_go(self):
+        self.check("The report, open square bracket, draft, close square bracket, is attached.",
+                   "The report [draft] is attached.")
+        self.check("Ouvrez les accolades. Réponse Fermez les accolades.", "{Réponse}.")
+
+    def test_whisper_own_quotes_around_the_commands_go(self):
+        self.check("L'objet s'écrit « Ouvrez la collade », « Nom texte fermé la collade ».",
+                   "L'objet s'écrit {Nom texte}.")
+        self.check("Le texte « Ouvrer les crochets » traduit par « Nous fermer les crochets » est là.",
+                   "Le texte [traduit par Nous] est là.")
+
+    def test_a_quote_said_around_them_stays(self):
+        self.check("Il a dit ouvrez les guillemets voir ouvrez les crochets note fermez les crochets "
+                   "fermez les guillemets", "Il a dit « voir [note] »")
+        self.check("Il a dit « voir ouvrez les crochets note fermez les crochets ».",
+                   "Il a dit « voir [note] ».")
+
+    def test_said_as_words(self):
+        for said in ("Il a fait un crochet par Lyon.", "Ferme le crochet de la fenêtre.",
+                     "Il faut ouvrir les crochets du portail.", "Il manque un crochet fermant.",
+                     "Ils se sont donné l'accolade.", "We are in the same tax bracket.",
+                     "Brace yourself for the news.", "We need to open brackets for each tier.",
+                     "The bracket on the shelf is loose."):
+            with self.subTest(said):
+                self.assertEqual(punctuation.apply(said), said)
+
+
 class WordsTest(unittest.TestCase):
     """The same words, said as words, stay words."""
 
@@ -202,6 +272,9 @@ class JoinTest(unittest.TestCase):
         self.assertEqual(punctuation.join(["La réunion (", "celle de lundi", ") est annulée."]),
                          "La réunion (celle de lundi) est annulée.")
         self.assertEqual(punctuation.join(['She said "', 'I will', '".']), 'She said "I will".')
+        self.assertEqual(punctuation.join(["The report [", "draft", "] is attached."]),
+                         "The report [draft] is attached.")
+        self.assertEqual(punctuation.join(["L'objet {", "nom", "}."]), "L'objet {nom}.")
 
 
 if __name__ == "__main__":

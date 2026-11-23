@@ -4,6 +4,25 @@
 
 ### Added
 
+- **Square brackets and braces said aloud** (Wispr Flow's spoken punctuation, continued):
+  *ouvrez les crochets* … *fermez les crochets* (or *crochet ouvrant* … *crochet fermant*)
+  are written [ … ], *ouvrez l'accolade* … *fermez l'accolade* (or *les accolades*,
+  *accolade ouvrante* … *accolade fermante*) { … }; *open bracket* … *close bracket* (or
+  *square bracket*) [ … ], *open brace* … *close brace* (or *curly brace*, *curly bracket*)
+  { … }. *"The object is open brace name colon text close brace"* → "The object is {name:
+  text}". Whisper's *la collade* for *l'accolade*, *ouvrer* for *ouvrez*, *closed* for
+  *close* count, and the quotes Whisper puts around the commands themselves (« Ouvrez la
+  collade ») go. The words said as words stay: *ferme le crochet de la fenêtre*, *il
+  manque un crochet fermant*, *the same tax bracket*, *brace yourself*. Under
+  `model.spoken_punctuation` (**Spoken punctuation** in the settings window); no new
+  setting. The very casual style lowers the capital after an opening bracket or brace.
+- `bench/punctuation/`: 16 sentences with square brackets or braces and 9 control sentences
+  added to the corpus, with their recordings, and `--only` to measure some ids apart; error
+  rate on words and marks, before → after:
+  - written sentences: 67.8 % → 0.0 % (16/16 exact), controls 9/9 kept;
+  - `small` (CPU): 94.4 % → 18.9 % (0/16 → 5/16 exact), no control changed;
+  - `large-v3-turbo` (GPU): 88.8 % → 9.1 % (0/16 → 10/16 exact), no control changed; the
+    44 earlier sentences and 22 earlier controls come out the same with both models.
 - **A style per kind of app** (Wispr Flow's Styles categories): **Personal messages**,
   **Work messages** and **Email** now sit at the top of *Style per app* in the settings window
   (Dictation tab) — `personal_style`, `work_style` and `email_style` in `[model]`. Set
