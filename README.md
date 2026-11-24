@@ -243,9 +243,17 @@ the project is distributed by `main`, so the commit says more than the version n
 | `Super + J` (once more) | cuts the dictation off: what is left is neither transcribed nor inserted |
 | `Super + J` (again and again) | gives up: the window closes, the microphone is released, the daemon is free |
 | `Esc`, or a click on the overlay | cancels the dictation, like the third press — a click on a finished state dismisses it |
+| `Shift + Super + J` | **types the last dictation again** at the cursor — when it went to the wrong window, or the field lost it |
 
 The default shortcut follows the host: `Super + J` on Linux and macOS (`Cmd + J`),
-`Ctrl + Alt + J` on WSL — Windows reserves the Windows key for itself.
+`Ctrl + Alt + J` on WSL — Windows reserves the Windows key for itself. The one that pastes
+the last dictation again, as Wispr Flow's *paste last transcript*, adds `Shift`:
+`Shift + Super + J`, `Shift + Cmd + J`, `Ctrl + Alt + Shift + J` on WSL. It types the
+dictation as it was typed the first time; after a restart of the service, the latest of the
+history (none when the history is off). Change it or turn it off in the settings window,
+**Shortcut and output** tab. An installation made before it keeps only the dictation's
+shortcut on update: `whisper-desk hotkey install` adds this one, as does a combination
+picked in the settings window.
 
 The text is inserted into the focused application: editor, browser, chat client,
 search box. Your clipboard is handed back untouched at the end of the dictation.
@@ -588,6 +596,7 @@ next sentence. Two entries with the same misspelling (*Mac OS* and *mac-os*) are
 ```sh
 whisper-desk record     # dictate and write the text to standard output
 whisper-desk toggle     # same as the keyboard shortcut
+whisper-desk paste-last # types the last dictation again at the cursor
 whisper-desk status     # daemon state, loaded model, GPU or CPU
 whisper-desk doctor     # full diagnostic
 whisper-desk update     # update the installation (--check to compare only)
@@ -713,7 +722,7 @@ whisper-desk settings
 ```
 
 <p align="center">
-  <img src="docs/settings-window.png" alt="The settings window, Dictation tab" width="560">
+  <img src="docs/settings-window.png" alt="The settings window, Shortcut and output tab: the dictation's shortcut and the one that pastes the last dictation" width="560">
 </p>
 
 Eight tabs — `Alt` + the underlined letter jumps to one, `Ctrl+PageUp` / `Ctrl+PageDown`
@@ -723,7 +732,7 @@ move between them, `Ctrl+S` saves, the whole window works from the keyboard:
 |---|---|
 | **Dictation** | language, model (with its download size and speed), style; style for personal messages, work messages and email, style per app; spoken punctuation, hesitations, spoken corrections, lists, developer syntax |
 | **Microphone** | device, with a **Test** gauge; capture tool; sentence-by-sentence insertion, pause between sentences, silence that ends the dictation, time to give up, longest dictation, voice threshold |
-| **Shortcut and output** | shortcut, captured by pressing the new combination, its name and action; output mode, paste shortcut, way of pasting, clipboard given back, notifications |
+| **Shortcut and output** | shortcut, captured by pressing the new combination, its name and action; the shortcut that pastes the last dictation, or none; output mode, paste shortcut, way of pasting, clipboard given back, notifications |
 | **Words** | vocabulary; replacements, each misspelling with the spelling meant; snippets, each cue with its text |
 | **Overlay** | shown or not, position, distance to the edge, accent colour, size, equalizer bars |
 | **History** | keep a history, for how many days |
@@ -748,6 +757,7 @@ Everything, the rest included, is configurable in **`~/.config/whisper-desk/conf
 ```toml
 [hotkey]
 binding = "auto"              # "auto", or <Ctrl>/<Alt>/<Shift>/<Super> + a key
+paste_last = "auto"           # types the last dictation again: <Super><Shift>j, or "none"
 
 [model]
 name = "auto"                 # auto | tiny | base | small | medium | large-v3 | large-v3-turbo

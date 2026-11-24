@@ -731,6 +731,54 @@ class StyleTest(DictationCase):
         self.assertEqual(self.delivered, ["See you tomorrow"])
 
 
+class PasteLastTest(DictationCase):
+    """The paste-last shortcut types the last dictation again, as it was typed."""
+
+    def pasted(self, service) -> list[str]:
+        texts: list[str] = []
+        service.insert = lambda text: texts.append(text) or {"inserting": True}
+        return texts
+
+    def test_the_last_dictation_is_typed_again(self):
+        self.recorder.segments[:] = [b"first", b"second"]
+        with self.service() as service:
+            self.listening(service)
+            service.toggle()
+            self.assertTrue(wait_until(lambda: service.session is None))
+            texts = self.pasted(service)
+            self.assertEqual(service.paste_last(), {"inserting": True})
+        self.assertEqual(texts, ["first second"])
+
+    def test_after_a_restart_the_history_has_it(self):
+        entries = [mock.Mock(text="older"), mock.Mock(text="the latest")]
+        with mock.patch.object(daemon.history, "load", lambda: entries), \
+                mock.patch.dict(CONFIG, {"output": {**CONFIG["output"], "history": True}}):
+            with self.service() as service:
+                texts = self.pasted(service)
+                service.paste_last()
+        self.assertEqual(texts, ["the latest"])
+
+    def test_a_history_switched_off_is_not_read(self):
+        with mock.patch.object(daemon.history, "load", lambda: [mock.Mock(text="private")]):
+            with self.service() as service:
+                texts = self.pasted(service)
+                self.assertEqual(service.paste_last(), {"error": "no dictation yet"})
+        self.assertEqual(texts, [])
+
+    def test_the_command_reaches_it(self):
+        with self.service() as service:
+            service.last_text = "hello"
+            texts = self.pasted(service)
+            handler = mock.Mock(spec=daemon.Handler)
+            handler.service = service
+            handler.rfile = [b'{"cmd": "paste_last"}\n']
+            replies: list[dict] = []
+            handler._reply = replies.append
+            daemon.Handler.handle(handler)
+        self.assertEqual(replies, [{"inserting": True}])
+        self.assertEqual(texts, ["hello"])
+
+
 class CursorCase(DictationCase):
     """A dictation typed at a cursor that backspaces reach."""
 

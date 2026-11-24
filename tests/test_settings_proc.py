@@ -49,8 +49,8 @@ class ControllerCase(unittest.TestCase):
             config_module.load(),
             "/bin/whisper-desk toggle",
             send=lambda command, **kwargs: self.sent.append(command) or self.reply,
-            install_hotkey=lambda config, command: self.installed.append(command)
-            or hotkey.resolve_binding(config),
+            install_hotkey=lambda config, command, slot=hotkey.TOGGLE:
+            self.installed.append(command) or hotkey.resolve(config, slot),
         )
 
     def save(self, **values):
@@ -122,7 +122,7 @@ class SaveTest(ControllerCase):
         self.assertEqual(self.installed, [])
 
     def test_a_shortcut_the_desktop_refuses_is_said(self):
-        def refuse(config, command):
+        def refuse(config, command, slot=hotkey.TOGGLE):
             raise hotkey.UnsupportedDesktop("unsupported desktop (KDE)")
         self.controller.install_hotkey = refuse
         reply = self.save(binding="<Ctrl><Alt>d")
@@ -195,7 +195,8 @@ class EveryOptionTest(ControllerCase):
 
     def test_a_new_desktop_name_installs_the_shortcut_again(self):
         self.save(hotkey_name="dictation")
-        self.assertEqual(len(self.installed), 1)
+        self.assertEqual(self.installed,
+                         ["/bin/whisper-desk toggle", "/bin/whisper-desk paste-last"])
 
 
 class UpdatesTest(ControllerCase):
@@ -277,11 +278,11 @@ class ShortcutTest(ControllerCase):
     def test_the_gtk_accelerator_becomes_the_configuration_syntax(self):
         with forced_host(host.LINUX):
             reply = self.controller.shortcut("<Primary><Alt>d")
-        self.assertEqual(reply["hotkey"], {"binding": "<Ctrl><Alt>d", "label": "Ctrl+Alt+D"})
+        self.assertEqual(reply["hotkeys"], {"binding": {"binding": "<Ctrl><Alt>d", "label": "Ctrl+Alt+D"}})
 
     def test_default_is_auto(self):
         with forced_host(host.WSL):
-            self.assertEqual(self.controller.shortcut("auto")["hotkey"],
+            self.assertEqual(self.controller.shortcut("auto")["hotkeys"]["binding"],
                              {"binding": "auto", "label": "Ctrl+Alt+J"})
 
     def test_a_bare_letter_is_not_a_shortcut(self):
@@ -293,10 +294,59 @@ class ShortcutTest(ControllerCase):
 
     def test_mod4_is_the_super_key(self):
         with forced_host(host.LINUX):
-            self.assertEqual(self.controller.shortcut("<Mod4>j")["hotkey"]["binding"], "<Super>j")
+            self.assertEqual(self.controller.shortcut("<Mod4>j")["hotkeys"]["binding"]["binding"], "<Super>j")
 
     def test_a_function_key_alone_is(self):
-        self.assertEqual(self.controller.shortcut("F9")["hotkey"]["binding"], "f9")
+        self.assertEqual(self.controller.shortcut("F9")["hotkeys"]["binding"]["binding"], "f9")
+
+
+class PasteLastShortcutTest(ControllerCase):
+    """The second shortcut, which types the last dictation again."""
+
+    def test_the_window_gets_both_shortcuts(self):
+        with forced_host(host.LINUX):
+            hotkeys = self.controller.snapshot()["hotkeys"]
+        self.assertEqual(hotkeys, {
+            "binding": {"binding": "auto", "label": "Super+J"},
+            "paste_last": {"binding": "auto", "label": "Shift+Super+J"},
+        })
+
+    def test_its_default_under_wsl_avoids_the_windows_key(self):
+        with forced_host(host.WSL):
+            self.assertEqual(self.controller.shortcut("auto", "paste_last")["hotkeys"],
+                             {"paste_last": {"binding": "auto", "label": "Ctrl+Alt+Shift+J"}})
+
+    def test_it_can_be_turned_off(self):
+        self.assertEqual(self.controller.shortcut("none", "paste_last")["hotkeys"],
+                         {"paste_last": {"binding": "none", "label": "Off"}})
+
+    def test_the_dictation_shortcut_cannot(self):
+        self.assertIn("status", self.controller.shortcut("none", "binding"))
+
+    def test_a_pressed_combination_is_its_own(self):
+        with forced_host(host.LINUX):
+            reply = self.controller.shortcut("<Primary><Alt>v", "paste_last")
+        self.assertEqual(reply["hotkeys"], {"paste_last": {"binding": "<Ctrl><Alt>v", "label": "Ctrl+Alt+V"}})
+
+    def test_a_new_one_installs_the_paste_command_only(self):
+        with forced_host(host.LINUX):
+            reply = self.save(paste_last="<Ctrl><Alt>v")
+        self.assertEqual(self.installed, ["/bin/whisper-desk paste-last"])
+        self.assertIn("paste-last shortcut Ctrl+Alt+V installed", reply["status"])
+        self.assertEqual(config_module.load(self.path)["hotkey"]["paste_last"], "<Ctrl><Alt>v")
+
+    def test_turned_off_it_is_removed(self):
+        reply = self.save(paste_last="none")
+        self.assertEqual(self.installed, ["/bin/whisper-desk paste-last"])
+        self.assertIn("paste-last shortcut removed", reply["status"])
+
+    def test_a_refusal_is_said_without_losing_the_setting(self):
+        def refuse(config, command, slot=hotkey.TOGGLE):
+            raise hotkey.UnsupportedDesktop("unsupported desktop (KDE)")
+        self.controller.install_hotkey = refuse
+        reply = self.save(paste_last="<Ctrl><Alt>v")
+        self.assertIn("paste-last shortcut not installed (unsupported desktop (KDE))", reply["status"])
+        self.assertEqual(config_module.load(self.path)["hotkey"]["paste_last"], "<Ctrl><Alt>v")
 
 
 class MeterTest(unittest.TestCase):

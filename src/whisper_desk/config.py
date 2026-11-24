@@ -41,6 +41,9 @@ DEFAULTS: dict[str, Any] = {
         "name": "whisper-desk",
         # "toggle": first press = listen, second press = transcribe.
         "action": "toggle",
+        # Types the last dictation again at the cursor. "auto" -> <Super><Shift>j,
+        # <Ctrl><Alt><Shift>j under WSL; "none" for no such shortcut.
+        "paste_last": "auto",
     },
     "model": {
         # "auto" -> large-v3-turbo with an NVIDIA GPU, small otherwise.

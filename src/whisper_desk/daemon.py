@@ -1,8 +1,8 @@
 """Daemon: keeps the model in memory and runs dictations on demand.
 
 Protocol: one JSON request per line on a Unix socket, one JSON response per
-line. Commands: toggle, record, stop, status, reload, load, insert, pause,
-resume, quit.
+line. Commands: toggle, record, stop, status, reload, load, insert,
+paste_last, pause, resume, quit.
 """
 
 from __future__ import annotations
@@ -204,7 +204,11 @@ class Session:
     def _remember(self) -> None:
         """One history entry per dictation — what was inserted, even if cut short."""
         settings = self.service.config["output"]
-        if self.capture or not self.parts or not settings["history"]:
+        if self.capture or not self.parts:
+            return
+        # Kept even with the history off: the paste-last shortcut reads it.
+        self.service.last_text = punctuation.join(self.parts)
+        if not settings["history"]:
             return
         # Asked at the shortcut: a dictation over by now has long had its answer.
         self.app_known.wait(focus.TIMEOUT_SECONDS)
@@ -635,6 +639,8 @@ class Service:
         self.lock = threading.Lock()
         # Paused from the tray: the shortcut says so instead of listening.
         self.paused = False
+        # The last dictation as typed, for the paste-last shortcut.
+        self.last_text = ""
 
     # -- commands ----------------------------------------------------------
     def toggle(self) -> dict[str, Any]:
@@ -680,6 +686,23 @@ class Service:
                 return {"error": f"busy ({self.state})"}
         threading.Thread(target=self._insert, args=(text,), daemon=True).start()
         return {"inserting": True}
+
+    def paste_last(self) -> dict[str, Any]:
+        """Types the last dictation again — Wispr Flow's "paste last transcript".
+
+        The one in memory, else, after a restart, the history's latest: the
+        text dictated into a field that lost it is never more than a shortcut away.
+        """
+        text = self.last_text
+        if not text and self.config["output"]["history"]:
+            entries = history.load()
+            text = entries[-1].text if entries else ""
+        if not text:
+            threading.Thread(target=output.notify, daemon=True, args=(
+                "whisper-desk: nothing to paste", "No dictation yet."
+            )).start()
+            return {"error": "no dictation yet"}
+        return self.insert(text)
 
     def _insert(self, text: str) -> None:
         writer = output.CursorWriter(self.config)
@@ -820,6 +843,7 @@ class Handler(socketserver.StreamRequestHandler):
                 "status": self.service.status,
                 "reload": self.service.reload,
                 "insert": lambda: self.service.insert(str(request.get("text", ""))),
+                "paste_last": self.service.paste_last,
                 "load": self.service.load,
                 "pause": self.service.pause,
                 "resume": self.service.resume,

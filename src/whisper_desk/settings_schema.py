@@ -135,6 +135,9 @@ TABS: tuple[Tab, ...] = (
         Group("Shortcut", (
             _s("binding", "hotkey.binding", "shortcut", "Start and stop",
                "Starts the dictation, stops it, then cuts it off. Change…, then press the new combination."),
+            _s("paste_last", "hotkey.paste_last", "shortcut", "Paste the last dictation",
+               "Types your last dictation again at the cursor — when it went to the wrong "
+               "window, or the field lost it. Off for no such shortcut."),
             _s("hotkey_name", "hotkey.name", "text", "Name in the desktop",
                "How the shortcut is called in your desktop's keyboard settings.",
                required=True),
