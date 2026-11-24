@@ -426,6 +426,20 @@
 
 ### Changed
 
+- **Paste the last dictation again with a shortcut** (Wispr Flow's *paste last transcript*):
+  `Shift + Super + J` (`Shift + Cmd + J` on macOS, `Ctrl + Alt + Shift + J` under WSL) types
+  the last dictation at the cursor again, as it was typed — the dictation that went to the
+  wrong window, or a field that lost it on a reload, is one shortcut away rather than a trip
+  to the history. The daemon keeps it in memory even with the history off; after a restart,
+  the latest of the history is taken. Set, changed or turned off in the settings window,
+  **Shortcut and output** tab (**Paste the last dictation**: Change…, Default, Off), or
+  `paste_last` in `[hotkey]` (`"auto"`, a combination, or `"none"`); `whisper-desk
+  paste-last` does the same from a terminal. `whisper-desk hotkey install` installs both
+  shortcuts — a second GNOME custom shortcut, a second Start menu link under WSL, a second
+  skhd line on macOS —, `hotkey remove` removes both. An existing installation keeps its
+  shortcut as it is on update: `whisper-desk hotkey install`, or a combination picked in the
+  settings window, adds the new one. The screenshots (`docs/settings-window.png`,
+  `docs/settings-output.png`) show the new setting.
 - **The welcome window in the Hermez look, and done from the keyboard** (Wispr Flow's
   onboarding is one look from end to end): its **Next** button is Hermez orange instead of
   the desktop theme's green or blue, its headlines are set in Bricolage Grotesque (the

@@ -103,6 +103,11 @@ KEYBOARDS = (
     ("none", "Never paste: the text stays in the clipboard"),
 )
 # Where each value of the window lives in config.toml.
+# The window's shortcut fields: the slot each installs, and its key in [hotkey].
+SHORTCUT_SLOTS = {
+    "binding": (hotkey.TOGGLE, "binding"),
+    "paste_last": (hotkey.PASTE_LAST, "paste_last"),
+}
 FIELDS = {
     setting.field: (setting.section, setting.key)
     for setting in settings_schema.settings()
@@ -204,11 +209,13 @@ class SettingsController:
         config: dict[str, Any],
         command: str,
         send: Callable[..., dict[str, Any]],
-        install_hotkey: Callable[[dict[str, Any], str], str] = hotkey.install,
+        install_hotkey: Callable[..., str] = hotkey.install,
         emit: Callable[[dict[str, Any]], None] = lambda message: None,
     ):
         self.config = config
         self.command = command
+        # The same program as the dictation's shortcut, asked to paste instead.
+        self.paste_command = command.rsplit(" ", 1)[0] + " paste-last"
         self.send = send
         self.install_hotkey = install_hotkey
         self.meter = LevelMeter(emit)
@@ -243,12 +250,13 @@ class SettingsController:
 
     def snapshot(self) -> dict[str, Any]:
         values = self.values()
-        binding = hotkey.resolve_binding(self.config)
         return {
             "layout": settings_schema.layout(),
             "defaults": self.defaults(),
             "values": values,
-            "hotkey": {"binding": values["binding"], "label": hotkey.label(binding)},
+            "hotkeys": {
+                field: self.keycap(field, str(values[field])) for field in SHORTCUT_SLOTS
+            },
             "choices": {
                 name: with_current(choices, str(values[field]))
                 for name, field, choices in (
@@ -282,15 +290,26 @@ class SettingsController:
             self.meter.stop()
             return None
         if action == "hotkey":
-            return self.shortcut(str(request.get("accel", "")))
+            return self.shortcut(str(request.get("accel", "")), str(request.get("field") or "binding"))
         if action == "save":
             return self.save(request.get("values") or {})
         return None
 
-    def shortcut(self, accel: str) -> dict[str, Any]:
+    @staticmethod
+    def keycap(field: str, binding: str) -> dict[str, str]:
+        """A shortcut as the window shows it: its value and its keys."""
+        resolved = hotkey.resolve({"hotkey": {SHORTCUT_SLOTS[field][1]: binding}},
+                                  SHORTCUT_SLOTS[field][0])
+        return {"binding": binding, "label": hotkey.label(resolved) if resolved else "Off"}
+
+    def shortcut(self, accel: str, field: str = "binding") -> dict[str, Any]:
         """A combination pressed in the window, in the configuration's syntax."""
+        if field not in SHORTCUT_SLOTS:
+            return {"status": f"No shortcut called {field}"}
         if accel == "auto":
             binding = "auto"
+        elif accel == "none" and field != "binding":
+            binding = "none"
         else:
             modifiers, key = hotkey.parse_binding(accel)
             if not key:
@@ -299,8 +318,7 @@ class SettingsController:
             if not set(modifiers) - {"shift"} and not re.fullmatch(r"f\d{1,2}", key):
                 return {"status": "A shortcut needs Ctrl, Alt or Super — or a function key"}
             binding = hotkey.format_gtk(modifiers, key)
-        resolved = hotkey.resolve_binding({"hotkey": {"binding": binding}})
-        return {"hotkey": {"binding": binding, "label": hotkey.label(resolved)}}
+        return {"hotkeys": {field: self.keycap(field, binding)}}
 
     def validated(self, values: dict[str, Any]) -> tuple[dict[str, Any], str]:
         """The values as they are written, and what is wrong with the first that is not."""
@@ -441,6 +459,15 @@ class SettingsController:
                 notes.append(f"shortcut {hotkey.label(installed)} installed")
             except (hotkey.UnsupportedDesktop, OSError, subprocess.SubprocessError) as error:
                 notes.append(f"shortcut not installed ({error})")
+        if {"paste_last", "name"} & set(changes.get("hotkey", {})):
+            try:
+                installed = self.install_hotkey(self.config, self.paste_command, hotkey.PASTE_LAST)
+                if installed:
+                    notes.append(f"paste-last shortcut {hotkey.label(installed)} installed")
+                elif "paste_last" in changes["hotkey"]:
+                    notes.append("paste-last shortcut removed")
+            except (hotkey.UnsupportedDesktop, OSError, subprocess.SubprocessError) as error:
+                notes.append(f"paste-last shortcut not installed ({error})")
         notes.append(self._reload())
         model = str(self.config["model"]["name"])
         if "name" in changes.get("model", {}) and model in MODEL_BYTES and not is_downloaded(model):

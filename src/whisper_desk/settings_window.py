@@ -8,11 +8,12 @@ on stdout what the user asks for, one JSON object per line:
     stdin   {"values": {..., "snippets": [[cue, text], ...],
                          "replacements": [[misspelling, spelling], ...],
                          "app_styles": [[app, style], ...]}, "choices": {...},
-             "hotkey": {"binding", "label"}}
+             "hotkeys": {field: {"binding", "label"}}}
             {"level": 0.42, "meter": "..."}  {"status": "...", "saved": true}
     stdout  {"action": "save", "values": {...}}
             {"action": "test_mic" | "stop_mic", "device": "..."}
-            {"action": "hotkey", "accel": "<Primary><Alt>d" | "auto"}
+            {"action": "hotkey", "field": "binding" | "paste_last",
+             "accel": "<Primary><Alt>d" | "auto" | "none"}
 """
 
 from __future__ import annotations
@@ -101,8 +102,10 @@ class SettingsWindow(Gtk.Window):
         super().__init__(title="whisper-desk settings")
         self.set_default_size(820, 720)
         self.set_icon_name("audio-input-microphone")
-        self.binding = "auto"
-        self.capturing = False
+        # field -> {"binding", "keycap", "hint", "help"}: one per shortcut setting.
+        self.shortcuts: dict = {}
+        # The shortcut field waiting for its combination, or None.
+        self.capturing = None
         self.testing = False
         self.built = False
         self.choices: dict = {}
@@ -213,8 +216,7 @@ class SettingsWindow(Gtk.Window):
         hint.get_style_context().add_class("hint")
         page.attach(hint, 1, row, 1, 1)
         if kind == "shortcut":
-            self.hotkey_hint = hint
-            self.hotkey_help = setting["help"]
+            self.shortcuts[setting["field"]].update(hint=hint, help=setting["help"])
         elif kind == "device":
             self.device_hint = hint
         self.fields[setting["field"]] += (hint,)
@@ -284,20 +286,29 @@ class SettingsWindow(Gtk.Window):
 
         return button, lambda: hex_colour(button.get_rgba()), write
 
-    def _make_shortcut(self, _setting: dict):
+    def _make_shortcut(self, setting: dict):
+        field = setting["field"]
+        shortcut = self.shortcuts[field] = {"binding": "auto", "help": setting["help"]}
         keys = Gtk.Box(spacing=8)
-        self.keycap = Gtk.Label(label="…")
-        self.keycap.get_style_context().add_class("keycap")
+        keycap = shortcut["keycap"] = Gtk.Label(label="…")
+        keycap.get_style_context().add_class("keycap")
+        keys.pack_start(keycap, False, False, 0)
         change = Gtk.Button(label="Change…")
-        change.connect("clicked", self._on_capture)
+        change.connect("clicked", self._on_capture, field)
         reset = Gtk.Button(label="Default")
-        reset.set_tooltip_text("The host's default: Super+J, or Ctrl+Alt+J under WSL")
-        reset.connect("clicked", lambda _button: send({"action": "hotkey", "accel": "auto"}))
-        keys.pack_start(self.keycap, False, False, 0)
-        keys.pack_start(change, False, False, 0)
-        keys.pack_start(reset, False, False, 0)
+        reset.set_tooltip_text(f"The host's default: {self._default_text(setting)}")
+        reset.connect("clicked", lambda _button: send({"action": "hotkey", "field": field, "accel": "auto"}))
+        buttons = [change, reset]
+        if field != "binding":
+            # Only the dictation's own shortcut cannot be done without.
+            off = Gtk.Button(label="Off")
+            off.set_tooltip_text("No such shortcut")
+            off.connect("clicked", lambda _button: send({"action": "hotkey", "field": field, "accel": "none"}))
+            buttons.append(off)
+        for button in buttons:
+            keys.pack_start(button, False, False, 0)
         # The binding is told by the daemon side, as a label: see show_state.
-        return keys, lambda: self.binding, lambda value: None
+        return keys, lambda: shortcut["binding"], lambda value: None
 
     def _make_replacements(self, _setting: dict):
         self.replacements = Gtk.ListStore(str, str)
@@ -428,6 +439,8 @@ class SettingsWindow(Gtk.Window):
             for choice, label in self.choices.get(name, []):
                 if choice == value:
                     return label.split(" — ")[0]
+        if setting["kind"] == "shortcut" and setting["field"] == "paste_last":
+            return "Shift+Super+J (Ctrl+Alt+Shift+J under WSL)"
         if setting["kind"] == "shortcut":
             return "Super+J (Ctrl+Alt+J under WSL)"
         if value in ("", None):
@@ -439,7 +452,7 @@ class SettingsWindow(Gtk.Window):
             if setting["kind"] in TABLE_KINDS:
                 continue
             if setting["kind"] == "shortcut":
-                send({"action": "hotkey", "accel": "auto"})
+                send({"action": "hotkey", "field": setting["field"], "accel": "auto"})
                 continue
             self.fields[setting["field"]][3](self.defaults[setting["field"]])
         self.status.get_style_context().remove_class("error")
@@ -457,17 +470,21 @@ class SettingsWindow(Gtk.Window):
                 self.show_all()
             for field, (setting, _widget, _read, write, _tab, hint) in self.fields.items():
                 if setting["kind"] == "shortcut":
-                    self.hotkey_help = f"{setting['help']} Default: {self._default_text(setting)}."
+                    shortcut = self.shortcuts[field]
+                    shortcut["help"] = f"{setting['help']} Default: {self._default_text(setting)}."
+                    shortcut["binding"] = values.get(field, shortcut["binding"])
+                    if self.capturing != field:
+                        shortcut["hint"].set_text(shortcut["help"])
                     continue
                 write(values.get(field, self.defaults.get(field, "")))
                 if setting["kind"] not in TABLE_KINDS:
                     hint.set_text(f"{setting['help']} Default: {self._default_text(setting)}.")
-            if "binding" in values:
-                self.binding = values["binding"]
-        if "hotkey" in message:
-            self.binding = message["hotkey"]["binding"]
-            self.keycap.set_text(message["hotkey"]["label"])
-            self._end_capture()
+        for field, keys in message.get("hotkeys", {}).items():
+            if field in self.shortcuts:
+                self.shortcuts[field]["binding"] = keys["binding"]
+                self.shortcuts[field]["keycap"].set_text(keys["label"])
+                if self.capturing == field:
+                    self._end_capture()
         if "level" in message:
             self.meter.set_value(float(message["level"]))
         if message.get("meter"):
@@ -718,16 +735,22 @@ class SettingsWindow(Gtk.Window):
         if self.testing:
             send({"action": "test_mic", "device": self.device.get_active_id() or "default"})
 
-    def _on_capture(self, _button: Gtk.Button) -> None:
-        self.capturing = True
-        self.keycap.set_text("Press the combination…")
-        self.keycap.get_style_context().add_class("capturing")
-        self.hotkey_hint.set_text("Esc to keep the current shortcut.")
+    def _on_capture(self, _button: Gtk.Button, field: str) -> None:
+        if self.capturing:
+            self._end_capture()
+        self.capturing = field
+        shortcut = self.shortcuts[field]
+        shortcut["keycap"].set_text("Press the combination…")
+        shortcut["keycap"].get_style_context().add_class("capturing")
+        shortcut["hint"].set_text("Esc to keep the current shortcut.")
 
     def _end_capture(self) -> None:
-        self.capturing = False
-        self.keycap.get_style_context().remove_class("capturing")
-        self.hotkey_hint.set_text(self.hotkey_help)
+        if not self.capturing:
+            return
+        shortcut = self.shortcuts[self.capturing]
+        self.capturing = None
+        shortcut["keycap"].get_style_context().remove_class("capturing")
+        shortcut["hint"].set_text(shortcut["help"])
 
     def _on_key(self, _widget: Gtk.Widget, event: Gdk.EventKey) -> bool:
         if not self.capturing:
@@ -739,8 +762,9 @@ class SettingsWindow(Gtk.Window):
                 self.close()
                 return True
             return False
+        field = self.capturing
         if event.keyval == Gdk.KEY_Escape:
-            send({"action": "hotkey", "accel": self.binding})
+            send({"action": "hotkey", "field": field, "accel": self.shortcuts[field]["binding"]})
             return True
         if event.keyval in MODIFIER_KEYS:
             return True
@@ -751,7 +775,7 @@ class SettingsWindow(Gtk.Window):
             state |= Gdk.ModifierType.SUPER_MASK
         modifiers = state & Gtk.accelerator_get_default_mod_mask()
         keyval = Gdk.keyval_to_lower(event.keyval)
-        send({"action": "hotkey", "accel": Gtk.accelerator_name(keyval, modifiers)})
+        send({"action": "hotkey", "field": field, "accel": Gtk.accelerator_name(keyval, modifiers)})
         return True
 
     def _on_delete(self, _widget: Gtk.Widget, _event: Gdk.Event) -> bool:

@@ -34,7 +34,10 @@ the tracker's own left-to-do of 2026-11-15 (2026-11-20); style per kind of app,
 personal messages, work messages, email, other — and the tracker's own left-to-do of 2026-11-16
 (2026-11-20); the history filtered by app, the tracker's own left-to-do of 2026-11-18 and
 2026-11-19 (2026-11-21); square brackets and braces said aloud, the tracker's own left-to-do
-of 2026-10-21 (#31), "Auto punctuation" on the features page (2026-11-23).
+of 2026-10-21 (#31), "Auto punctuation" on the features page (2026-11-23); the shortcut that
+pastes the last transcript again, "Paste last transcript" in
+[Customize keyboard and mouse shortcuts](https://docs.wisprflow.ai/articles/2612050838-supported-unsupported-keyboard-hotkey-shortcuts)
+(read on 2026-11-24).
 
 **Status**: done · partial · missing · out of scope.
 **Effort**: S (a session) · M (a few sessions) · L (to split into several gaps).
@@ -64,6 +67,7 @@ of 2026-10-21 (#31), "Auto punctuation" on the features page (2026-11-23).
 | **Command Mode** — select text, say how to rewrite it | — (would need a local model, e.g. Ollama) | missing | high | L |
 | **Developer syntax** — camelCase, snake_case, CLI commands, file tagging in Cursor | `casing.py`: a name said after its style ("camel case user name" → `userName`, snake, pascal, kebab, constant case) written in it, Whisper's glued and hyphenated forms understood; measured in `bench/casing/` (#28). Not guessed from context without the style said; no CLI commands, no file tagging | partial | medium | M |
 | **History** of dictations | `whisper-desk history` and its window: search, copy, insert again, purge; each dictation names the app it went to (#49); filtered by app, a menu next to the search or `history --app` (#54) | done | — | — |
+| **Paste last transcript** — a shortcut types the last dictation again | `Shift + Super + J` (`Ctrl + Alt + Shift + J` under WSL) or `whisper-desk paste-last`: the last dictation as typed, kept in memory, the history's latest after a restart; set, changed or turned off in the settings window | in PR | medium | S |
 | **Settings** | `whisper-desk settings`: every key of `config.toml`, in eight tabs (Dictation, Microphone, Shortcut and output, Words, Overlay, History, Advanced, Updates), each with its help and default, **Restore defaults** per section, invalid values refused before saving, keyboard only; `tests/test_settings_schema.py` fails when a key has no setting | done | — | — |
 | **Overlay** | X11 overlay: live level, sentence transcribed, states, cancel | done | — | — |
 | **Usage dashboard** — words dictated, speed, streak, top apps | `whisper-desk stats` (`stats.py`): dictations, words in all, today and over 7 days, words per minute, days in a row, worked out from the history (#32); top apps by share of the words, from the app the history now notes (#49); the same figures in four tiles above the history window (#50). Apps only where the desktop names the one in front; no chart over time, no rank among users | partial | low | S |
@@ -506,3 +510,26 @@ of 2026-10-21 (#31), "Auto punctuation" on the features page (2026-11-23).
   command and the words after it. Left to do: *parenthèse
   ouvrante* / *fermante*, a bracket or a brace said around a line of code with its own
   spacing (`{ return x }`), *left* / *right bracket*.
+- 2026-11-24 — **Paste last transcript** (in PR, a feature day): Wispr Flow's shortcut that pastes
+  the last transcript again — for a dictation sent to the wrong window, or into a field that lost
+  it. A second global shortcut, `Shift + Super + J` (`Shift + Cmd + J` on macOS, `Ctrl + Alt +
+  Shift + J` under WSL, where Windows keeps the Windows key), types the last dictation at the
+  cursor as it was typed, through the same path as the history's **Insert**; `whisper-desk
+  paste-last` does the same. The daemon keeps the text in memory, history on or off; after a
+  restart it takes the history's latest — never when the history is off. Nothing to paste yet
+  is said in a notification. `paste_last` in `[hotkey]` (`"auto"`, a combination, `"none"`),
+  set in the settings window, **Shortcut and output** tab, under the dictation's shortcut:
+  **Change…** (the combination pressed), **Default**, **Off**. Each shortcut has a slot of its
+  own on every desktop: a second GNOME custom shortcut (`whisper-desk-paste-last/`), a second
+  Start menu link (`whisper-desk paste last.lnk`), a second skhd line; installing or removing
+  one leaves the other. `hotkey install` installs both, `hotkey remove` removes both; an update
+  still never touches the shortcuts, so an existing installation adds it with `hotkey install`
+  or by picking it in the window. A feature, no quality measure: 21 new tests (the binding per
+  host and turned off, both slots under GNOME and skhd, the daemon pasting from memory, from the
+  history, and nothing with the history off, the settings controller); the two GNOME slots
+  checked with the real `gsettings` on a scratch store; before/after screenshots of the tab (the
+  new ones in `docs/settings-window.png` and `docs/settings-output.png`). Differences with
+  Wispr Flow: its shortcut is `Alt + Shift + Z` on Windows, `Ctrl + Cmd + V` on macOS —
+  whisper-desk keeps to its own key with Shift; only the last dictation, not the one before;
+  no *copy last transcript* (`Ctrl + Cmd + C`, `Shift + Alt + X`) nor tray menu entry yet.
+  Left to do: *copy last transcript*, the tray menu's *Paste last dictation*, Command Mode.

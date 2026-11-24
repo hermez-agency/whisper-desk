@@ -96,21 +96,33 @@ def cmd_hotkey(args: argparse.Namespace) -> int:
     try:
         if args.hotkey_action == "remove":
             hotkey.remove()
-            print("Shortcut removed.")
+            hotkey.remove(hotkey.PASTE_LAST)
+            print("Shortcuts removed.")
             return 0
         if args.hotkey_action == "show":
             current = hotkey.show()
             print(json.dumps(current, ensure_ascii=False, indent=2) if current else "No shortcut installed.")
+            paste_last = hotkey.show(hotkey.PASTE_LAST)
+            if paste_last:
+                print(json.dumps(paste_last, ensure_ascii=False, indent=2))
             return 0
         binding = hotkey.install(config, f"{BIN} toggle")
         print(f"Shortcut installed: {binding} → {BIN} toggle")
-        return 0
     except hotkey.UnsupportedDesktop as error:
         return _print_error(
             f"{error}. Create the shortcut by hand on the command '{BIN} toggle'."
         )
     except (OSError, subprocess.SubprocessError) as error:
         return _print_error(f"installing the shortcut failed: {error}")
+    # The dictation's shortcut is in: a refusal of this one is only said.
+    try:
+        binding = hotkey.install(config, f"{BIN} paste-last", hotkey.PASTE_LAST)
+        if binding:
+            print(f"Shortcut installed: {binding} → {BIN} paste-last")
+    except (hotkey.UnsupportedDesktop, OSError, subprocess.SubprocessError) as error:
+        print(f"Paste-last shortcut not installed ({error}): "
+              f"create it by hand on the command '{BIN} paste-last'.", file=sys.stderr)
+    return 0
 
 
 def cmd_config(args: argparse.Namespace) -> int:
@@ -799,6 +811,9 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("daemon", help="runs the service (managed by systemd)").set_defaults(func=cmd_daemon)
     sub.add_parser("toggle", help="starts listening, stops it, then cuts the dictation off").set_defaults(func=cmd_toggle)
     sub.add_parser("record", help="synchronous dictation, text on stdout").set_defaults(func=cmd_record)
+    sub.add_parser(
+        "paste-last", help="types the last dictation again at the cursor"
+    ).set_defaults(func=cmd_simple("paste_last"))
     sub.add_parser("stop", help="stops the current listening").set_defaults(func=cmd_simple("stop"))
     sub.add_parser("status", help="daemon state").set_defaults(func=cmd_simple("status"))
     sub.add_parser("reload", help="reloads the configuration").set_defaults(func=cmd_simple("reload"))

@@ -9,6 +9,9 @@ binding = "auto"
 name = "whisper-desk"
 # To apply a shortcut change: whisper-desk hotkey install — whisper-desk settings does it for you
 action = "toggle"
+# Types the last dictation again at the cursor, as Wispr Flow's "paste last transcript".
+# "auto": <Super><Shift>j — <Ctrl><Alt><Shift>j under WSL. "none" for no such shortcut.
+paste_last = "auto"
 
 [model]
 # "auto": large-v3-turbo with an NVIDIA GPU, small otherwise.

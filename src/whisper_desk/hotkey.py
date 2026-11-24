@@ -4,6 +4,9 @@ Nobody agrees on the matter: GNOME stores shortcuts in gsettings, Windows
 attaches them to a Start menu shortcut, macOS exposes nothing at all — there
 you have to go through a third-party agent (skhd) or through the user's own
 hands. Each host therefore has its own plugin, behind the same interface.
+
+Two shortcuts share it, each in a slot of its own: the dictation (TOGGLE) and
+the one that types the last dictation again (PASTE_LAST).
 """
 
 from __future__ import annotations
@@ -21,9 +24,17 @@ BASE_PATH = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
 SLOT = "whisper-desk"
 KEY_PATH = f"{BASE_PATH}/{SLOT}/"
 
+TOGGLE = "toggle"
+PASTE_LAST = "paste_last"
+SLOTS = (TOGGLE, PASTE_LAST)
+KEY_PATHS = {TOGGLE: KEY_PATH, PASTE_LAST: f"{BASE_PATH}/{SLOT}-paste-last/"}
+
 SHORTCUT_NAME = "whisper-desk"
 SKHD_CONFIG = os.path.expanduser("~/.config/skhd/skhdrc")
 SKHD_MARK = "# whisper-desk"
+SKHD_MARKS = {TOGGLE: SKHD_MARK, PASTE_LAST: "# whisper-desk paste-last"}
+# Words that turn a binding off rather than name one.
+OFF = ("", "none", "off", "disabled")
 
 
 class UnsupportedDesktop(RuntimeError):
@@ -84,6 +95,23 @@ def resolve_binding(config: dict[str, Any]) -> str:
     return default_binding() if not binding or binding.lower() == "auto" else binding
 
 
+def default_paste_last() -> str:
+    """The dictation's own key with Shift: one more finger, nothing new to learn."""
+    return "<Ctrl><Alt><Shift>j" if host.is_wsl() else "<Super><Shift>j"
+
+
+def resolve_paste_last(config: dict[str, Any]) -> str:
+    """The shortcut that types the last dictation again; "" when it is off."""
+    binding = str(config["hotkey"].get("paste_last", "auto")).strip()
+    if binding.lower() in OFF:
+        return ""
+    return default_paste_last() if binding.lower() == "auto" else binding
+
+
+def resolve(config: dict[str, Any], slot: str = TOGGLE) -> str:
+    return resolve_paste_last(config) if slot == PASTE_LAST else resolve_binding(config)
+
+
 def label(binding: str) -> str:
     """"<Super>j" → "Super+J": the shortcut as the user reads it on their keyboard."""
     modifiers, key = parse_binding(binding)
@@ -131,27 +159,31 @@ class GnomeHotkey:
                 f"unsupported desktop ({os.environ.get('XDG_CURRENT_DESKTOP', 'unknown')})"
             )
 
-    def install(self, binding: str, name: str, command: str) -> str:
+    def install(self, binding: str, name: str, command: str, slot: str = TOGGLE) -> str:
         self.check()
+        key_path = KEY_PATHS[slot]
         paths = _bindings()
-        if KEY_PATH not in paths:
-            paths.append(KEY_PATH)
+        if key_path not in paths:
+            paths.append(key_path)
             _write_bindings(paths)
-        target = f"{CUSTOM_SCHEMA}:{KEY_PATH}"
+        target = f"{CUSTOM_SCHEMA}:{key_path}"
         _gsettings("set", target, "name", name)
         _gsettings("set", target, "command", command)
         _gsettings("set", target, "binding", binding)
         return binding
 
-    def remove(self) -> None:
+    def remove(self, slot: str = TOGGLE) -> None:
         self.check()
-        _write_bindings([path for path in _bindings() if path != KEY_PATH])
+        paths = _bindings()
+        if KEY_PATHS[slot] in paths:
+            _write_bindings([path for path in paths if path != KEY_PATHS[slot]])
 
-    def show(self) -> dict[str, str]:
+    def show(self, slot: str = TOGGLE) -> dict[str, str]:
         self.check()
-        if KEY_PATH not in _bindings():
+        key_path = KEY_PATHS[slot]
+        if key_path not in _bindings():
             return {}
-        target = f"{CUSTOM_SCHEMA}:{KEY_PATH}"
+        target = f"{CUSTOM_SCHEMA}:{key_path}"
         return {
             "name": _gsettings("get", target, "name").strip("'"),
             "command": _gsettings("get", target, "command").strip("'"),
@@ -165,7 +197,12 @@ class GnomeHotkey:
 # desktop, and only with Ctrl+Alt (optionally completed by Shift).
 WINDOWS_KEYS = {"space": "SPACE", "enter": "ENTER", "insert": "INS"}
 LINK_NAME = "whisper-desk.lnk"
-START_MENU = "$env:APPDATA + '\\Microsoft\\Windows\\Start Menu\\Programs\\" + LINK_NAME + "'"
+LINK_NAMES = {TOGGLE: LINK_NAME, PASTE_LAST: "whisper-desk paste last.lnk"}
+
+
+def start_menu(slot: str = TOGGLE) -> str:
+    return "$env:APPDATA + '\\Microsoft\\Windows\\Start Menu\\Programs\\" + LINK_NAMES[slot] + "'"
+
 
 
 def format_windows(modifiers: list[str], key: str) -> str:
@@ -200,10 +237,10 @@ class WindowsHotkey:
                 "Windows interoperability unavailable (powershell.exe not found)"
             )
 
-    def _script(self, body: str) -> str:
-        return f"$path = {START_MENU}; $shell = New-Object -ComObject WScript.Shell; {body}"
+    def _script(self, body: str, slot: str = TOGGLE) -> str:
+        return f"$path = {start_menu(slot)}; $shell = New-Object -ComObject WScript.Shell; {body}"
 
-    def install(self, binding: str, name: str, command: str) -> str:
+    def install(self, binding: str, name: str, command: str, slot: str = TOGGLE) -> str:
         self.check()
         hotkey = format_windows(*parse_binding(binding))
         distro = host.wsl_distro()
@@ -217,24 +254,24 @@ class WindowsHotkey:
             f"$link.Hotkey = {host.powershell_literal(hotkey)};"
             "$link.Save()"
         )
-        if host.run_powershell(self._script(body)) is None:
+        if host.run_powershell(self._script(body, slot)) is None:
             raise UnsupportedDesktop("cannot create the Windows shortcut")
         return hotkey
 
-    def remove(self) -> None:
+    def remove(self, slot: str = TOGGLE) -> None:
         self.check()
         host.run_powershell(
-            self._script("if (Test-Path $path) { Remove-Item $path -Force }")
+            self._script("if (Test-Path $path) { Remove-Item $path -Force }", slot)
         )
 
-    def show(self) -> dict[str, str]:
+    def show(self, slot: str = TOGGLE) -> dict[str, str]:
         self.check()
         body = (
             "if (-not (Test-Path $path)) { exit 0 };"
             "$link = $shell.CreateShortcut($path);"
             "$link.Hotkey; $link.Arguments; $link.Description"
         )
-        output = host.run_powershell(self._script(body))
+        output = host.run_powershell(self._script(body, slot))
         if not output:
             return {}
         lines = [line.strip() for line in output.splitlines() if line.strip()]
@@ -283,11 +320,11 @@ class SkhdHotkey:
         except OSError:
             return []
 
-    def _without_ours(self) -> list[str]:
+    def _without_ours(self, slot: str = TOGGLE) -> list[str]:
         """Removes our line and its comment, so it can be rewritten cleanly."""
         kept, skip_next = [], False
         for line in self._lines():
-            if line.strip() == SKHD_MARK:
+            if line.strip() == SKHD_MARKS[slot]:
                 skip_next = True
                 continue
             if skip_next:
@@ -305,23 +342,23 @@ class SkhdHotkey:
     def _reload(self) -> None:
         subprocess.run(["skhd", "--reload"], capture_output=True, timeout=10, check=False)
 
-    def install(self, binding: str, name: str, command: str) -> str:
+    def install(self, binding: str, name: str, command: str, slot: str = TOGGLE) -> str:
         self.check()
         shortcut = format_skhd(*parse_binding(binding))
-        self._write(self._without_ours() + [SKHD_MARK, f"{shortcut} : {command}"])
+        self._write(self._without_ours(slot) + [SKHD_MARKS[slot], f"{shortcut} : {command}"])
         self._reload()
         return shortcut
 
-    def remove(self) -> None:
+    def remove(self, slot: str = TOGGLE) -> None:
         self.check()
-        self._write(self._without_ours())
+        self._write(self._without_ours(slot))
         self._reload()
 
-    def show(self) -> dict[str, str]:
+    def show(self, slot: str = TOGGLE) -> dict[str, str]:
         self.check()
         lines = self._lines()
         for index, line in enumerate(lines):
-            if line.strip() == SKHD_MARK and index + 1 < len(lines):
+            if line.strip() == SKHD_MARKS[slot] and index + 1 < len(lines):
                 shortcut, _, command = lines[index + 1].partition(":")
                 return {
                     "name": SHORTCUT_NAME,
@@ -343,16 +380,25 @@ def backend():
     return BACKENDS[host.name()]()
 
 
-def install(config: dict[str, Any], command: str) -> str:
-    """Creates or updates the shortcut. Returns the installed combination."""
-    return backend().install(
-        resolve_binding(config), str(config["hotkey"]["name"]), command
-    )
+def install(config: dict[str, Any], command: str, slot: str = TOGGLE) -> str:
+    """Creates or updates a shortcut. Returns the installed combination.
+
+    A slot whose binding is off is removed instead, and "" returned.
+    """
+    binding = resolve(config, slot)
+    plugin = backend()
+    if not binding:
+        plugin.remove(slot)
+        return ""
+    name = str(config["hotkey"]["name"])
+    if slot == PASTE_LAST:
+        name += " (paste last)"
+    return plugin.install(binding, name, command, slot)
 
 
-def remove() -> None:
-    backend().remove()
+def remove(slot: str = TOGGLE) -> None:
+    backend().remove(slot)
 
 
-def show() -> dict[str, str]:
-    return backend().show()
+def show(slot: str = TOGGLE) -> dict[str, str]:
+    return backend().show(slot)

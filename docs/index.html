@@ -784,6 +784,7 @@
           <tr><td><kbd>Super</kbd> + <kbd>J</kbd> (once more)</td><td>cuts the dictation off: what is left is neither transcribed nor inserted</td></tr>
           <tr><td><kbd>Super</kbd> + <kbd>J</kbd> (again and again)</td><td>gives up: the window closes, the microphone is released, the daemon is free</td></tr>
           <tr><td><kbd>Esc</kbd>, or a click on the overlay</td><td>cancels the dictation — a click on a finished state dismisses it</td></tr>
+          <tr><td><kbd>Shift</kbd> + <kbd>Super</kbd> + <kbd>J</kbd></td><td>types the last dictation again at the cursor — when it went to the wrong window</td></tr>
         </tbody>
       </table>
     </div>
@@ -791,7 +792,8 @@
     <p>
       The default shortcut follows the host: <kbd>Super</kbd> + <kbd>J</kbd> on Linux and macOS
       (<kbd>Cmd</kbd> + <kbd>J</kbd>), <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>J</kbd> on WSL —
-      Windows reserves the Windows key for itself.
+      Windows reserves the Windows key for itself. The one that pastes the last dictation
+      again adds <kbd>Shift</kbd>, and is changed or turned off in the settings window.
     </p>
 
     <h3>Correcting yourself as you speak</h3>
@@ -913,6 +915,7 @@
     <h3>From the command line</h3>
     <pre data-copy><span class="p">$ </span>whisper-desk record     <span class="c"># dictate and write the text to standard output</span>
 <span class="p">$ </span>whisper-desk toggle     <span class="c"># same as the keyboard shortcut</span>
+<span class="p">$ </span>whisper-desk paste-last <span class="c"># types the last dictation again at the cursor</span>
 <span class="p">$ </span>whisper-desk status     <span class="c"># daemon state, loaded model, GPU or CPU</span>
 <span class="p">$ </span>whisper-desk doctor     <span class="c"># full diagnostic</span>
 <span class="p">$ </span>whisper-desk update     <span class="c"># update the installation (--check to compare only)</span>
@@ -1015,7 +1018,7 @@
       <div class="shot wide">
         <picture>
           <source srcset="settings-window.webp" type="image/webp">
-          <img src="settings-window.png" alt="The whisper-desk settings window" width="672" height="590" loading="lazy">
+          <img src="settings-window.png" alt="The whisper-desk settings window" width="672" height="629" loading="lazy">
         </picture>
         <span>The settings window — no TOML to edit</span>
       </div>
@@ -1025,6 +1028,7 @@
 
     <pre data-copy><span class="k">[hotkey]</span>
 binding = <span class="s">"auto"</span>              <span class="c"># "auto", or &lt;Ctrl&gt;/&lt;Alt&gt;/&lt;Shift&gt;/&lt;Super&gt; + a key</span>
+paste_last = <span class="s">"auto"</span>           <span class="c"># types the last dictation again: &lt;Super&gt;&lt;Shift&gt;j, or "none"</span>
 
 <span class="k">[model]</span>
 name = <span class="s">"auto"</span>                 <span class="c"># auto | tiny | base | small | medium | large-v3 | large-v3-turbo</span>
