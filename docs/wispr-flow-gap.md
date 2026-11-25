@@ -37,7 +37,8 @@ personal messages, work messages, email, other — and the tracker's own left-to
 of 2026-10-21 (#31), "Auto punctuation" on the features page (2026-11-23); the shortcut that
 pastes the last transcript again, "Paste last transcript" in
 [Customize keyboard and mouse shortcuts](https://docs.wisprflow.ai/articles/2612050838-supported-unsupported-keyboard-hotkey-shortcuts)
-(read on 2026-11-24).
+(read on 2026-11-24); copy last transcript and the tray's *Paste last dictation*, the tracker's
+own left-to-do of 2026-11-24, *Copy last transcript* in the same article (2026-11-25).
 
 **Status**: done · partial · missing · out of scope.
 **Effort**: S (a session) · M (a few sessions) · L (to split into several gaps).
@@ -48,7 +49,7 @@ pastes the last transcript again, "Paste last transcript" in
 |---|---|---|---|---|
 | **Backtrack** — a correction said mid-sentence keeps only the corrected version | `backtrack.py`: "non, plutôt", "ou plutôt", "je veux dire", "no wait", "actually", "I mean", "or rather"… carried out by local rules; measured in `bench/backtrack/`; a correction said after the pause that ended its sentence erases and retypes that sentence, measured in `bench/backtrack/ --pauses` (#44); *efface ça* / *scratch that* said alone erases the last sentence typed, again the one before, measured in `bench/backtrack/ --discard` (#45); *efface tout* / *scratch all that* erases the whole dictation, measured in `bench/backtrack/ --clear` (#52). A correction rewrites only the last sentence; no phrase longer than three words replaced without a word to line up with | partial | high | S |
 | **Filler removal** — "um", "uh", pauses | Whisper drops most hesitations by itself; `hesitations.py` removes those it writes ("euh", "hum", "um", "uh", "erm") and words or runs of up to three words said twice in a row, keeping intended doubles; measured in `bench/hesitations/`. A hesitation Whisper mishears as a word ("A", "« E »") stays | done | high | S |
-| **Auto punctuation** — inferred from pauses and tone, spoken marks ("comma") | Whisper's own punctuation and capitals; spoken marks and line breaks ("virgule", "point d'interrogation", "à la ligne", "comma", "new paragraph") written by `punctuation.py`, measured in `bench/punctuation/` (#26); quotes and brackets said aloud ("ouvrez les guillemets", "fermez la parenthèse", "open quote", "close paren") written « », " " and ( ) (#31); square brackets and braces ("ouvrez les crochets", "accolade fermante", "open bracket", "close curly brace") written [ ] and { } (in PR). No punctuation inferred from tone beyond Whisper's | partial | medium | S |
+| **Auto punctuation** — inferred from pauses and tone, spoken marks ("comma") | Whisper's own punctuation and capitals; spoken marks and line breaks ("virgule", "point d'interrogation", "à la ligne", "comma", "new paragraph") written by `punctuation.py`, measured in `bench/punctuation/` (#26); quotes and brackets said aloud ("ouvrez les guillemets", "fermez la parenthèse", "open quote", "close paren") written « », " " and ( ) (#31); square brackets and braces ("ouvrez les crochets", "accolade fermante", "open bracket", "close curly brace") written [ ] and { } (#56). No punctuation inferred from tone beyond Whisper's | partial | medium | S |
 | **Lists** — spoken enumerations become a formatted list | `lists.py`: items numbered aloud (*un, deux*, *premièrement*, *firstly*, *number one*, or the figures Whisper writes) written one per line, "1. …", the words before as a title with a colon; goes on across pauses with the as-you-go dictation; measured in `bench/lists/` (#33); bulleted items said after *tiret*, *puce*, *bullet*, *bullet point*, *dash* written "- …", measured in `bench/lists/` (#48). Bullets must be said (Wispr Flow guesses a list from the content); no nested lists | partial | medium | S |
 | **Name spelling from context** | `vocabulary` (hotwords) and the context of the dictation fed back to the model | partial | high | — |
 | **100+ languages** | every Whisper language; `language = "auto"` detects one language per sentence | done | medium | — |
@@ -67,7 +68,7 @@ pastes the last transcript again, "Paste last transcript" in
 | **Command Mode** — select text, say how to rewrite it | — (would need a local model, e.g. Ollama) | missing | high | L |
 | **Developer syntax** — camelCase, snake_case, CLI commands, file tagging in Cursor | `casing.py`: a name said after its style ("camel case user name" → `userName`, snake, pascal, kebab, constant case) written in it, Whisper's glued and hyphenated forms understood; measured in `bench/casing/` (#28). Not guessed from context without the style said; no CLI commands, no file tagging | partial | medium | M |
 | **History** of dictations | `whisper-desk history` and its window: search, copy, insert again, purge; each dictation names the app it went to (#49); filtered by app, a menu next to the search or `history --app` (#54) | done | — | — |
-| **Paste last transcript** — a shortcut types the last dictation again | `Shift + Super + J` (`Ctrl + Alt + Shift + J` under WSL) or `whisper-desk paste-last`: the last dictation as typed, kept in memory, the history's latest after a restart; set, changed or turned off in the settings window | in PR | medium | S |
+| **Paste last transcript** — a shortcut types the last dictation again; **copy last transcript** puts it in the clipboard | `Shift + Super + J` (`Ctrl + Alt + Shift + J` under WSL) or `whisper-desk paste-last`: the last dictation as typed, kept in memory, the history's latest after a restart; set, changed or turned off in the settings window (#57); **Paste the last dictation** and **Copy the last dictation** in the tray menu, `whisper-desk copy-last` (in PR). No shortcut of its own for the copy | partial | medium | S |
 | **Settings** | `whisper-desk settings`: every key of `config.toml`, in eight tabs (Dictation, Microphone, Shortcut and output, Words, Overlay, History, Advanced, Updates), each with its help and default, **Restore defaults** per section, invalid values refused before saving, keyboard only; `tests/test_settings_schema.py` fails when a key has no setting | done | — | — |
 | **Overlay** | X11 overlay: live level, sentence transcribed, states, cancel | done | — | — |
 | **Usage dashboard** — words dictated, speed, streak, top apps | `whisper-desk stats` (`stats.py`): dictations, words in all, today and over 7 days, words per minute, days in a row, worked out from the history (#32); top apps by share of the words, from the app the history now notes (#49); the same figures in four tiles above the history window (#50). Apps only where the desktop names the one in front; no chart over time, no rank among users | partial | low | S |
@@ -481,7 +482,7 @@ pastes the last transcript again, "Paste last transcript" in
   onboarding also asks for permissions and teaches the shortcut by trying it, as whisper-desk
   does on its last step. Left to do: the overlay's colours checked against the palette, the
   tray menu's labels, a high-contrast check of the stone greys on a dark theme.
-- 2026-11-23 — **Square brackets and braces said aloud** (in PR, partial, a quality day): the
+- 2026-11-23 — **Square brackets and braces said aloud** (merged, #56, partial, a quality day): the
   left-to-do of #31 — "square brackets and braces". *Ouvrez les crochets* … *fermez les
   crochets* (or *crochet ouvrant* … *crochet fermant*) are written [ … ], *ouvrez l'accolade* …
   *fermez l'accolade* (or *les accolades*, *accolade ouvrante* … *fermante*) { … }; *open
@@ -510,7 +511,7 @@ pastes the last transcript again, "Paste last transcript" in
   command and the words after it. Left to do: *parenthèse
   ouvrante* / *fermante*, a bracket or a brace said around a line of code with its own
   spacing (`{ return x }`), *left* / *right bracket*.
-- 2026-11-24 — **Paste last transcript** (in PR, a feature day): Wispr Flow's shortcut that pastes
+- 2026-11-24 — **Paste last transcript** (merged, #57, a feature day): Wispr Flow's shortcut that pastes
   the last transcript again — for a dictation sent to the wrong window, or into a field that lost
   it. A second global shortcut, `Shift + Super + J` (`Shift + Cmd + J` on macOS, `Ctrl + Alt +
   Shift + J` under WSL, where Windows keeps the Windows key), types the last dictation at the
@@ -533,3 +534,22 @@ pastes the last transcript again, "Paste last transcript" in
   whisper-desk keeps to its own key with Shift; only the last dictation, not the one before;
   no *copy last transcript* (`Ctrl + Cmd + C`, `Shift + Alt + X`) nor tray menu entry yet.
   Left to do: *copy last transcript*, the tray menu's *Paste last dictation*, Command Mode.
+- 2026-11-25 — **Paste and copy the last dictation from the tray** (in PR, an interface day):
+  the left-to-do of #57 — "*copy last transcript*, the tray menu's *Paste last dictation*".
+  Wispr Flow has, beside its *paste last transcript*, a *copy last transcript* that puts the
+  last dictation in the clipboard. The tray menu now holds, under the dictation's entry,
+  **Paste the last dictation (Shift+Super+J)** — the shortcut named, or none when it is off —,
+  which types it at the cursor of the window the menu was opened over, and **Copy the last
+  dictation**, which puts it in the clipboard (a window the paste cannot reach, a text to paste
+  twice, a shortcut forgotten). `whisper-desk copy-last` copies from a terminal. The same text
+  as the shortcut: the one in memory, else the history's latest after a restart, never when the
+  history is off; nothing yet, or a clipboard that does not answer, is said in a notification.
+  Pasting is greyed out while a dictation runs (it would type into it), copying is not; both
+  are greyed out while the service is stopped. No new key in `config.toml`. A feature, no
+  quality measure: 10 new tests (the daemon copying from memory, from the history, nothing with
+  the history off, a silent clipboard, the socket command; the tray's labels, what is greyed
+  out when, the orders sent). No screenshot: the tray menu is drawn by the desktop's panel,
+  not by whisper-desk. Differences with Wispr Flow: no shortcut of its own for the copy
+  (`Ctrl + Cmd + C` on macOS, `Shift + Alt + X` on Windows) — a third global shortcut would
+  need a slot on every desktop, as #57's did. Left to do: a shortcut for the copy if it is
+  asked for, Command Mode, the overlay's colours checked against the Hermez palette.

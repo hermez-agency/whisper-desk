@@ -779,6 +779,60 @@ class PasteLastTest(DictationCase):
         self.assertEqual(texts, ["hello"])
 
 
+class CopyLastTest(DictationCase):
+    """Copy last: the last dictation in the clipboard, nothing typed."""
+
+    def test_the_last_dictation_goes_to_the_clipboard(self):
+        copied: list[str] = []
+        with self.service() as service, \
+                mock.patch.object(daemon.output, "copy", lambda text: copied.append(text) or True):
+            service.last_text = "hello there"
+            service.insert = lambda text: self.fail("typed")
+            self.assertEqual(service.copy_last(), {"copied": True})
+        self.assertEqual(copied, ["hello there"])
+
+    def test_after_a_restart_the_history_has_it(self):
+        copied: list[str] = []
+        with mock.patch.object(daemon.history, "load", lambda: [mock.Mock(text="the latest")]), \
+                mock.patch.dict(CONFIG, {"output": {**CONFIG["output"], "history": True}}), \
+                mock.patch.object(daemon.output, "copy", lambda text: copied.append(text) or True):
+            with self.service() as service:
+                service.copy_last()
+        self.assertEqual(copied, ["the latest"])
+
+    def test_nothing_to_copy_is_said(self):
+        notes: list[tuple] = []
+        with mock.patch.object(daemon.history, "load", lambda: [mock.Mock(text="private")]), \
+                self.service() as service, \
+                mock.patch.object(daemon.output, "notify", lambda *args: notes.append(args)), \
+                mock.patch.object(daemon.output, "copy", lambda text: self.fail("copied")):
+            self.assertEqual(service.copy_last(), {"error": "no dictation yet"})
+            self.assertTrue(wait_until(lambda: notes))
+        self.assertEqual(notes[0][0], "whisper-desk: nothing to copy")
+
+    def test_a_silent_clipboard_is_said(self):
+        notes: list[tuple] = []
+        with self.service() as service, \
+                mock.patch.object(daemon.output, "notify", lambda *args: notes.append(args)), \
+                mock.patch.object(daemon.output, "copy", lambda text: False):
+            service.last_text = "hello"
+            self.assertEqual(service.copy_last(), {"error": "no clipboard answered"})
+            self.assertTrue(wait_until(lambda: notes))
+        self.assertIn("could not be copied", notes[0][0])
+
+    def test_the_command_reaches_it(self):
+        with self.service() as service, \
+                mock.patch.object(daemon.output, "copy", lambda text: True):
+            service.last_text = "hello"
+            handler = mock.Mock(spec=daemon.Handler)
+            handler.service = service
+            handler.rfile = [b'{"cmd": "copy_last"}\n']
+            replies: list[dict] = []
+            handler._reply = replies.append
+            daemon.Handler.handle(handler)
+        self.assertEqual(replies, [{"copied": True}])
+
+
 class CursorCase(DictationCase):
     """A dictation typed at a cursor that backspaces reach."""
 

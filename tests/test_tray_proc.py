@@ -94,6 +94,32 @@ class MenuTest(unittest.TestCase):
         self.assertEqual([command for command, _ in self.sent if command != "status"],
                          ["pause", "resume"])
 
+    def test_the_last_dictation_is_offered_with_its_shortcut(self):
+        items = self.items(READY)
+        self.assertEqual(items["paste_last"]["label"], "Paste the last dictation (Shift+Super+J)")
+        self.assertTrue(items["paste_last"]["enabled"])
+        self.assertEqual(items["copy_last"]["label"], "Copy the last dictation")
+        self.assertTrue(items["copy_last"]["enabled"])
+
+    def test_a_paste_shortcut_turned_off_is_not_named(self):
+        self.controller.config["hotkey"]["paste_last"] = "none"
+        self.assertEqual(self.items(READY)["paste_last"]["label"], "Paste the last dictation")
+
+    def test_pasting_waits_for_the_dictation_copying_does_not(self):
+        items = self.items({**READY, "state": "recording"})
+        self.assertFalse(items["paste_last"]["enabled"])
+        self.assertTrue(items["copy_last"]["enabled"])
+
+    def test_a_stopped_service_has_nothing_to_paste_or_copy(self):
+        items = self.items(None)
+        self.assertFalse(items["paste_last"]["enabled"])
+        self.assertFalse(items["copy_last"]["enabled"])
+
+    def test_paste_and_copy_reach_the_daemon(self):
+        self.assertIsNone(self.controller.handle({"action": "paste_last"}))
+        self.assertIsNone(self.controller.handle({"action": "copy_last"}))
+        self.assertEqual([command for command, _ in self.sent], ["paste_last", "copy_last"])
+
     def test_history_and_settings_open_their_windows(self):
         self.controller.handle({"action": "history"})
         self.controller.handle({"action": "settings"})

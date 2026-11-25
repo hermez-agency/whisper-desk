@@ -2,7 +2,7 @@
 
 Protocol: one JSON request per line on a Unix socket, one JSON response per
 line. Commands: toggle, record, stop, status, reload, load, insert,
-paste_last, pause, resume, quit.
+paste_last, copy_last, pause, resume, quit.
 """
 
 from __future__ import annotations
@@ -687,22 +687,43 @@ class Service:
         threading.Thread(target=self._insert, args=(text,), daemon=True).start()
         return {"inserting": True}
 
-    def paste_last(self) -> dict[str, Any]:
-        """Types the last dictation again — Wispr Flow's "paste last transcript".
-
-        The one in memory, else, after a restart, the history's latest: the
-        text dictated into a field that lost it is never more than a shortcut away.
-        """
+    def _last(self, verb: str) -> str:
+        """The last dictation: the one in memory, else, after a restart, the history's latest."""
         text = self.last_text
         if not text and self.config["output"]["history"]:
             entries = history.load()
             text = entries[-1].text if entries else ""
         if not text:
             threading.Thread(target=output.notify, daemon=True, args=(
-                "whisper-desk: nothing to paste", "No dictation yet."
+                f"whisper-desk: nothing to {verb}", "No dictation yet."
             )).start()
+        return text
+
+    def paste_last(self) -> dict[str, Any]:
+        """Types the last dictation again — Wispr Flow's "paste last transcript".
+
+        The text dictated into a field that lost it is never more than a shortcut away.
+        """
+        text = self._last("paste")
+        if not text:
             return {"error": "no dictation yet"}
         return self.insert(text)
+
+    def copy_last(self) -> dict[str, Any]:
+        """Puts the last dictation in the clipboard — Wispr Flow's "copy last transcript".
+
+        For a window the paste shortcut cannot reach, or a text to paste twice.
+        """
+        text = self._last("copy")
+        if not text:
+            return {"error": "no dictation yet"}
+        if not output.copy(text):
+            threading.Thread(target=output.notify, daemon=True, args=(
+                "whisper-desk: the last dictation could not be copied",
+                "No clipboard answered — see whisper-desk doctor.",
+            )).start()
+            return {"error": "no clipboard answered"}
+        return {"copied": True}
 
     def _insert(self, text: str) -> None:
         writer = output.CursorWriter(self.config)
@@ -844,6 +865,7 @@ class Handler(socketserver.StreamRequestHandler):
                 "reload": self.service.reload,
                 "insert": lambda: self.service.insert(str(request.get("text", ""))),
                 "paste_last": self.service.paste_last,
+                "copy_last": self.service.copy_last,
                 "load": self.service.load,
                 "pause": self.service.pause,
                 "resume": self.service.resume,

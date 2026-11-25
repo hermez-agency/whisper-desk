@@ -597,6 +597,7 @@ next sentence. Two entries with the same misspelling (*Mac OS* and *mac-os*) are
 whisper-desk record     # dictate and write the text to standard output
 whisper-desk toggle     # same as the keyboard shortcut
 whisper-desk paste-last # types the last dictation again at the cursor
+whisper-desk copy-last  # puts the last dictation in the clipboard
 whisper-desk status     # daemon state, loaded model, GPU or CPU
 whisper-desk doctor     # full diagnostic
 whisper-desk update     # update the installation (--check to compare only)
@@ -614,8 +615,11 @@ whisper-desk quit       # stop the daemon
 ### Tray icon
 
 An icon in the system tray says whether the service runs, with which model and which
-microphone, and holds a menu: start or finish a dictation, **History…**, **Settings…**,
-**Pause dictation** (the shortcut then says it is paused instead of listening), **Quit**.
+microphone, and holds a menu: start or finish a dictation, **Paste the last dictation**
+(at the cursor of the window you were in, as `Shift + Super + J`), **Copy the last
+dictation** (into the clipboard, to paste it yourself where the shortcut cannot reach, or
+twice), **History…**, **Settings…**, **Pause dictation** (the shortcut then says it is
+paused instead of listening), **Quit**.
 It starts with the session on Linux, and needs the AppIndicator library for the system
 Python (`gir1.2-ayatanaappindicator3-0.1`).
 
