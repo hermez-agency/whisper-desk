@@ -814,6 +814,9 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser(
         "paste-last", help="types the last dictation again at the cursor"
     ).set_defaults(func=cmd_simple("paste_last"))
+    sub.add_parser(
+        "copy-last", help="puts the last dictation in the clipboard"
+    ).set_defaults(func=cmd_simple("copy_last"))
     sub.add_parser("stop", help="stops the current listening").set_defaults(func=cmd_simple("stop"))
     sub.add_parser("status", help="daemon state").set_defaults(func=cmd_simple("status"))
     sub.add_parser("reload", help="reloads the configuration").set_defaults(func=cmd_simple("reload"))

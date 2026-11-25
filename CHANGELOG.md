@@ -4,6 +4,15 @@
 
 ### Added
 
+- **Paste or copy the last dictation from the tray** (Wispr Flow's *paste last transcript*
+  and *copy last transcript*): the tray menu now holds **Paste the last dictation
+  (Shift+Super+J)**, which types it at the cursor of the window you were in, and **Copy the
+  last dictation**, which puts it in the clipboard — for a window the paste cannot reach, a
+  text to paste twice, or when the shortcut slipped your mind. The same text as the
+  shortcut: the one in memory, else the history's latest after a restart (none when the
+  history is off); nothing yet is said in a notification, as is a clipboard that does not
+  answer. Pasting waits for a dictation to end, copying does not; both are greyed out while
+  the service is stopped. `whisper-desk copy-last` copies from a terminal. No new setting.
 - **Square brackets and braces said aloud** (Wispr Flow's spoken punctuation, continued):
   *ouvrez les crochets* … *fermez les crochets* (or *crochet ouvrant* … *crochet fermant*)
   are written [ … ], *ouvrez l'accolade* … *fermez l'accolade* (or *les accolades*,

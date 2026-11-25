@@ -164,6 +164,12 @@ class TrayController:
             toggle = "Cancel the dictation"
         else:
             toggle = f"Start a dictation ({shortcut})"
+        paste_shortcut = hotkey.resolve_paste_last(self.config)
+        paste = "Paste the last dictation"
+        if paste_shortcut:
+            paste += f" ({hotkey.label(paste_shortcut)})"
+        # Typing waits for a dictation to end; copying never types, so it never waits.
+        busy = state in ("recording", "working", "loading")
         microphone = status.get("microphone", "default") if status else self.config["recording"]["device"]
         return {
             "icon": icon,
@@ -172,6 +178,8 @@ class TrayController:
                 {"id": "microphone", "label": f"Microphone: {microphone}", "enabled": False},
                 {"separator": True},
                 {"id": "toggle", "label": toggle, "enabled": not paused},
+                {"id": "paste_last", "label": paste, "enabled": status is not None and not busy},
+                {"id": "copy_last", "label": "Copy the last dictation", "enabled": status is not None},
                 {"id": "history", "label": "History…"},
                 {"id": "settings", "label": "Settings…"},
                 {"separator": True},
@@ -194,6 +202,12 @@ class TrayController:
                 self.send("toggle", timeout=10)
             except Exception:
                 pass
+        elif action in ("paste_last", "copy_last"):
+            try:
+                self.send(action, timeout=10)
+            except Exception:
+                pass
+            return None
         elif action == "pause":
             try:
                 self.send("pause" if request.get("active") else "resume", timeout=5)

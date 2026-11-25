@@ -6,7 +6,7 @@ drives it over JSON lines:
 
     stdin   {"icon": "...", "items": [{"id", "label", "enabled", "check", "active"}
              | {"separator": true}, ...]}      {"quit": true}
-    stdout  {"action": "toggle" | "history" | "settings" | "quit"}
+    stdout  {"action": "toggle" | "paste_last" | "copy_last" | "history" | "settings" | "quit"}
             {"action": "pause", "active": true}
             {"event": "unavailable", "reason": "..."}
 """
