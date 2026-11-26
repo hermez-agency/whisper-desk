@@ -540,7 +540,7 @@ a cue, in the **Snippets** list of `whisper-desk settings` (**Add…**, **Edit�
 "my calendar link" = "https://cal.com/me/30min"
 "ma signature" = """
 Bien à vous,
-Salvador"""
+Camille"""
 ```
 
 | You say | whisper-desk writes |
@@ -1199,4 +1199,4 @@ MIT
 
 ## Author
 
-A Hermez product.
+A Hermez product — [hermez.dev](https://hermez.dev).
